@@ -40,17 +40,37 @@ jobs:
               print('::error title=Windows synthetic test details::' + detail)
           sys.exit(result.returncode)
       - name: Build application with browser
-        run: >-
-          python -m PyInstaller --noconfirm --clean --onedir --console
-          --name FenbiCollector --collect-all playwright
-          --add-data "browser_cache:browser_cache"
-          --add-data "snapshot_dom.js:."
-          --add-data "next_control.js:."
-          standalone_main.py
-      - name: Verify packaged browser and startup
+        shell: python
         run: |
-          dist/FenbiCollector/FenbiCollector.exe --help
-          dist/FenbiCollector/FenbiCollector.exe --smoke-test
+          import subprocess
+          import sys
+          result = subprocess.run([
+              sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--console',
+              '--name', 'FenbiCollector', '--collect-all', 'playwright',
+              '--add-data', 'browser_cache:browser_cache',
+              '--add-data', 'snapshot_dom.js:.', '--add-data', 'next_control.js:.',
+              'standalone_main.py'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+              text=True, encoding='utf-8', errors='replace')
+          print(result.stdout, end='')
+          if result.returncode:
+              detail = result.stdout[-3000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print('::error title=Windows packaging details::' + detail)
+          sys.exit(result.returncode)
+      - name: Verify packaged browser and startup
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          import sys
+          app = str(Path('dist/FenbiCollector/FenbiCollector.exe').resolve())
+          for flag in ['--help', '--smoke-test']:
+              result = subprocess.run([app, flag], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                  text=True, encoding='utf-8', errors='replace', timeout=120)
+              print(result.stdout, end='')
+              if result.returncode:
+                  detail = result.stdout[-3000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                  print('::error title=Packaged application check failed::' + detail)
+                  sys.exit(result.returncode)
       - uses: actions/upload-artifact@v4
         with:
           name: FenbiCollector-Windows-candidate

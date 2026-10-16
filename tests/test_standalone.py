@@ -13,7 +13,7 @@ import standalone_main as app
 class StandaloneTests(unittest.TestCase):
     def test_frozen_app_uses_bundled_browser_and_persistent_output_location(self):
         with TemporaryDirectory() as td:
-            root=Path(td)
+            root=Path(td).resolve()
             with patch.object(app.sys,'frozen',True,create=True), patch.object(app.sys,'executable',str(root/'FenbiCollector.exe')), patch.object(app.sys,'_MEIPASS',str(root/'_internal'),create=True), patch.object(app.os,'chdir') as chdir, patch.dict(os.environ):
                 self.assertEqual(app.configure_paths(),root)
                 self.assertEqual(os.environ['PLAYWRIGHT_BROWSERS_PATH'],str(root/'_internal'/'browser_cache'))

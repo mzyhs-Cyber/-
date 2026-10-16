@@ -4,7 +4,7 @@ import json
 import re
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
-VERSION = '2.6-candidate'
+VERSION = '2.7-candidate'
 
 def text(html):
     return BeautifulSoup(html or '', 'html.parser').get_text(' ', strip=True)

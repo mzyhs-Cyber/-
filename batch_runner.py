@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit
 from bank_core import VERSION, json_write
+SELECTION_PAGE_WAIT_SECONDS = 8
 
 
 def submission_key(url):
@@ -136,6 +137,87 @@ def validate_targets(targets):
     return unique
 
 
+def parse_year_setting(value, current_year):
+    value = value.strip().lower()
+    if value in ('m', 'manual'):
+        return None
+    if not value:
+        return current_year - 9, current_year
+    match = re.fullmatch(r'((?:19|20)\d{2})\s*[-—~至]\s*((?:19|20)\d{2})', value)
+    if not match or int(match[1]) > int(match[2]):
+        raise ValueError('输入年份范围如2017-2026，回车取近十年，或m手动选卷')
+    return int(match[1]), int(match[2])
+
+
+def paper_year(title):
+    match = re.search(r'(?<!\d)((?:19|20)\d{2})(?!\d)', title)
+    return int(match[1]) if match else None
+
+
+async def scan_year_targets(page, categories, year_start, year_end, output=None):
+    from fenbi_crawler_v2 import (click_filter, reset_listing_first_page, wait_paper_items,
+                                 list_signature, click_next, NEXT_LIST, now)
+    selected = []
+    report = {'year_start': year_start, 'year_end': year_end, 'status': 'scanning', 'categories': []}
+    def persist():
+        if output is not None:
+            Path(output).mkdir(parents=True, exist_ok=True)
+            json_write(Path(output) / 'selection_progress.json', {**report, 'updated_at': now(), 'selected': selected})
+    try:
+        for category in categories:
+            await click_filter(page, category)
+            await reset_listing_first_page(page)
+            item = {'category': category, 'pages': 0, 'selected': 0, 'years_found': [], 'undated_titles': []}
+            report['categories'].append(item)
+            seen = set()
+            for page_index in range(301):
+                if page_index == 300:
+                    raise RuntimeError('列表超过300页，已停止并保留选卷进度')
+                rows = await wait_paper_items(page)
+                if not rows:
+                    raise RuntimeError('无法读取分类列表：' + category)
+                signature = tuple(tuple(row) for row in list_signature(rows))
+                if signature in seen:
+                    raise RuntimeError('翻页后列表未变化或发生循环：' + category)
+                seen.add(signature)
+                for row in rows:
+                    year = paper_year(row['title'])
+                    if year is None:
+                        item['undated_titles'].append(row['title'])
+                    elif year_start <= year <= year_end:
+                        selected.append({'title': row['title'], 'listing': {'url': page.url, 'category': category,
+                            'page_index': page_index, 'signature': [list(r) for r in signature]}})
+                        if year not in item['years_found']:
+                            item['years_found'].append(year)
+                if selected:
+                    selected = validate_targets(selected)
+                item['pages'] = page_index + 1
+                item['selected'] = sum(t['listing']['category'] == category for t in selected)
+                persist()
+                print(f'[自动选卷] {category} 第{page_index+1}页；{year_start}—{year_end}年已选{item["selected"]}套，累计{len(selected)}套', flush=True)
+                if not await click_next(page, NEXT_LIST):
+                    break
+                deadline = time.monotonic() + SELECTION_PAGE_WAIT_SECONDS
+                while time.monotonic() < deadline:
+                    if list_signature(await wait_paper_items(page)) != signature:
+                        break
+                    await asyncio.sleep(0.15)
+                else:
+                    raise RuntimeError('翻页后列表未变化：' + category)
+            item['years_found'].sort()
+            item['years_absent_from_listing'] = [y for y in range(year_start, year_end+1) if y not in item['years_found']]
+        if not selected:
+            raise ValueError('所选分类没有找到该年份范围内的试卷，可改用m手动选择')
+        report['status'] = 'selected'
+        persist()
+        print(f'[自动选卷完成] {year_start}—{year_end}年，{len(categories)}个分类，共{len(selected)}套，开始采集。', flush=True)
+        return validate_targets(selected)
+    except Exception as exc:
+        report.update(status='selection_incomplete', error=str(exc))
+        persist()
+        raise
+
+
 async def choose_targets(page, args):
     from fenbi_crawler_v2 import visible_categories, click_filter, paper_items, wait_paper_items, list_signature, click_next, NEXT_LIST
     names = await visible_categories(page)
@@ -149,6 +231,17 @@ async def choose_targets(page, args):
             break
         except ValueError as exc:
             print('分类选择无效：' + str(exc), flush=True)
+    from fenbi_crawler_v2 import now
+    current_year = int(now()[:4])
+    while True:
+        value = await asyncio.to_thread(input, f'年份范围：Enter=近十年{current_year-9}—{current_year}；也可2017-2026；m=手动选卷：')
+        try:
+            years = parse_year_setting(value, current_year)
+            break
+        except ValueError as exc:
+            print(str(exc), flush=True)
+    if years is not None:
+        return await scan_year_targets(page, [names[i] for i in category_indices], *years, output=getattr(args, 'output', None))
     selected = []
     for position, category_index in enumerate(category_indices):
         category = names[category_index]
@@ -187,7 +280,7 @@ async def choose_targets(page, args):
 
 
 async def open_target(context, page, target):
-    from fenbi_crawler_v2 import paper_items, wait_paper_items, list_signature, click_filter, click_next, NEXT_LIST, open_paper, ListingStateError
+    from fenbi_crawler_v2 import paper_items, wait_paper_items, list_signature, click_filter, reset_listing_first_page, click_next, NEXT_LIST, open_paper, ListingStateError
     listing = target.get('listing')
     if not listing:
         await page.goto(target['url'], wait_until='domcontentloaded')
@@ -197,6 +290,7 @@ async def open_target(context, page, target):
         if page.url != listing['url']:
             await page.goto(listing['url'], wait_until='domcontentloaded')
         await click_filter(page, listing['category'])
+        await reset_listing_first_page(page)
         await wait_paper_items(page)
         for _ in range(listing['page_index']):
             if not await click_next(page, NEXT_LIST):

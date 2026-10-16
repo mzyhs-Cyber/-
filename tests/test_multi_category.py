@@ -10,7 +10,7 @@ class MultiCategorySelectionTests(unittest.IsolatedAsyncioTestCase):
         async def category(p,name):state.update(category=name,page=0);changes.append(name)
         async def rows(p):return [{'title':f"{state['category']}卷{state['page']}-{n}", 'key':str(n)} for n in range(1,4)]
         async def nxt(*a):state['page']+=1;return True
-        with patch('fenbi_crawler_v2.visible_categories',AsyncMock(return_value=['国考','安徽','北京','江苏'])),patch('fenbi_crawler_v2.click_filter',category),patch('fenbi_crawler_v2.wait_paper_items',rows),patch('fenbi_crawler_v2.list_signature',lambda rs:tuple((r['title'],r['key']) for r in rs)),patch('fenbi_crawler_v2.click_next',nxt),patch('builtins.input',side_effect=answers):
+        with patch('fenbi_crawler_v2.visible_categories',AsyncMock(return_value=['国考','安徽','北京','江苏'])),patch('fenbi_crawler_v2.click_filter',category),patch('fenbi_crawler_v2.wait_paper_items',rows),patch('fenbi_crawler_v2.list_signature',lambda rs:tuple((r['title'],r['key']) for r in rs)),patch('fenbi_crawler_v2.click_next',nxt),patch('builtins.input',side_effect=(answers[:1]+["m"]+answers[1:] if answers[0]!='99' else answers)):
             result=await choose_targets(page,SimpleNamespace())
         return result,changes
     async def test_multiple_categories_keep_each_paper_location(self):
@@ -23,7 +23,7 @@ class MultiCategorySelectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result),3)
         self.assertEqual([r['listing']['page_index'] for r in result],[0,1,0])
     async def test_invalid_category_reprompts_and_empty_category_can_be_skipped(self):
-        result,changes=await self.select(['99','1,2','s','1','s'])
+        result,changes=await self.select(['99','1,2','m','s','1','s'])
         self.assertEqual(changes,['国考','安徽']);self.assertEqual(len(result),1)
     async def test_single_category_still_works_and_empty_final_does_not_start(self):
         result,_=await self.select(['4','s','1-2','s']);self.assertEqual(len(result),2)
@@ -32,7 +32,7 @@ class MultiCategorySelectionTests(unittest.IsolatedAsyncioTestCase):
         for category,page_index in [('国考',0),('安徽',1),('江苏',0)]:
             row={'title':category+'卷','key':'1'};sig=((row['title'],'1'),)
             target={'title':row['title'],'listing':{'url':page.url,'category':category,'page_index':page_index,'signature':[list(x) for x in sig]}}
-            with patch('fenbi_crawler_v2.paper_items',AsyncMock(return_value=[])),patch('fenbi_crawler_v2.wait_paper_items',AsyncMock(return_value=[row])),patch('fenbi_crawler_v2.list_signature',lambda rs:tuple((r['title'],r['key']) for r in rs)),patch('fenbi_crawler_v2.click_filter',AsyncMock()) as click,patch('fenbi_crawler_v2.click_next',AsyncMock(return_value=True)) as nxt,patch('fenbi_crawler_v2.open_paper',AsyncMock(return_value=page)):
+            with patch('fenbi_crawler_v2.paper_items',AsyncMock(return_value=[])),patch('fenbi_crawler_v2.wait_paper_items',AsyncMock(return_value=[row])),patch('fenbi_crawler_v2.list_signature',lambda rs:tuple((r['title'],r['key']) for r in rs)),patch('fenbi_crawler_v2.click_filter',AsyncMock()) as click,patch('fenbi_crawler_v2.reset_listing_first_page',AsyncMock()),patch('fenbi_crawler_v2.click_next',AsyncMock(return_value=True)) as nxt,patch('fenbi_crawler_v2.open_paper',AsyncMock(return_value=page)):
                 self.assertIs(await open_target(None,page,target),page)
                 click.assert_awaited_once_with(page,category);self.assertEqual(nxt.await_count,page_index)
 
@@ -58,7 +58,7 @@ class CrossCategoryBrowserTests(unittest.IsolatedAsyncioTestCase):
                 await r.fulfill(body=body,content_type='text/html; charset=utf-8')
             await browser.context.route('https://www.fenbi.com/**',route)
             await browser.page.goto('https://www.fenbi.com/list')
-            with patch('builtins.input',side_effect=['1,2,3,4']+['1-2','s']*4):plan=await choose_targets(browser.page,None)
+            with patch('builtins.input',side_effect=['1,2,3,4','m']+['1-2','s']*4):plan=await choose_targets(browser.page,None)
             self.assertEqual(len(plan),8)
             self.assertEqual([p['listing']['category'] for p in plan],[c for c in names for _ in range(2)])
             with TemporaryDirectory() as td,patch('builtins.input',side_effect=AssertionError('No midrun prompt')):

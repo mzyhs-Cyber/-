@@ -434,6 +434,30 @@ async def click_filter(page, name):
     except Exception as exc:
         raise ListingStateError('分类切换失败：' + name + '；' + type(exc).__name__) from exc
 
+async def reset_listing_first_page(page):
+    for pager in await page.locator('.paging').all():
+        if not await pager.is_visible():
+            continue
+        active = pager.locator('.item.active')
+        if await active.count() != 1:
+            continue
+        raw = (await active.inner_text()).strip()
+        if not raw.isdigit() or int(raw) <= 1:
+            continue
+        first = pager.locator('.item').filter(has_text=re.compile(r'^\s*1\s*$'))
+        if await first.count() != 1:
+            raise ListingStateError('无法确认列表第一页按钮')
+        await first.click(timeout=4000)
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            active = pager.locator('.item.active')
+            if await active.count() == 1 and (await active.inner_text()).strip() == '1':
+                await page.wait_for_timeout(600)
+                return
+            await asyncio.sleep(0.15)
+        raise ListingStateError('返回列表第一页失败')
+
+
 async def visible_categories(page):
     async def read():
         names = []
@@ -510,6 +534,7 @@ async def restore_listing(page, list_url, name, round_no, signature):
         if list_signature(await wait_paper_items(page)) == signature:
             return
         await click_filter(page, name)
+        await reset_listing_first_page(page)
         await wait_paper_items(page)
         for _ in range(round_no):
             if not await click_next(page, NEXT_LIST):

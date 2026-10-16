@@ -1,0 +1,21 @@
+{
+  "version": "2.5-candidate",
+  "new_targeted_tests": 21,
+  "targeted_tests": {
+    "passed": 21,
+    "full_length_batch_positions": 1350,
+    "resume_no_reopen": "passed"
+  },
+  "full_regressions": {
+    "passed": 66
+  },
+  "windows_build": "passed_66_tests_packaging_and_executable_smoke",
+  "live_list_selection": "2021-2025 Jiangsu A/B ten-paper selection verified",
+  "real_windows_ten_papers": "not_run",
+  "current_website_import": "not_run",
+  "standalone_unattended_design": "Selected jobs: bounded retries, checkpoint resume, continue after failed paper; auth requires owner.",
+  "startup_help": "passed",
+  "startup_browser_smoke": "passed",
+  "windows_run_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38860127376",
+  "tested_commit": "3a61be925fba54d7ba000947338a25c5c98a5195"
+}

@@ -1,6 +1,7 @@
 name: Build Windows candidate
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches: [main]
 permissions:
@@ -73,7 +74,7 @@ jobs:
                   sys.exit(result.returncode)
       - uses: actions/upload-artifact@v4
         with:
-          name: FenbiCollector-Windows-v2.3
+          name: FenbiCollector-Windows-v2.5-candidate
           path: dist/FenbiCollector/
           retention-days: 14
           if-no-files-found: error

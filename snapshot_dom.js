@@ -1,5 +1,9 @@
 () => {
- const visible=e=>!!e.getClientRects().length && getComputedStyle(e).visibility!=='hidden';
+ const visible=e=>{
+   if(e.closest('[hidden]') || getComputedStyle(e).visibility==='hidden') return false;
+   const range=document.createRange(); range.selectNodeContents(e);
+   return !!(e.getClientRects().length || range.getClientRects().length);
+ };
  const materialNodes=scope=>[...scope.querySelectorAll('.materials-container .material-content,app-materials .material-content')]
    .filter(e=>!e.parentElement.closest('.material-content'));
  let roots=[...document.querySelectorAll('app-ti')].filter(visible);
@@ -25,20 +29,39 @@
      const ms=materialNodes(document).filter(visible);
      if(ms.length===1) material=ms[0];
    }
+   let chapter='';
+   const group=e.closest('.ti');
+   for(let node=group?.previousElementSibling;node;node=node.previousElementSibling) {
+     if(node.matches('.chapter-container')) {
+       chapter=node.querySelector('.chapter-name')?.innerText||'';
+       break;
+     }
+   }
    const subject=e.getAttribute('data-subject')||e.closest('[data-subject]')?.getAttribute('data-subject')||
-     e.closest('app-tis')?.querySelector('.title-type-name,.chapter-name')?.innerText||'';
+     chapter.replace(/[（(]\s*\d+\s*题[）)]\s*$/, '');
    const raw=e.getAttribute('data-question-no')||card?.no||'';
    return {html:e.outerHTML,order:/^\d+$/.test(raw.trim())?Number(raw):null,subject:subject.trim(),material:material?.outerHTML||''};
  });
- const counts=[];
- for(const e of [...document.querySelectorAll('[data-question-count],.question-count,.total-count,.paper-summary')].filter(visible)) {
+ const counts=[], countEvidence=[];
+ const evidence=(e,n,kind)=>{
+   if(!Number.isInteger(n)||n<1||n>1000) return;
+   counts.push(n);
+   countEvidence.push({count:n,kind,text:(e.innerText||'').trim(),node:e.tagName.toLowerCase(),
+      id:e.id||null,class:e.getAttribute('class')||null,attribute:e.getAttribute('data-question-count')});
+ };
+ for(const e of [...document.querySelectorAll('[data-question-count],.question-count,.total-count,.paper-summary,.answer-card,.answer-card *,.answer-card-content .tag-sub,.report-keypoints-content-title-right-section')].filter(visible)) {
    const n=e.getAttribute('data-question-count');
-   if(n && /^\d+$/.test(n)) counts.push(Number(n));
-   for(const m of e.innerText.matchAll(/(?:共|总计|总题数[：:\s]*)\s*(\d+)\s*题/g)) counts.push(Number(m[1]));
+   if(n && /^\d+$/.test(n)) evidence(e,Number(n),'data-question-count');
+   const text=(e.innerText||'').trim();
+   for(const m of text.matchAll(/(?:共计|共|总计|总题数[：:\s]*)\s*(\d+)\s*题/g)) evidence(e,Number(m[1]),'explicit-total');
+   if(e.matches('.answer-card,.answer-card *,.answer-card-content .tag-sub')) {
+     const m=text.match(/^(?:已答(?:题数)?[：:\s]*)?(\d+)\s*[\/／]\s*(\d+)\s*(?:题)?$/);
+     if(m && Number(m[1])<=Number(m[2])) evidence(e,Number(m[2]),'answer-card-progress');
+   }
  }
- const titles=[...document.querySelectorAll('.paper-title,.exam-title,.solution-title-container .paper-name,h1')]
+ const titles=[...document.querySelectorAll('.paper-title,.exam-title,.solution-title-container .paper-name,.header-title,h1')]
    .filter(visible).map(e=>e.innerText.trim()).filter(Boolean);
  const allMaterials=materialNodes(document).filter(visible);
- return {rows,counts:[...new Set(counts)],title:titles[0]||'',
+ return {rows,counts:[...new Set(counts)],countEvidence,title:titles[0]||'',
    unresolvedMaterials:allMaterials.some(e=>!rows.some(r=>r.material===e.outerHTML))};
 }

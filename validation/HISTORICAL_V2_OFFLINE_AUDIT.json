@@ -1,0 +1,32 @@
+[
+  {
+    "file": "2026国考地市级_130题_V2.json",
+    "questions": 130,
+    "declared": 130,
+    "unique_ids": 130,
+    "contiguous_orders": true,
+    "card_nodes": 130,
+    "card_ids_match": true,
+    "material_references_valid": true,
+    "embedded_images_verified": 173,
+    "embedded_images_invalid": 0,
+    "remote_images_not_checked": 0,
+    "missing_answers": 0,
+    "missing_explanations": 0
+  },
+  {
+    "file": "2026国考行政执法_130题_V2.json",
+    "questions": 130,
+    "declared": 130,
+    "unique_ids": 130,
+    "contiguous_orders": true,
+    "card_nodes": 130,
+    "card_ids_match": true,
+    "material_references_valid": true,
+    "embedded_images_verified": 174,
+    "embedded_images_invalid": 0,
+    "remote_images_not_checked": 0,
+    "missing_answers": 0,
+    "missing_explanations": 0
+  }
+]

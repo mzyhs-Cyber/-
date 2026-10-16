@@ -96,7 +96,7 @@ class CoreTests(unittest.TestCase):
 class SaveTests(unittest.IsolatedAsyncioTestCase):
     async def test_diagnostics_exist_even_if_first_page_check_fails(self):
         with TemporaryDirectory() as td:
-            page=SimpleNamespace(url='https://www.fenbi.com/solution/test',locator=lambda s: SimpleNamespace(first=SimpleNamespace(wait_for=AsyncMock(side_effect=RuntimeError('synthetic page check failed')))))
+            page=SimpleNamespace(url='https://www.fenbi.com/solution/test',evaluate=AsyncMock(side_effect=RuntimeError('synthetic page check failed')))
             args=SimpleNamespace(output=Path(td))
             with self.assertRaisesRegex(RuntimeError,'synthetic page check failed'):
                 await crawl_current_page(None,page,args,{})

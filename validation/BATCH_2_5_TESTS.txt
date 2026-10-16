@@ -1,0 +1,196 @@
+test_account_recovery_reopens_original_target_without_consuming_retry (test_batch_runner.BatchTests.test_account_recovery_reopens_original_target_without_consuming_retry) ... [步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+ok
+test_bad_paper_exhausts_retries_and_remaining_nine_finish (test_batch_runner.BatchTests.test_bad_paper_exhausts_retries_and_remaining_nine_finish) ... [步骤1] 正在检查试卷和解析页……
+[自动恢复] 2026合成1A卷，下一次尝试将重新打开页面并读取当前图片地址。
+[步骤1] 正在检查试卷和解析页……
+[任务] 2026合成1A卷：failed
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成2B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成3A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成4B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成5A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成6B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成7A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成8B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成9A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成10B卷：success
+ok
+test_cancelled_second_paper_resumes_without_repeating_first (test_batch_runner.BatchTests.test_cancelled_second_paper_resumes_without_repeating_first) ... [步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成2B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成3A卷：success
+ok
+test_failed_media_reopens_paper_and_uses_new_resource_urls (test_batch_runner.BatchTests.test_failed_media_reopens_paper_and_uses_new_resource_urls) ... [步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[自动恢复] 2026合成1A卷，下一次尝试将重新打开页面并读取当前图片地址。
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+ok
+test_login_requires_owner_and_preserves_remaining_job (test_batch_runner.BatchTests.test_login_requires_owner_and_preserves_remaining_job) ... [需本人操作] 请在程序浏览器中正常登录或完成验证；完成后自动继续，不会代填凭据或解验证码。
+ok
+test_media_overall_timeout_keeps_explicit_incomplete_manifest (test_batch_runner.BatchTests.test_media_overall_timeout_keeps_explicit_incomplete_manifest) ... [图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+ok
+test_media_request_retries_transient_error (test_batch_runner.BatchTests.test_media_request_retries_transient_error) ... [图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+ok
+test_pre_upgrade_success_is_revalidated_instead_of_discarded (test_batch_runner.BatchTests.test_pre_upgrade_success_is_revalidated_instead_of_discarded) ... [图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+ok
+test_real_layout_arrow_pager_does_not_click_past_last_page (test_batch_runner.BatchTests.test_real_layout_arrow_pager_does_not_click_past_last_page) ... ok
+test_retry_keeps_original_exercise_and_does_not_submit_again (test_batch_runner.BatchTests.test_retry_keeps_original_exercise_and_does_not_submit_again) ... [步骤1] 正在检查试卷和解析页……
+[自动恢复] 2026合成1A卷，下一次尝试将重新打开页面并读取当前图片地址。
+[步骤1] 正在检查试卷和解析页……
+[任务] 2026合成1A卷：failed
+ok
+test_submission_record_after_partial_line_survives_restart (test_batch_runner.BatchTests.test_submission_record_after_partial_line_survives_restart) ... ok
+test_tampered_media_receipt_is_reprocessed (test_batch_runner.BatchTests.test_tampered_media_receipt_is_reprocessed) ... [步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+ok
+test_ten_papers_without_input_and_resume_without_reopening (test_batch_runner.BatchTests.test_ten_papers_without_input_and_resume_without_reopening) ... [步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.469 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成2B卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.512 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成3A卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.476 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成4B卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.450 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成5A卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.532 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成6B卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.480 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成7A卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.447 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成8B卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.493 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成9A卷：success
+Executing <Task pending name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() running at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:55> wait_for=<Future pending cb=[Task.task_wakeup()] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:448> cb=[_run_until_complete_cb() at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py:181, ProtocolCallback.__init__.<locals>.cb() at /workspace/scratch/f7b7778aadf1/test-runtime/pylibs/playwright/_impl/_connection.py:266] created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.444 seconds
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 135 题；页面声明题数：135
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成10B卷：success
+Executing <Task finished name='Task-240' coro=<BatchTests.test_ten_papers_without_input_and_resume_without_reopening() done, defined at /workspace/scratch/f7b7778aadf1/collector/tests/test_batch_runner.py:51> result=None created at /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py:100> took 0.501 seconds
+ok
+test_ten_selected_same_tab_papers_keep_listing_state (test_batch_runner.BatchTests.test_ten_selected_same_tab_papers_keep_listing_state) ... [步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成1A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成2B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成3A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成4B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成5A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成6B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成7A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成8B卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成9A卷：success
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[任务] 2026合成10B卷：success
+ok
+test_title_mismatch_never_submits_wrong_paper (test_batch_runner.BatchTests.test_title_mismatch_never_submits_wrong_paper) ... ok
+test_unattended_unknown_submit_dialog_never_prompts (test_batch_runner.BatchTests.test_unattended_unknown_submit_dialog_never_prompts) ... ok
+test_ab_selection_uses_five_complete_year_pairs_and_ignores_c (test_batch_runner.JobValidationTests.test_ab_selection_uses_five_complete_year_pairs_and_ignores_c) ... ok
+test_attempted_submission_survives_restart_and_solution_url_alias (test_batch_runner.JobValidationTests.test_attempted_submission_survives_restart_and_solution_url_alias) ... ok
+test_job_lock_is_exclusive_and_released_after_failure (test_batch_runner.JobValidationTests.test_job_lock_is_exclusive_and_released_after_failure) ... ok
+test_plan_validates_all_targets_before_any_navigation (test_batch_runner.JobValidationTests.test_plan_validates_all_targets_before_any_navigation) ... ok
+test_ranges_and_aliases_keep_ab_separate (test_batch_runner.JobValidationTests.test_ranges_and_aliases_keep_ab_separate) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 36.238s
+
+OK

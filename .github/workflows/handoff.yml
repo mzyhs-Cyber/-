@@ -1,0 +1,25 @@
+name: Package AI handoff
+on:
+  workflow_dispatch:
+  create:
+jobs:
+  handoff:
+    if: github.event_name == 'workflow_dispatch' || (github.event.ref_type == 'tag' && startsWith(github.event.ref, 'handoff-'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Package tracked source and handoff, verify all hashes
+        run: python3 handoff/package_handoff.py --output handoff-output/Fenbi_AI_Handoff_20261016_code.zip
+      - name: Independently recheck delivered ZIP
+        run: python3 handoff/verify_package.py handoff-output/Fenbi_AI_Handoff_20261016_code.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fenbi-AI-Handoff-20261016
+          path: handoff-output/*
+          retention-days: 30
+          if-no-files-found: error

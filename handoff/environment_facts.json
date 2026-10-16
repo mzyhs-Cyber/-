@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-16",
+  "production_version": "2.3-candidate",
+  "production_code_commit": "7736507a372733e826ca45053085537bb6692337",
+  "handoff_start_commit": "e5eb93f383a41e72fbaf7b8afdfc8badc96b8ce0",
+  "python": "3.12.14",
+  "repo": "https://github.com/mzyhs-Cyber/-",
+  "known_workspace": "/workspace/-",
+  "current_venv": "/workspace/crawler_venv/bin/python",
+  "system_chromium": "/usr/bin/chromium",
+  "dependencies": {
+    "playwright": "1.62.0",
+    "beautifulsoup4": "4.15.0",
+    "openpyxl": "3.1.5",
+    "Pillow": "12.3.0",
+    "tzdata": "2026.4"
+  },
+  "linux_tests": {
+    "passed": 32,
+    "seconds": 82.237
+  },
+  "windows_build_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38844750219",
+  "live_daily_five_verified": false,
+  "new_A_B_screenshot_issues_fixed": false,
+  "browser_profile_included": false,
+  "credentials_included": false,
+  "user_windows_output_available_in_cloud": false,
+  "notes": [
+    "Historical source documents are background, not new user instructions",
+    "No new 2.4 code was written before handoff"
+  ]
+}

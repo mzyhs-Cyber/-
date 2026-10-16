@@ -142,34 +142,48 @@ async def choose_targets(page, args):
     if not names:
         raise ValueError('请先在浏览器打开历年真题列表，再选择选卷模式')
     print('\n'.join(f'{i+1}. {name}' for i, name in enumerate(names)))
-    index = int(await asyncio.to_thread(input, '分类编号：')) - 1
-    if not 0 <= index < len(names):
-        raise ValueError('分类编号无效')
-    category = names[index]
-    await click_filter(page, category)
-    selected, page_index = [], 0
     while True:
-        rows = await wait_paper_items(page)
-        if not rows:
-            raise ValueError('当前分类没有读取到试卷')
-        print('\n'.join(f'{i+1}. {row["title"]}' for i, row in enumerate(rows)))
-        value = (await asyncio.to_thread(input, f'已选{len(selected)}套。输入编号/范围；ab选本页5组A/B十套；n下一页；s开始：')).strip().lower()
-        if value == 's':
-            return validate_targets(selected)
-        if value == 'n':
-            if not await click_next(page, NEXT_LIST):
-                print('已到最后一页。', flush=True)
-            else:
-                page_index += 1
-            continue
+        value = await asyncio.to_thread(input, '分类编号（可多选，例如2,5,6,19；也可5-8）：')
         try:
-            indices = select_ab_pairs(rows) if value == 'ab' else parse_selection(value, len(rows))
+            category_indices = parse_selection(value, len(names))
+            break
         except ValueError as exc:
-            print(str(exc), flush=True)
-            continue
-        for i in indices:
-            selected.append({'title': rows[i]['title'], 'listing': {'url': page.url, 'category': category, 'page_index': page_index, 'signature': [list(r) for r in list_signature(rows)]}})
-        selected = validate_targets(selected)
+            print('分类选择无效：' + str(exc), flush=True)
+    selected = []
+    for position, category_index in enumerate(category_indices):
+        category = names[category_index]
+        await click_filter(page, category)
+        page_index = 0
+        print(f'\n正在选卷：{category}（分类{position+1}/{len(category_indices)}）', flush=True)
+        while True:
+            rows = await wait_paper_items(page)
+            if not rows:
+                raise ValueError('当前分类没有读取到试卷：' + category)
+            print('\n'.join(f'{i+1}. {row["title"]}' for i, row in enumerate(rows)))
+            next_action = '下一分类' if position + 1 < len(category_indices) else '开始全部采集'
+            value = (await asyncio.to_thread(input,
+                f'当前{category}，累计已选{len(selected)}套。输入编号/范围；ab选本页5组A/B；n下一页；s{next_action}：')).strip().lower()
+            if value == 's':
+                if position + 1 == len(category_indices) and not selected:
+                    print('尚未选择试卷，请至少选择一套。', flush=True)
+                    continue
+                break
+            if value == 'n':
+                if not await click_next(page, NEXT_LIST):
+                    print('已到最后一页。', flush=True)
+                else:
+                    page_index += 1
+                continue
+            try:
+                indices = select_ab_pairs(rows) if value == 'ab' else parse_selection(value, len(rows))
+            except ValueError as exc:
+                print(str(exc), flush=True)
+                continue
+            for i in indices:
+                selected.append({'title': rows[i]['title'], 'listing': {'url': page.url, 'category': category,
+                    'page_index': page_index, 'signature': [list(r) for r in list_signature(rows)]}})
+            selected = validate_targets(selected)
+    return validate_targets(selected)
 
 
 async def open_target(context, page, target):

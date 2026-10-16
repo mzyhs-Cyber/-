@@ -11,7 +11,7 @@ from unittest.mock import patch
 from PIL import Image
 from playwright.async_api import async_playwright
 
-async def batch_smoke_test():
+async def batch_smoke_test(automatic_decade=False):
     from batch_runner import choose_targets, run_batch
     from fenbi_crawler_v2 import valid_receipt
     pixels=io.BytesIO();Image.new('RGB',(2,2),'white').save(pixels,format='PNG')
@@ -19,13 +19,18 @@ async def batch_smoke_test():
     names=['国考','安徽','北京','江苏'];visits=[]
     listing=''.join(f'<span class="categories-item" onclick="sessionStorage.cat={i};draw()">{name}</span>' for i,name in enumerate(names))
     listing+='<main></main><script>const names='+json.dumps(names)+';function draw(){let c=Number(sessionStorage.cat||0);document.querySelector("main").innerHTML=[1,2].map(n=>`<div class="paper-item"><a class="item-info-title" href="/exam/solution/${c}-${n}">${names[c]}原创验收卷${n}</a></div>`).join("")}draw()</script>'
+    if automatic_decade:
+        listing = ''.join(f'<span class="categories-item" onclick="sessionStorage.cat={i};sessionStorage.pg=0;draw()">{name}</span>' for i,name in enumerate(names))
+        listing += '<main></main><div class="paging"></div><script>const names='+json.dumps(names)+r''' ;const years=[[2027,2026],[2017],[2016,0]];function draw(){let c=Number(sessionStorage.cat||0),p=Number(sessionStorage.pg||0);document.querySelector("main").innerHTML=years[p].map(y=>`<div class="paper-item"><a class="item-info-title" href="/exam/solution/${c}-${y}">${y?y+"年":"未标年份"}${names[c]}原创验收卷</a></div>`).join("");document.querySelector(".paging").innerHTML=[0,1,2].map(n=>`<div class="item ${n===p?"active":""}" onclick="sessionStorage.pg=${n};draw()">${n+1}</div>`).join("")+(p<2?'<button class="pagination-next" onclick="sessionStorage.pg=Number(sessionStorage.pg||0)+1;draw()">下一页</button>':'')}draw()</script>'''
+    def title_for(c,n):
+        return f'{n}年{names[c]}原创验收卷' if automatic_decade else f'{names[c]}原创验收卷{n}'
     async def route(r):
         url=r.request.url
         if url.endswith('/list'):body=listing
         else:
             key=url.rsplit('/',1)[-1];visits.append(key);c,n=map(int,key.split('-'))
             options=''.join(f'<li><label class="choice-radio-label"><p class="input-text">原创选项{x}</p></label></li>' for x in 'ABCD')
-            body=f'''<h1>{names[c]}原创验收卷{n}</h1><div class="paper-summary">共1题</div>
+            body=f'''<h1>{title_for(c,n)}</h1><div class="paper-summary">共1题</div>
             <div class="question-group"><app-materials><div class="materials-container"><div class="material-content"><p>原创公共材料<img src="{pixel}"></p></div></div></app-materials>
             <app-ti data-question-no="1" data-subject="判断推理"><app-question-choice><div class="question-choice-container"><app-format-html><p>原创验收题{key}<img src="{pixel}"></p></app-format-html><app-choice-radio><ul>{options}</ul></app-choice-radio></div></app-question-choice>
             <app-solution-overall><span class="correct-answer">B</span><span class="correct-rate">60%</span></app-solution-overall>
@@ -38,8 +43,12 @@ async def batch_smoke_test():
         try:
             context=await browser.new_context();await context.route('https://www.fenbi.com/**',route)
             page=await context.new_page();await page.goto('https://www.fenbi.com/list')
-            with patch('builtins.input',side_effect=['1,2,3,4']+['1-2','s']*4):plan=await choose_targets(page,None)
+            with patch('builtins.input',side_effect=(['1,2,3,4',''] if automatic_decade else ['1,2,3,4','m']+['1-2','s']*4)),patch('fenbi_crawler_v2.now',return_value='2026-10-16T00:00:00+08:00'):
+                plan=await choose_targets(page,None)
             if len(plan)!=8 or [t['listing']['category'] for t in plan]!=[c for c in names for _ in range(2)]:raise RuntimeError('Multi-category selection mismatch')
+            if automatic_decade:
+                if any(not (t['title'].startswith('2017年') or t['title'].startswith('2026年')) for t in plan):raise RuntimeError('Year boundary selection failed')
+                if [t['listing']['page_index'] for t in plan]!=[0,1]*4:raise RuntimeError('Saved page index mismatch')
             with TemporaryDirectory() as td,patch('builtins.input',side_effect=AssertionError('Unexpected midrun input')):
                 args=SimpleNamespace(output=Path(td),daily_target=8,max_rounds=3,download_images=True,auto_submit=False,headless=True,paper_retries=0,paper_timeout=30,auth_wait=1)
                 job=await run_batch(context,page,args,{},plan)
@@ -53,5 +62,5 @@ async def batch_smoke_test():
                     if not media or any(m['status']!='verified' or not (folder/m['local_path']).is_file() for m in media):raise RuntimeError('Packaged media missing')
                 before=list(visits);resumed=await run_batch(context,page,args,{},None)
                 if not resumed['target_met'] or before!=visits:raise RuntimeError('Resume reopened completed papers')
-            print('Packaged multi-category batch smoke test passed: 4 categories, 8 papers, exported content/materials/images and no-reopen resume.',flush=True)
+            print(('Packaged ten-year selection smoke test passed: 2017/2026 included, 2016/2027 excluded, 4 categories x 3 pages, 8 papers exported with images and no-reopen resume.' if automatic_decade else 'Packaged multi-category batch smoke test passed: 4 categories, 8 papers, exported content/materials/images and no-reopen resume.'),flush=True)
         finally:await browser.close()

@@ -46,10 +46,14 @@ async def smoke_test():
 def main():
     configure_console()
     app_dir = configure_paths()
-    automatic = any(arg in sys.argv for arg in ('--smoke-test', '--batch-smoke-test', '--help', '-h'))
+    automatic = any(arg in sys.argv for arg in ('--smoke-test', '--batch-smoke-test', '--decade-smoke-test', '--help', '-h'))
     exit_code = 1
     try:
-        if '--batch-smoke-test' in sys.argv:
+        if '--decade-smoke-test' in sys.argv:
+            from batch_smoke import batch_smoke_test
+            asyncio.run(batch_smoke_test(automatic_decade=True))
+            exit_code = 0
+        elif '--batch-smoke-test' in sys.argv:
             from batch_smoke import batch_smoke_test
             asyncio.run(batch_smoke_test())
             exit_code = 0

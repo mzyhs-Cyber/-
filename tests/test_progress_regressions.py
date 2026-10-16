@@ -87,3 +87,27 @@ class ProgressRegressions(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(RuntimeError):
                     await ensure_solution(self.page, SimpleNamespace(output=Path(td), auto_submit=True, headless=True), {})
             self.assertIsNone(await self.page.evaluate('window.clicked'))
+
+    async def test_live_layout_report_total_title_and_chapter_boundaries(self):
+        q1=fixtures.question().replace(' data-subject="判断推理"','')
+        q2=fixtures.question('q2',2).replace(' data-subject="判断推理"','')
+        await self.page.set_content('<div class="header-title">合成真实布局A卷</div><div class="report-keypoints-content-title-right-section">共计<div>2题</div></div><app-tis><div class="tis-container"><div class="chapter-container"><div class="chapter-name">常识判断<div>（1题）</div></div></div><div class="ti">'+q1+'</div><div class="chapter-container"><div class="chapter-name">资料分析<div>（1题）</div></div></div><div class="ti">'+q2+'</div></div></app-tis>')
+        d=await extract_exam_data(self.page,max_rounds=2)
+        self.assertEqual(d['paper_title'],'合成真实布局A卷')
+        self.assertEqual(d['expected_count'],2)
+        self.assertEqual([q['question_type'] for q in d['questions']],['常识判断','资料分析'])
+        self.assertTrue(validate_exam(d)['ok'])
+
+    async def test_live_answer_card_progress_is_scoped(self):
+        from fenbi_crawler_v2 import SNAPSHOT_JS
+        await self.page.set_content('<div class="tag-sub">0/999</div><div class="answer-card-content"><div class="tag-sub"><span>0</span> /135</div></div>')
+        s=await self.page.evaluate(SNAPSHOT_JS)
+        self.assertEqual(s['counts'],[135])
+
+    async def test_outer_ti_content_does_not_contaminate_stem(self):
+        from bank_core import parse_question
+        from bs4 import BeautifulSoup
+        html='<app-ti><div class="ti-content"><svg><path/></svg>'+fixtures.question()+'</div></app-ti>'
+        q=parse_question(html,'https://example.test')
+        self.assertEqual(BeautifulSoup(q['stem_html'],'html.parser').get_text(strip=True),'合成测试题')
+        self.assertNotIn('inline_svg_math_requires_site_compatible_conversion',q['errors'])

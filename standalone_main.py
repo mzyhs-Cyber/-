@@ -7,6 +7,12 @@ import sys
 import traceback
 
 
+def configure_console():
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='backslashreplace')
+
+
 def configure_paths():
     frozen = getattr(sys, 'frozen', False)
     app_dir = Path(sys.executable).resolve().parent if frozen else Path(__file__).resolve().parent
@@ -18,6 +24,9 @@ def configure_paths():
 
 
 async def smoke_test():
+    from fenbi_crawler_v2 import now
+    if not now().endswith('+08:00'):
+        raise RuntimeError('Shanghai timezone check failed')
     from playwright.async_api import async_playwright
     async with async_playwright() as p:
         launch = {'headless': True}
@@ -35,6 +44,7 @@ async def smoke_test():
 
 
 def main():
+    configure_console()
     app_dir = configure_paths()
     automatic = any(arg in sys.argv for arg in ('--smoke-test', '--help', '-h'))
     exit_code = 1

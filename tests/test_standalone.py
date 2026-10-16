@@ -22,8 +22,17 @@ class StandaloneTests(unittest.TestCase):
     def test_startup_error_is_saved_without_interactive_console(self):
         with TemporaryDirectory() as td:
             root=Path(td)
-            with patch.object(app,'configure_paths',return_value=root), patch.object(app.sys,'argv',['FenbiCollector']), patch.object(app.sys,'stdin',SimpleNamespace(isatty=lambda:False)), patch('fenbi_crawler_v2.main',new=AsyncMock(side_effect=RuntimeError('synthetic startup failure'))), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            stdout_bytes, stderr_bytes = io.BytesIO(), io.BytesIO()
+            stdout = io.TextIOWrapper(stdout_bytes, encoding='cp1252')
+            stderr = io.TextIOWrapper(stderr_bytes, encoding='cp1252')
+            with patch.object(app,'configure_paths',return_value=root), patch.object(app.sys,'argv',['FenbiCollector']), patch.object(app.sys,'stdin',SimpleNamespace(isatty=lambda:False)), patch('fenbi_crawler_v2.main',new=AsyncMock(side_effect=RuntimeError('synthetic startup failure'))), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 self.assertEqual(app.main(),1)
+            stdout.flush()
+            stderr.flush()
+            self.assertIn('发生错误', stdout_bytes.getvalue().decode('utf-8'))
+            self.assertIn('synthetic startup failure', stderr_bytes.getvalue().decode('utf-8'))
+            stdout.close()
+            stderr.close()
             report=json.loads((root/'fenbi_output'/'last_error.json').read_text())
             self.assertEqual(report['status'],'failed')
             self.assertIn('synthetic startup failure',report['traceback'])

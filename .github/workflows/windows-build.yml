@@ -46,7 +46,7 @@ jobs:
           import sys
           result = subprocess.run([
               sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--console',
-              '--name', 'FenbiCollector', '--collect-all', 'playwright',
+              '--name', 'FenbiCollector', '--collect-all', 'playwright', '--collect-all', 'tzdata',
               '--add-data', 'browser_cache:browser_cache',
               '--add-data', 'snapshot_dom.js:.', '--add-data', 'next_control.js:.',
               'standalone_main.py'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

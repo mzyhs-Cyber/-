@@ -19,9 +19,9 @@
 
 `.github/workflows/windows-build.yml` 在推送到 main 或手动触发时执行 Windows 构建：在 Windows 上运行合成页面测试，然后打包程序及 Chromium，并检查打包浏览器能否启动。
 
-2.3 构建正在准备中。下方链接和 `WINDOWS_BUILD_CHECK.json` 目前记录的是旧版 2.2，不能用来证明 2.3 已通过 Windows 验证。
+2026-10-16 已在 GitHub Windows runner 上完成 2.3 构建：32 项测试、打包后帮助命令、上海时区数据及内置 Chromium 启动检查均通过。该结果不代表真实粉笔账号已经完成五卷采集。
 
-新构建的工件名称为 `FenbiCollector-Windows-v2.3`。构建通过后，在 GitHub Actions 页面底部 Artifacts 下载并全部解压，双击 `FenbiCollector.exe`，无需另装 Python。须保留同一目录中的 `_internal` 文件夹。工件保留 14 天；过期后可重新运行构建。
+[打开 2.3 下载页面](https://github.com/mzyhs-Cyber/-/actions/runs/38844750219#artifacts)，登录 GitHub 后，在页面底部 Artifacts 下载 `FenbiCollector-Windows-v2.3`（约 381 MB）。全部解压到新文件夹，双击 `FenbiCollector.exe`，首行应显示 `2.3-candidate`，无需另装 Python。须保留同一目录中的 `_internal` 文件夹。工件保留 14 天；过期后可重新运行构建。构建记录见 `WINDOWS_BUILD_CHECK.json`。
 
 应用仍需使用电脑网络，在其打开的浏览器中正常登录粉笔；账号登录不会由聊天会话自动提供。真实网页、图片与导入行为仍需验收。
 

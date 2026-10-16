@@ -1,75 +1,83 @@
 {
-  "source_commit": "435517f5f22c5f0050f908870b9541248d84606b",
-  "run_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38842205857",
+  "version": "2.3-candidate",
+  "source_commit": "7736507a372733e826ca45053085537bb6692337",
+  "run_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38844750219",
   "runner": "windows-latest",
   "status": "success",
-  "synthetic_test_count": 27,
+  "synthetic_test_count": 32,
+  "regressions_verified": [
+    "session-scoped categories",
+    "same-tab navigation with three listing pages and five complete synthetic papers",
+    "popup with retained listing",
+    "single shared listing failure stops batch and saves diagnostics",
+    "failed restoration retains saved complete paper"
+  ],
   "packaged_checks": [
     "help",
     "Asia/Shanghai timezone",
     "bundled Chromium launch"
   ],
   "artifact": {
-    "name": "FenbiCollector-Windows-candidate",
+    "name": "FenbiCollector-Windows-v2.3",
     "displayed_size": "381 MB",
-    "sha256": "f2d77f05097f69911671b90c2e341680db3d5994bbd72ecea71e7a875e500ff3",
+    "sha256": "fdfc77072563f4da68b68a5c5ed4bb49fbb9667fec136b86a7367aba3d3a6811",
     "retention_days": 14
   },
   "steps": [
     {
       "name": "Set up job",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:47:16Z"
+      "completed_at": "2026-10-16T03:17:16Z"
     },
     {
       "name": "Run actions/checkout@v4",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:47:22Z"
+      "completed_at": "2026-10-16T03:17:21Z"
     },
     {
       "name": "Run actions/setup-python@v5",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:47:22Z"
+      "completed_at": "2026-10-16T03:17:21Z"
     },
     {
       "name": "Install dependencies",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:48:01Z"
+      "completed_at": "2026-10-16T03:18:03Z"
     },
     {
       "name": "Test synthetic collection workflows",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:48:55Z"
+      "completed_at": "2026-10-16T03:19:29Z"
     },
     {
       "name": "Build application with browser",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:49:13Z"
+      "completed_at": "2026-10-16T03:19:48Z"
     },
     {
       "name": "Verify packaged browser and startup",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:49:14Z"
+      "completed_at": "2026-10-16T03:19:50Z"
     },
     {
       "name": "Run actions/upload-artifact@v4",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:49:47Z"
+      "completed_at": "2026-10-16T03:20:24Z"
     },
     {
       "name": "Post Run actions/setup-python@v5",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:49:47Z"
+      "completed_at": "2026-10-16T03:20:24Z"
     },
     {
       "name": "Post Run actions/checkout@v4",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:49:49Z"
+      "completed_at": "2026-10-16T03:20:26Z"
     },
     {
       "name": "Complete job",
       "conclusion": "success",
-      "completed_at": "2026-10-16T02:49:50Z"
+      "completed_at": "2026-10-16T03:20:27Z"
     }
   ],
   "real_account_collection_verified": false,

@@ -4,7 +4,7 @@ import json
 import re
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
-VERSION = '2.3-candidate'
+VERSION = '2.6-candidate'
 
 def text(html):
     return BeautifulSoup(html or '', 'html.parser').get_text(' ', strip=True)
@@ -50,9 +50,15 @@ def parse_question(html, base_url, order=None, subject='', material_html=''):
             raw = node.get('data-question-no') or node.get_text(' ', strip=True)
             m = re.fullmatch('\\s*(?:第\\s*)?(\\d{1,3})\\s*(?:题|[.、．])?\\s*', raw)
             order = int(m[1]) if m else None
-    stem = s.select_one("app-question-choice > .question-choice-container > app-format-html, app-question-choice article, .ti-content, [data-role='stem']")
-    if not stem:
-        stem = s.select_one('app-question-choice app-format-html')
+    # Selector priority is semantic; a selector union uses document order and
+    # can select the .ti-content wrapper containing answers, tools and icons.
+    stem = None
+    for selector in ("app-question-choice > .question-choice-container > app-format-html",
+                     "app-question-choice article", "app-question-choice app-format-html",
+                     "[data-role='stem']", ".ti-content"):
+        stem = s.select_one(selector)
+        if stem is not None:
+            break
     stem_html = rich(stem, base_url)
     labels = []
     for selector in ('app-choice-radio ul > li > label', 'app-choice-checkbox ul > li > label', '.choice-radio-label', '.choice-checkbox-label', "[data-role='option']"):

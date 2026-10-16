@@ -1,0 +1,164 @@
+{
+  "method": "Read-only snapshot_dom.js in authorized cloud browser, then local bank_core parser/V2 conversion. Not standalone EXE navigation acceptance.",
+  "papers": [
+    {
+      "paper": "2023_A",
+      "name": "2023年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+      "page_total": 135,
+      "questions": 135,
+      "structure_ok": true,
+      "material_groups": 7,
+      "material_questions": 29,
+      "rates": 135,
+      "subjects": {
+        "常识判断": 15,
+        "言语理解与表达": 30,
+        "数量关系": 20,
+        "判断推理": 50,
+        "资料分析": 20
+      },
+      "media_references": 250,
+      "bad_media_references": 0,
+      "bad_media_unique": 0,
+      "bad_media_questions": [],
+      "online_dom_check_passed": true,
+      "standalone_collector_acceptance": false,
+      "website_import_acceptance": false
+    },
+    {
+      "paper": "2023_B",
+      "name": "2023年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+      "page_total": 135,
+      "questions": 135,
+      "structure_ok": true,
+      "material_groups": 7,
+      "material_questions": 29,
+      "rates": 135,
+      "subjects": {
+        "常识判断": 20,
+        "言语理解与表达": 25,
+        "数量关系": 20,
+        "判断推理": 50,
+        "资料分析": 20
+      },
+      "media_references": 273,
+      "bad_media_references": 0,
+      "bad_media_unique": 0,
+      "bad_media_questions": [],
+      "online_dom_check_passed": true,
+      "standalone_collector_acceptance": false,
+      "website_import_acceptance": false
+    },
+    {
+      "paper": "2024_A",
+      "name": "2024年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+      "page_total": 135,
+      "questions": 135,
+      "structure_ok": true,
+      "material_groups": 7,
+      "material_questions": 29,
+      "rates": 135,
+      "subjects": {
+        "常识判断": 15,
+        "言语理解与表达": 30,
+        "数量关系": 20,
+        "判断推理": 50,
+        "资料分析": 20
+      },
+      "media_references": 306,
+      "bad_media_references": 0,
+      "bad_media_unique": 0,
+      "bad_media_questions": [],
+      "online_dom_check_passed": true,
+      "standalone_collector_acceptance": false,
+      "website_import_acceptance": false
+    },
+    {
+      "paper": "2024_B",
+      "name": "2024年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+      "page_total": 135,
+      "questions": 135,
+      "structure_ok": true,
+      "material_groups": 7,
+      "material_questions": 29,
+      "rates": 135,
+      "subjects": {
+        "常识判断": 20,
+        "言语理解与表达": 25,
+        "数量关系": 20,
+        "判断推理": 50,
+        "资料分析": 20
+      },
+      "media_references": 237,
+      "bad_media_references": 0,
+      "bad_media_unique": 0,
+      "bad_media_questions": [],
+      "online_dom_check_passed": true,
+      "standalone_collector_acceptance": false,
+      "website_import_acceptance": false
+    },
+    {
+      "paper": "2025_B",
+      "name": "2025年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+      "page_total": 135,
+      "questions": 135,
+      "structure_ok": true,
+      "material_groups": 6,
+      "material_questions": 27,
+      "rates": 135,
+      "subjects": {
+        "政治理论": 10,
+        "常识判断": 10,
+        "言语理解与表达": 30,
+        "数量关系": 20,
+        "判断推理": 45,
+        "资料分析": 20
+      },
+      "media_references": 294,
+      "bad_media_references": 0,
+      "bad_media_unique": 0,
+      "bad_media_questions": [],
+      "online_dom_check_passed": true,
+      "standalone_collector_acceptance": false,
+      "website_import_acceptance": false
+    },
+    {
+      "paper": "2025_C",
+      "name": "2025年江苏省公务员录用考试《行测》题（C类）（网友回忆版）",
+      "page_total": 130,
+      "questions": 130,
+      "structure_ok": true,
+      "material_groups": 6,
+      "material_questions": 27,
+      "rates": 130,
+      "subjects": {
+        "政治理论": 10,
+        "常识判断": 10,
+        "言语理解与表达": 30,
+        "数量关系": 20,
+        "判断推理": 40,
+        "资料分析": 20
+      },
+      "media_references": 242,
+      "bad_media_references": 0,
+      "bad_media_unique": 0,
+      "bad_media_questions": [],
+      "online_dom_check_passed": true,
+      "standalone_collector_acceptance": false,
+      "website_import_acceptance": false
+    }
+  ],
+  "initial_transient_media_failure": {
+    "paper": "2023_A",
+    "unique_resources": 5,
+    "question_numbers": [
+      131,
+      132
+    ],
+    "normal_page_reopen_result": "all images loaded",
+    "cdn_note": "Normal reopening rotated CDN hostnames; a fresh DOM snapshot and matching fresh media observation were used together."
+  },
+  "synthetic_regressions": 45,
+  "standalone_collector_acceptance": false,
+  "website_import_acceptance": false
+}

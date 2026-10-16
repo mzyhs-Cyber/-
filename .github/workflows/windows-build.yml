@@ -1,6 +1,7 @@
 name: Build Windows candidate
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches: [main]
 permissions:
@@ -63,7 +64,7 @@ jobs:
           import subprocess
           import sys
           app = str(Path('dist/FenbiCollector/FenbiCollector.exe').resolve())
-          for flag in ['--help', '--smoke-test']:
+          for flag in ['--help', '--smoke-test', '--batch-smoke-test']:
               result = subprocess.run([app, flag], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                   text=True, encoding='utf-8', errors='replace', timeout=120)
               print(result.stdout, end='')
@@ -73,7 +74,7 @@ jobs:
                   sys.exit(result.returncode)
       - uses: actions/upload-artifact@v4
         with:
-          name: FenbiCollector-Windows-v2.3
+          name: FenbiCollector-Windows-v2.6-candidate
           path: dist/FenbiCollector/
           retention-days: 14
           if-no-files-found: error

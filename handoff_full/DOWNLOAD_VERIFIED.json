@@ -1,0 +1,20 @@
+{
+  "status": "verified",
+  "zip_file": "Fenbi_AI_Handoff_20261016_ALL.zip",
+  "bytes": 108189478,
+  "zip_sha256": "7ff166ba678805f259a348df15cbb686f773ad9f2b7230434336107a6e49ae7a",
+  "payload_files": 112,
+  "zip_entries": 113,
+  "source_commit": "b71cc52d514ec94098a593653dc46cae1fd5d5ba",
+  "kind": "public_full_handoff_authorized",
+  "all_file_hashes_match": true,
+  "zip_crc_ok": true,
+  "download_url": "https://github.com/mzyhs-Cyber/-/releases/download/full-handoff-20261016/Fenbi_AI_Handoff_20261016_ALL.zip",
+  "http_status": 200,
+  "content_type": "application/octet-stream",
+  "release_checksum_matches": true,
+  "all_110_original_payloads_match": true,
+  "part_assets_in_checksum_file": 5,
+  "release_url": "https://github.com/mzyhs-Cyber/-/releases/tag/full-handoff-20261016",
+  "publish_workflow_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38852684813"
+}

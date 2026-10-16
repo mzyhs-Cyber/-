@@ -1,0 +1,25 @@
+{
+  "source": "Authenticated normal Jiangsu real-test list via cloud browser",
+  "visible_papers": 15,
+  "categories_observed": 39,
+  "selected_papers": 10,
+  "selection": [
+    "2025年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+    "2025年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+    "2024年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+    "2024年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+    "2023年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+    "2023年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+    "2022年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+    "2022年江苏省公务员录用考试《行测》题（B类）（网友回忆版）",
+    "2021年江苏省公务员录用考试《行测》题（A类）（网友回忆版）",
+    "2021年江苏省公务员录用考试《行测》题（B类）（网友回忆版）"
+  ],
+  "pagination": {
+    "next_selector": ".question-list-pager .houpage",
+    "active_selector": ".paging .item.active",
+    "last_page_disabled_attribute": false,
+    "category_click_resets_page_one": true
+  },
+  "scope": "Live list reading and local selection rule only; standalone EXE ten-paper acceptance not performed."
+}

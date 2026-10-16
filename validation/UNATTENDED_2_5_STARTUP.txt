@@ -1,0 +1,39 @@
+--help
+采集程序 2.5-candidate：请保持此窗口打开。
+输出目录：/workspace/scratch/f7b7778aadf1/collector/fenbi_output
+usage: standalone_main.py [-h] [--output OUTPUT] [--profile PROFILE]
+                          [--browser {chromium,chrome}] [--headless]
+                          [--auto-submit | --no-auto-submit]
+                          [--download-images] [--daily-target DAILY_TARGET]
+                          [--max-rounds MAX_ROUNDS] [--plan PLAN] [--resume]
+                          [--paper-retries PAPER_RETRIES]
+                          [--paper-timeout PAPER_TIMEOUT]
+                          [--auth-wait AUTH_WAIT]
+                          [--expected-count EXPECTED_COUNT]
+
+粉笔正常页面采集、整卷核验、当前网站V2输出
+
+options:
+  -h, --help            show this help message and exit
+  --output OUTPUT
+  --profile PROFILE
+  --browser {chromium,chrome}
+  --headless            仅已有可用登录时使用；须同时给--plan
+  --auto-submit, --no-auto-submit
+                        默认开启；仅本人已授权练习卷；--no-auto-submit可关闭
+  --download-images     额外保存图片副本，不改写HTML原地址
+  --daily-target DAILY_TARGET
+  --max-rounds MAX_ROUNDS
+  --plan PLAN           JSON数组，每条含正常页面url/title；expected_count可选，未知时从页面核实
+  --resume              继续输出目录中保存的选卷任务
+  --paper-retries PAPER_RETRIES
+                        每卷失败后的额外尝试次数，默认2
+  --paper-timeout PAPER_TIMEOUT
+                        单次处理时限（秒）
+  --auth-wait AUTH_WAIT
+                        等待用户正常登录/验证的最长秒数
+  --expected-count EXPECTED_COUNT
+                        仅单卷模式，须核实后填写
+
+--smoke-test
+Browser smoke test passed.

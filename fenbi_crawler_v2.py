@@ -3,6 +3,8 @@ BROWSER_QUERY_SECONDS = 6
 PAGE_READY_SECONDS = 15
 NO_PROGRESS_ROUNDS = 8
 NO_PROGRESS_SECONDS = 6
+MEDIA_VERIFY_SECONDS = 120
+SUBMIT_CONFIRM_SECONDS = 8
 import argparse
 import asyncio
 import base64
@@ -10,6 +12,7 @@ import hashlib
 import io
 import json
 import logging
+import os
 import re
 import time
 import sys
@@ -21,11 +24,15 @@ from openpyxl import Workbook
 from PIL import Image
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 from bank_core import VERSION, json_write, media_manifest, parse_question, to_v2, validate_exam
+from batch_runner import submission_key, load_submission_events
 START_URL = 'https://www.fenbi.com/spa/tiku/guide/realTest/xingce/xingce'
 PAPER_ITEMS, FILTER_ITEMS = ('.paper-item', '.categories-item')
 NEXT_LIST = "button:has-text('下一页'), a:has-text('下一页'), .pagination-next, [aria-label='Next']"
 NEXT_QUESTION = "button:has-text('下一题'), a:has-text('下一题'), .next-question"
 LOG = logging.getLogger('fenbi')
+
+class UserActionRequired(RuntimeError):
+    """Authentication or verification needs the account owner; never solve automatically."""
 
 class ListingStateError(RuntimeError):
     """The listing cannot be trusted; do not repeat the failure for every paper."""
@@ -101,32 +108,46 @@ async def wait_page_ready(page):
     except (TimeoutError, PlaywrightTimeoutError):
         raise RuntimeError('页面等待超时：未确认可见解析或真实练习内容及唯一交卷入口，未点击提交。') from None
 
-async def ensure_solution(page, args, submitted):
+async def ensure_solution(page, args, submitted, expected_title=None):
     if await solution_visible(page):
         return None
     if await wait_page_ready(page) == 'solution':
         return None
+    if expected_title:
+        observed_titles = await page.evaluate("""() => [...document.querySelectorAll('.paper-title,.exam-title,.solution-title-container .paper-name,.header-title,h1')].filter(e=>e.getClientRects().length).map(e=>e.innerText.trim()).filter(Boolean)""")
+        if set(observed_titles) != {expected_title}:
+            raise RuntimeError('交卷前标题未与所选试卷唯一匹配，未提交。')
     if not args.auto_submit:
         raise RuntimeError('不是解析页，自动交卷已关闭。请正常打开解析页。')
-    key = page.url
+    key = submission_key(page.url)
     if key in submitted:
         raise RuntimeError('已尝试提交该页面，不重复交卷。')
     submit = page.locator('div.submit-btn:visible, button.submit-btn:visible')
     if await submit.count() != 1:
         raise RuntimeError('没有唯一可见的交卷按钮，未执行提交。')
-    event = {'time': now(), 'url': key, 'kind': 'placeholder_submission', 'status': 'attempted', 'purpose': '自动占位，仅用于取得解析', 'exclude_from_personal_statistics': True}
+    event = {'time': now(), 'url': page.url, 'submission_key': key, 'kind': 'placeholder_submission', 'status': 'attempted', 'purpose': '自动占位，仅用于取得解析', 'exclude_from_personal_statistics': True}
     submitted[key] = event
 
     def record(value):
-        with (args.output / 'submission_events.jsonl').open('a', encoding='utf-8') as f:
+        path = args.output / 'submission_events.jsonl'
+        needs_newline = False
+        if path.exists() and path.stat().st_size:
+            with path.open('rb') as prior:
+                prior.seek(-1, 2)
+                needs_newline = prior.read(1) != b'\n'
+        with path.open('a', encoding='utf-8') as f:
+            if needs_newline:
+                f.write('\n')
             f.write(json.dumps(value, ensure_ascii=False) + '\n')
+            f.flush()
+            os.fsync(f.fileno())  # Persist attempted status before a submit click.
     record(event)
     await submit.click()
     await page.wait_for_timeout(600)
     if not await solution_visible(page):
         dialogs = page.locator("[role='dialog']:visible, dialog:visible, [class*='dialog']:visible, [class*='modal']:visible, [class*='popup']:visible, app-exam-submit-dialog:visible").filter(has_text=re.compile('交卷|提交试卷|未作答|未答'))
         confirm = dialogs.locator("button:visible, [role='button']:visible, .btn-submit:visible, .confirm-btn:visible, .submit-btn:visible").filter(has_text=re.compile('^\\s*(确认交卷|确定交卷|提交试卷|确认提交|交卷|提交|确定|确认)\\s*$'))
-        deadline = time.monotonic() + 8
+        deadline = time.monotonic() + SUBMIT_CONFIRM_SECONDS
         while not await solution_visible(page) and await confirm.count() != 1 and time.monotonic() < deadline:
             await page.wait_for_timeout(150)
         if await solution_visible(page):
@@ -134,8 +155,8 @@ async def ensure_solution(page, args, submitted):
         elif await confirm.count() == 1:
             await confirm.click()
         else:
-            if getattr(args, 'headless', False):
-                raise RuntimeError('无法识别交卷确认窗口，请改用有界面模式。')
+            if getattr(args, 'headless', False) or getattr(args, 'unattended', False):
+                raise RuntimeError('交卷确认窗口无法唯一识别；本卷保留待补，自动模式不等待人工确认。')
             while not await solution_visible(page):
                 print('请在浏览器里手动完成交卷，看到标准答案和解析后再回来。', flush=True)
                 await asyncio.to_thread(input, '完成后按 Enter 继续采集：')
@@ -248,7 +269,7 @@ async def verify_media(context, v2, folder, download=False):
     print('[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。', flush=True)
     manifest, sem = (media_manifest(v2), asyncio.Semaphore(4))
 
-    async def check(src):
+    async def check_once(src):
         async with sem:
             result = {'checked_at': now(), 'status': 'unchecked'}
             try:
@@ -281,8 +302,24 @@ async def verify_media(context, v2, folder, download=False):
             except Exception as exc:
                 result.update(status='unverified', error=type(exc).__name__ + ': ' + str(exc)[:180])
             return result
+    async def check(src):
+        for attempt in range(3):
+            result = await check_once(src)
+            result['attempts'] = attempt + 1
+            if result['status'] == 'verified' or result.get('http_status') in (401, 403, 404):
+                return result
+            if attempt < 2:
+                await asyncio.sleep(0.3 * (attempt + 1))
+        return result
     sources = sorted(set((row['source'] for row in manifest)))
-    cache = dict(zip(sources, await asyncio.gather(*(check(src) for src in sources))))
+    cache = {}
+    async def capture(src):
+        cache[src] = await check(src)
+    try:
+        await asyncio.wait_for(asyncio.gather(*(capture(src) for src in sources)), timeout=MEDIA_VERIFY_SECONDS)
+    except TimeoutError:
+        for src in sources:
+            cache.setdefault(src, {'status': 'media_time_limit', 'checked_at': now()})
     return [{**row, **cache[row['source']]} for row in manifest]
 
 async def save_exam(context, data, args):
@@ -320,6 +357,7 @@ async def save_exam(context, data, args):
     result = {'status': status, 'title': data['paper_title'], 'path': str(folder.resolve()), 'questions': len(data['questions']), 'page_url': data['page_url'], 'completed_at': now(), 'version': VERSION, 'issues': audit['issues']}
     if status == 'success':
         result['sha256'] = sha(folder / 'paper_v2.json')
+        result['file_hashes'] = {n: sha(folder / n) for n in ('paper_v2.json', 'questions.json', 'audit.json', 'media_manifest.json')}
     json_write(folder / 'receipt.json', result)
     return result
 
@@ -330,11 +368,11 @@ async def crawl_current_page(context, page, args, submitted, expected=None, titl
     start = time.monotonic()
     if not allowed_page(page.url):
         raise ValueError('只支持正常访问的 fenbi.com HTTPS 页面。')
-    event = await ensure_solution(page, args, submitted)
+    event = await ensure_solution(page, args, submitted, title)
     run_status(args.output, 'collecting')
     data = await extract_exam_data(page, expected, title, args.max_rounds, progress_dir=args.output)
     run_status(args.output, 'saving_and_verifying', captured_questions=len(data['questions']))
-    data['submission'] = event or submitted.get(page.url)
+    data['submission'] = event or submitted.get(submission_key(page.url))
     data['elapsed_capture_seconds'] = round(time.monotonic() - start, 3)
     result = await save_exam(context, data, args)
     result['elapsed_total_seconds'] = round(time.monotonic() - start, 3)
@@ -359,6 +397,15 @@ async def paper_items(page):
         return await asyncio.wait_for(_read_paper_items(page), timeout=BROWSER_QUERY_SECONDS)
     except Exception as exc:
         raise ListingStateError('读取试卷列表失败：' + type(exc).__name__) from exc
+
+async def wait_paper_items(page, timeout=8):
+    deadline = time.monotonic() + timeout
+    while True:
+        rows = await paper_items(page)
+        if rows or time.monotonic() >= deadline:
+            return rows
+        await asyncio.sleep(0.15)
+
 
 def list_signature(rows):
     return tuple(((r['title'], r['href']) for r in rows))
@@ -460,13 +507,15 @@ async def restore_listing(page, list_url, name, round_no, signature):
                 await asyncio.sleep(0.2)
         if page.url != list_url:
             raise ListingStateError('无法返回原试卷列表。')
-        if list_signature(await paper_items(page)) == signature:
+        if list_signature(await wait_paper_items(page)) == signature:
             return
         await click_filter(page, name)
+        await wait_paper_items(page)
         for _ in range(round_no):
             if not await click_next(page, NEXT_LIST):
                 raise ListingStateError('无法恢复原列表页码。')
-        if list_signature(await paper_items(page)) != signature:
+            await wait_paper_items(page)
+        if list_signature(await wait_paper_items(page)) != signature:
             raise ListingStateError('返回后的列表与原列表不一致。')
     try:
         await asyncio.wait_for(restore(), timeout=30)
@@ -494,8 +543,24 @@ async def listing_diagnostic(page, args, name, error):
 def valid_receipt(entry):
     try:
         path = Path(entry['path'])
-        return entry.get('version') == VERSION and entry.get('status') == 'success' and (sha(path / 'paper_v2.json') == entry.get('sha256')) and json.loads((path / 'audit.json').read_text(encoding='utf-8'))['ok']
-    except (OSError, KeyError, ValueError):
+        if entry.get('version') not in ('2.2-candidate', '2.3-candidate', '2.4-candidate', '2.4.1-candidate', VERSION) or entry.get('status') != 'success':
+            return False
+        if sha(path / 'paper_v2.json') != entry.get('sha256'):
+            return False
+        if not json.loads((path / 'audit.json').read_text(encoding='utf-8'))['ok']:
+            return False
+        required = ('paper_v2.json', 'questions.json', 'audit.json', 'media_manifest.json')
+        hashes = entry.get('file_hashes')
+        if hashes:
+            return all(hashes.get(n) == sha(path / n) for n in required)
+        # Older receipts used one hash. Revalidate their content once at resume
+        # instead of discarding completed work solely because the app upgraded.
+        data = json.loads((path / 'questions.json').read_text(encoding='utf-8'))
+        v2 = json.loads((path / 'paper_v2.json').read_text(encoding='utf-8'))
+        media = json.loads((path / 'media_manifest.json').read_text(encoding='utf-8'))
+        return (validate_exam(data)['ok'] and to_v2(data) == v2 and
+                len(media) == len(media_manifest(v2)) and all(m.get('status') == 'verified' for m in media))
+    except (OSError, KeyError, ValueError, TypeError):
         return False
 
 def complete_entries(output, today_only=False):
@@ -589,16 +654,24 @@ def options():
     p.add_argument('--headless', action='store_true', help='仅已有可用登录时使用；须同时给--plan')
     p.add_argument('--auto-submit', action=argparse.BooleanOptionalAction, default=True, help='默认开启；仅本人已授权练习卷；--no-auto-submit可关闭')
     p.add_argument('--download-images', action='store_true', help='额外保存图片副本，不改写HTML原地址')
-    p.add_argument('--daily-target', type=int, default=5)
+    p.add_argument('--daily-target', type=int, default=10)
     p.add_argument('--max-rounds', type=int, default=300)
-    p.add_argument('--plan', type=Path, help='JSON数组，每条含url/title/expected_count')
+    p.add_argument('--plan', type=Path, help='JSON数组，每条含正常页面url/title；expected_count可选，未知时从页面核实')
+    p.add_argument('--resume', action='store_true', help='继续输出目录中保存的选卷任务')
+    p.add_argument('--paper-retries', type=int, default=2, help='每卷失败后的额外尝试次数，默认2')
+    p.add_argument('--paper-timeout', type=float, default=240, help='单次处理时限（秒）')
+    p.add_argument('--auth-wait', type=float, default=900, help='等待用户正常登录/验证的最长秒数')
     p.add_argument('--expected-count', type=int, help='仅单卷模式，须核实后填写')
     args = p.parse_args()
+    if args.paper_retries < 0 or args.paper_timeout <= 0 or args.auth_wait <= 0:
+        p.error('重试次数不能为负，时限须为正数')
     if args.daily_target < 1 or args.max_rounds < 1 or (args.expected_count is not None and args.expected_count < 1):
         p.error('数量参数必须为正整数')
-    if args.plan and args.expected_count:
+    if (args.plan or args.resume) and args.expected_count:
         p.error('计划模式请分别设置每卷expected_count')
-    if args.headless and (not args.plan):
+    if args.plan and args.resume:
+        p.error('--plan与--resume不能同时使用')
+    if args.headless and not (args.plan or args.resume):
         p.error('无界面模式必须给--plan；首次登录请用有界面模式')
     return args
 
@@ -607,7 +680,8 @@ async def main():
     args.output.mkdir(parents=True, exist_ok=True)
     run_status(args.output, 'starting')
     logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler(), logging.FileHandler(args.output / 'crawler.log', encoding='utf-8')])
-    results, submitted, single_mode = ([], {}, False)
+    results, submitted, single_mode = ([], load_submission_events(args.output), False)
+    batch_job = None
     async with async_playwright() as pw:
         launch = {'headless': args.headless, 'viewport': {'width': 1440, 'height': 900}}
         if args.browser == 'chrome':
@@ -623,25 +697,21 @@ async def main():
             print('占位提交不代表真实学习成绩；平台端练习历史可能被改变，本程序不会清理平台记录。')
             if not args.headless:
                 await asyncio.to_thread(input, '准备好后按Enter：')
-            if args.plan:
-                plan = json.loads(args.plan.read_text(encoding='utf-8'))
-                if not isinstance(plan, list):
-                    raise ValueError('plan必须是数组')
-                for target in plan:
-                    if len(daily_entries(args.output)) >= args.daily_target:
-                        break
-                    if not allowed_page(target.get('url', '')) or not target.get('title') or type(target.get('expected_count')) is not int or (target['expected_count'] < 1):
-                        raise ValueError('每条计划须有fenbi HTTPS url、完整title、正整数expected_count')
-                    if any((e['page_url'] == target['url'] or e['title'] == target['title'] for e in complete_entries(args.output).values())):
-                        continue
-                    try:
-                        await page.goto(target['url'], wait_until='domcontentloaded')
-                        results.append(await crawl_current_page(context, page, args, submitted, target['expected_count'], target['title']))
-                    except Exception as exc:
-                        results.append({'status': 'failed', 'title': target['title'], 'message': str(exc)})
+            from batch_runner import run_batch, choose_targets
+            if args.plan or args.resume:
+                targets = json.loads(args.plan.read_text(encoding='utf-8')) if args.plan else None
+                batch_job = await run_batch(context, page, args, submitted, targets)
+                results = [p.get('receipt') or {'status': p['state'], 'title': p['target']['title']} for p in batch_job['papers']]
             else:
-                mode = (await asyncio.to_thread(input, '模式1=当前卷，2=指定分类，3=全部可见分类：')).strip()
-                if mode == '1':
+                saved = args.output / 'batch_task.json'
+                default_mode = '5' if saved.exists() and json.loads(saved.read_text(encoding='utf-8')).get('state') != 'completed' else '4'
+                default_label = '续跑已保存任务' if default_mode == '5' else '选卷后自动完成'
+                mode = (await asyncio.to_thread(input, f'模式：Enter={default_label}，4=新建选卷任务，5=续跑，1=当前卷：')).strip() or default_mode
+                if mode in ('4', '5'):
+                    targets = await choose_targets(page, args) if mode == '4' else None
+                    batch_job = await run_batch(context, page, args, submitted, targets)
+                    results = [p.get('receipt') or {'status': p['state'], 'title': p['target']['title']} for p in batch_job['papers']]
+                elif mode == '1':
                     single_mode = True
                     results.append(await crawl_current_page(context, page, args, submitted, args.expected_count))
                 else:
@@ -677,7 +747,11 @@ async def main():
                 unique.update((q['globalId'] for q in d['questions']))
             summary = {'date': now()[:10], 'timezone': 'Asia/Shanghai', 'target': args.daily_target, 'complete_papers': len(entries), 'target_met': len(entries) >= args.daily_target, 'question_positions': sum((e['questions'] for e in entries)), 'unique_globalIds': len(unique), 'papers': entries, 'this_run': results, 'website_import_verified': False, 'note': '本地核验；还需当前网站实际导入及导出复核'}
             json_write(args.output / ('daily_' + now()[:10] + '.json'), summary)
-            print(json.dumps({k: summary[k] for k in ('complete_papers', 'target', 'target_met', 'question_positions', 'unique_globalIds')}, ensure_ascii=False))
+            if batch_job is None:
+                print(json.dumps({k: summary[k] for k in ('complete_papers', 'target', 'target_met', 'question_positions', 'unique_globalIds')}, ensure_ascii=False))
+    if batch_job is not None:
+        print(json.dumps({k: batch_job.get(k) for k in ('state', 'target', 'complete_papers', 'target_met')}, ensure_ascii=False))
+        return 0 if batch_job.get('target_met') else 2
     if single_mode:
         return 0 if results and results[-1]['status'] == 'success' else 2
     return 0 if summary['target_met'] else 2

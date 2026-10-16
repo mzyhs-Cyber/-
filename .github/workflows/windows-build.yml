@@ -64,7 +64,7 @@ jobs:
           import subprocess
           import sys
           app = str(Path('dist/FenbiCollector/FenbiCollector.exe').resolve())
-          for flag in ['--help', '--smoke-test']:
+          for flag in ['--help', '--smoke-test', '--batch-smoke-test']:
               result = subprocess.run([app, flag], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                   text=True, encoding='utf-8', errors='replace', timeout=120)
               print(result.stdout, end='')

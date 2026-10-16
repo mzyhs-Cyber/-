@@ -1,5 +1,8 @@
 from __future__ import annotations
 BROWSER_QUERY_SECONDS = 6
+PAGE_READY_SECONDS = 15
+NO_PROGRESS_ROUNDS = 8
+NO_PROGRESS_SECONDS = 6
 import argparse
 import asyncio
 import base64
@@ -16,7 +19,7 @@ from urllib.parse import urljoin, urlsplit
 from zoneinfo import ZoneInfo
 from openpyxl import Workbook
 from PIL import Image
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 from bank_core import VERSION, json_write, media_manifest, parse_question, to_v2, validate_exam
 START_URL = 'https://www.fenbi.com/spa/tiku/guide/realTest/xingce/xingce'
 PAPER_ITEMS, FILTER_ITEMS = ('.paper-item', '.categories-item')
@@ -66,19 +69,48 @@ async def click_next(page, selector):
     except Exception as exc:
         raise RuntimeError('browser_navigation_error:' + type(exc).__name__) from None
 
+PAGE_STATE_JS = """() => {
+  const rendered = e => {
+    if (e.closest('[hidden]') || getComputedStyle(e).visibility === 'hidden') return false;
+    const r = document.createRange(); r.selectNodeContents(e);
+    return !!(e.getClientRects().length || r.getClientRects().length);
+  };
+  const content = e => !!(e.textContent.trim() || e.querySelector('img[src],svg,math,table'));
+  if ([...document.querySelectorAll('app-solution-overall,.correct-answer')]
+      .some(e => rendered(e) && content(e))) return 'solution';
+  const exercise = [...document.querySelectorAll('app-question-choice,.ti-content,[data-role="stem"]')]
+      .some(e => rendered(e) && content(e));
+  const submit = [...document.querySelectorAll('div.submit-btn,button.submit-btn')]
+      .filter(e => rendered(e) && !e.closest('[disabled],[aria-disabled="true"]'));
+  return exercise && submit.length === 1 ? 'exercise' : false;
+}"""
+
 async def solution_visible(page):
-    return await asyncio.wait_for(page.evaluate("() => [...document.querySelectorAll('app-solution-overall,.correct-answer')].some(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden')"), timeout=BROWSER_QUERY_SECONDS)
+    state = await asyncio.wait_for(page.evaluate(PAGE_STATE_JS), timeout=BROWSER_QUERY_SECONDS)
+    return state == 'solution'
+
+async def wait_page_ready(page):
+    try:
+        handle = await asyncio.wait_for(
+            page.wait_for_function(PAGE_STATE_JS, timeout=PAGE_READY_SECONDS * 1000),
+            timeout=PAGE_READY_SECONDS + 1)
+        try:
+            return await handle.json_value()
+        finally:
+            await handle.dispose()
+    except (TimeoutError, PlaywrightTimeoutError):
+        raise RuntimeError('页面等待超时：未确认可见解析或真实练习内容及唯一交卷入口，未点击提交。') from None
 
 async def ensure_solution(page, args, submitted):
     if await solution_visible(page):
+        return None
+    if await wait_page_ready(page) == 'solution':
         return None
     if not args.auto_submit:
         raise RuntimeError('不是解析页，自动交卷已关闭。请正常打开解析页。')
     key = page.url
     if key in submitted:
         raise RuntimeError('已尝试提交该页面，不重复交卷。')
-    if not any([await x.is_visible() for x in await page.locator("app-question-choice, .ti-content, [data-role='stem']").all()]):
-        raise RuntimeError('未确认当前是练习题页面，不点击提交按钮。')
     submit = page.locator('div.submit-btn:visible, button.submit-btn:visible')
     if await submit.count() != 1:
         raise RuntimeError('没有唯一可见的交卷按钮，未执行提交。')
@@ -94,11 +126,12 @@ async def ensure_solution(page, args, submitted):
     if not await solution_visible(page):
         dialogs = page.locator("[role='dialog']:visible, dialog:visible, [class*='dialog']:visible, [class*='modal']:visible, [class*='popup']:visible, app-exam-submit-dialog:visible").filter(has_text=re.compile('交卷|提交试卷|未作答|未答'))
         confirm = dialogs.locator("button:visible, [role='button']:visible, .btn-submit:visible, .confirm-btn:visible, .submit-btn:visible").filter(has_text=re.compile('^\\s*(确认交卷|确定交卷|提交试卷|确认提交|交卷|提交|确定|确认)\\s*$'))
-        try:
-            await confirm.first.wait_for(state='visible', timeout=8000)
-        except Exception:
+        deadline = time.monotonic() + 8
+        while not await solution_visible(page) and await confirm.count() != 1 and time.monotonic() < deadline:
+            await page.wait_for_timeout(150)
+        if await solution_visible(page):
             pass
-        if await confirm.count() == 1:
+        elif await confirm.count() == 1:
             await confirm.click()
         else:
             if getattr(args, 'headless', False):
@@ -119,21 +152,28 @@ async def extract_exam_data(page, expected=None, expected_title=None, max_rounds
     questions, observations, errors, counts, titles, snapshots = ({}, [], set(), set(), set(), {})
     previous, stagnant = (None, 0)
     capture_started = time.monotonic()
+    last_progress = capture_started
+    count_evidence = {}
+    stop_reason = None
     if progress_dir is not None:
         Path(progress_dir).mkdir(parents=True, exist_ok=True)
         json_write(Path(progress_dir) / 'capture_checkpoint.json', {'schema_version': VERSION, 'paper_title': expected_title, 'page_url': page.url, 'expected_count': expected, 'questions': [], 'rendered_snapshots': [], 'collection_errors': [], 'captured_at': now(), 'status': 'capture_starting_not_import_ready'})
     for _ in range(max_rounds):
         if time.monotonic() - capture_started > 90:
             errors.add('capture_time_limit')
+            stop_reason = 'capture_time_limit'
             break
         try:
             snap = await asyncio.wait_for(page.evaluate(SNAPSHOT_JS), timeout=12)
         except Exception as step_error:
             errors.add('browser_read_failed' + ':' + str(step_error))
+            stop_reason = 'browser_read_failed'
             break
         if snap['title']:
             titles.add(snap['title'])
         counts.update(snap['counts'])
+        for evidence in snap.get('countEvidence', []):
+            count_evidence[json.dumps(evidence, sort_keys=True, ensure_ascii=False)] = evidence
         if snap['unresolvedMaterials']:
             errors.add('unresolved_visible_material')
         for row in snap['rows']:
@@ -158,29 +198,38 @@ async def extract_exam_data(page, expected=None, expected_title=None, max_rounds
         if progress_dir is not None:
             checkpoint_folder = Path(progress_dir)
             checkpoint_folder.mkdir(parents=True, exist_ok=True)
-            json_write(checkpoint_folder / 'capture_checkpoint.json', {'schema_version': VERSION, 'paper_title': next(iter(titles)) if len(titles) == 1 else '未命名试卷', 'page_url': page.url, 'expected_count': expected or (next(iter(counts)) if len(counts) == 1 else None), 'questions': list(questions.values()), 'collection_errors': sorted(errors), 'captured_at': now(), 'observations': observations, 'rendered_snapshots': list(snapshots.values()), 'status': 'checkpoint_only_not_import_ready'})
-        fingerprint = tuple(((k, v.get('answer'), len(v.get('analysis_html', ''))) for k, v in questions.items()))
+            json_write(checkpoint_folder / 'capture_checkpoint.json', {'schema_version': VERSION, 'paper_title': next(iter(titles)) if len(titles) == 1 else '未命名试卷', 'page_url': page.url, 'expected_count': expected or (next(iter(counts)) if len(counts) == 1 else None), 'count_evidence': list(count_evidence.values()), 'questions': list(questions.values()), 'collection_errors': sorted(errors), 'captured_at': now(), 'observations': observations, 'rendered_snapshots': list(snapshots.values()), 'status': 'checkpoint_only_not_import_ready'})
+        fingerprint = json.dumps({'questions': questions, 'counts': sorted(counts), 'titles': sorted(titles)}, sort_keys=True, ensure_ascii=False)
         stagnant = stagnant + 1 if fingerprint == previous else 0
+        if fingerprint != previous:
+            last_progress = time.monotonic()
         previous = fingerprint
         count = expected or (next(iter(counts)) if len(counts) == 1 else None)
         if count and len(questions) == count and all((q.get('answer') and q.get('analysis_html') for q in questions.values())):
+            stop_reason = 'expected_content_collected'
+            break
+        if stagnant >= NO_PROGRESS_ROUNDS and time.monotonic() - last_progress >= NO_PROGRESS_SECONDS:
+            stop_reason = 'no_content_progress'
+            errors.add(stop_reason)
             break
         try:
             if await click_next(page, NEXT_QUESTION):
                 continue
         except Exception as step_error:
             errors.add('next_control_failed' + ':' + str(step_error))
+            stop_reason = 'next_control_failed'
             break
         try:
             moved = await asyncio.wait_for(page.evaluate("() => {\n          let moved=false;\n          for(const e of [document.scrollingElement,...document.querySelectorAll('app-tis,.right-section,.question-list,.solution-content')]) {\n            if(!e||!e.getClientRects().length) continue;\n            const before=e.scrollTop; e.scrollTop+=Math.max(400,e.clientHeight*0.8);\n            moved ||= e.scrollTop!==before;\n          }\n          return moved;\n        }"), timeout=12)
         except Exception as step_error:
             errors.add('browser_read_failed' + ':' + str(step_error))
+            stop_reason = 'browser_read_failed'
             break
         await asyncio.sleep(0.7)
-        if stagnant >= 3 and (not moved):
-            break
+        observations[-1]['scroll_moved'] = moved
     else:
         errors.add('collection_round_limit')
+        stop_reason = 'collection_round_limit'
     if len(counts) > 1:
         errors.add('ambiguous_expected_count')
     if expected and counts and (counts != {expected}):
@@ -190,7 +239,7 @@ async def extract_exam_data(page, expected=None, expected_title=None, max_rounds
     title = next(iter(titles)) if len(titles) == 1 else '未命名试卷'
     if expected_title and title != expected_title:
         errors.add('paper_title_mismatch')
-    collected_data = {'schema_version': VERSION, 'paper_title': title, 'page_url': page.url, 'expected_count': expected or (next(iter(counts)) if len(counts) == 1 else None), 'questions': list(questions.values()), 'collection_errors': sorted(errors), 'observations': observations, 'captured_at': now(), 'rendered_snapshots': list(snapshots.values())}
+    collected_data = {'schema_version': VERSION, 'paper_title': title, 'page_url': page.url, 'expected_count': expected or (next(iter(counts)) if len(counts) == 1 else None), 'count_evidence': list(count_evidence.values()), 'stop_reason': stop_reason, 'questions': list(questions.values()), 'collection_errors': sorted(errors), 'observations': observations, 'captured_at': now(), 'rendered_snapshots': list(snapshots.values())}
     if progress_dir is not None:
         json_write(Path(progress_dir) / 'capture_checkpoint.json', {**collected_data, 'status': 'capture_finished_needs_validation'})
     return collected_data
@@ -244,7 +293,7 @@ async def save_exam(context, data, args):
     snapshots = data.pop('rendered_snapshots', [])
     json_write(folder / 'rendered_dom.json', {'page_url': data['page_url'], 'captured_at': data.get('captured_at'), 'snapshots': snapshots})
     json_write(folder / 'questions.json', data)
-    json_write(folder / 'source_provenance.json', {'page_url': data['page_url'], 'captured_at': data.get('captured_at'), 'method': 'normal_rendered_DOM', 'expected_count': data.get('expected_count'), 'source_files': [{'file': name, 'sha256': sha(folder / name)} for name in ('rendered_dom.json', 'questions.json')], 'submission': data.get('submission'), 'material_id_policy': 'local-material: prefix denotes a local content-derived ID'})
+    json_write(folder / 'source_provenance.json', {'page_url': data['page_url'], 'captured_at': data.get('captured_at'), 'method': 'normal_rendered_DOM', 'expected_count': data.get('expected_count'), 'count_evidence': data.get('count_evidence', []), 'stop_reason': data.get('stop_reason'), 'source_files': [{'file': name, 'sha256': sha(folder / name)} for name in ('rendered_dom.json', 'questions.json')], 'submission': data.get('submission'), 'material_id_policy': 'local-material: prefix denotes a local content-derived ID'})
     audit, v2 = (validate_exam(data), None)
     try:
         v2 = to_v2(data)
@@ -281,7 +330,6 @@ async def crawl_current_page(context, page, args, submitted, expected=None, titl
     start = time.monotonic()
     if not allowed_page(page.url):
         raise ValueError('只支持正常访问的 fenbi.com HTTPS 页面。')
-    await asyncio.wait_for(page.locator('app-solution-overall:visible, .correct-answer:visible, .submit-btn:visible').first.wait_for(timeout=10000), timeout=12)
     event = await ensure_solution(page, args, submitted)
     run_status(args.output, 'collecting')
     data = await extract_exam_data(page, expected, title, args.max_rounds, progress_dir=args.output)

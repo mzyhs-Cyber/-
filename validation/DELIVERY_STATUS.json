@@ -1,0 +1,25 @@
+{
+  "version": "2.4-candidate",
+  "synthetic_tests": {
+    "passed": 42,
+    "new_regressions": 10,
+    "real_account_acceptance": false
+  },
+  "baseline_targeted_tests": {
+    "tests": 4,
+    "failures": 3,
+    "errors": 1,
+    "expected_failure_reproduction": true
+  },
+  "linux_browser": "Chrome Headless Shell 131.0.6778.264",
+  "python": "3.12",
+  "playwright": "1.57.0",
+  "startup_help": "passed",
+  "browser_smoke_test": "passed",
+  "windows_2_4_build": "pending_push_and_ci",
+  "remote_repair_branch_exists": false,
+  "new_real_complete_papers": 0,
+  "current_website_import_acceptance": "not_run",
+  "publication_block_reason": null,
+  "publication_authorization": "User explicitly authorized public repair-branch push and Windows build on 2026-10-16."
+}

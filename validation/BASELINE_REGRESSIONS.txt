@@ -1,0 +1,79 @@
+test_submit_button_before_exercise_content (test_progress_regressions.ProgressRegressions.test_submit_button_before_exercise_content) ... ERROR
+test_display_contents_questions_and_solution_are_visible (test_progress_regressions.ProgressRegressions.test_display_contents_questions_and_solution_are_visible) ... [采集进度] 已读取 0 题；页面声明题数：1
+[采集进度] 已读取 0 题；页面声明题数：1
+FAIL
+test_scoped_answer_card_fraction_is_independent_count (test_progress_regressions.ProgressRegressions.test_scoped_answer_card_fraction_is_independent_count) ... [采集进度] 已读取 2 题；页面声明题数：尚未识别
+[采集进度] 已读取 2 题；页面声明题数：尚未识别
+FAIL
+test_enabled_next_without_new_content_stops_and_saves (test_progress_regressions.ProgressRegressions.test_enabled_next_without_new_content_stops_and_saves) ... [采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+FAIL
+
+======================================================================
+ERROR: test_submit_button_before_exercise_content (test_progress_regressions.ProgressRegressions.test_submit_button_before_exercise_content)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f7b7778aadf1/collector/tests/test_progress_regressions.py", line 24, in test_submit_button_before_exercise_content
+    event = await ensure_solution(self.page, SimpleNamespace(output=Path(td), auto_submit=True, headless=True), {})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f7b7778aadf1/handoff/Fenbi_AI_Handoff_20261016_part01of05/code/fenbi_crawler_v2.py", line 81, in ensure_solution
+    raise RuntimeError('未确认当前是练习题页面，不点击提交按钮。')
+RuntimeError: 未确认当前是练习题页面，不点击提交按钮。
+
+======================================================================
+FAIL: test_display_contents_questions_and_solution_are_visible (test_progress_regressions.ProgressRegressions.test_display_contents_questions_and_solution_are_visible)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f7b7778aadf1/collector/tests/test_progress_regressions.py", line 30, in test_display_contents_questions_and_solution_are_visible
+    self.assertTrue(validate_exam(d)['ok'], validate_exam(d))
+AssertionError: False is not true : {'ok': False, 'expected_questions': 1, 'total_questions': 0, 'complete_questions': 0, 'incomplete_questions': 0, 'issues': ['collection_round_limit', 'question_count_mismatch', 'non_contiguous_orders'], 'questions': [], 'warnings': []}
+
+======================================================================
+FAIL: test_scoped_answer_card_fraction_is_independent_count (test_progress_regressions.ProgressRegressions.test_scoped_answer_card_fraction_is_independent_count)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f7b7778aadf1/collector/tests/test_progress_regressions.py", line 35, in test_scoped_answer_card_fraction_is_independent_count
+    self.assertEqual(d['expected_count'], 2)
+AssertionError: None != 2
+
+======================================================================
+FAIL: test_enabled_next_without_new_content_stops_and_saves (test_progress_regressions.ProgressRegressions.test_enabled_next_without_new_content_stops_and_saves)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f7b7778aadf1/collector/tests/test_progress_regressions.py", line 55, in test_enabled_next_without_new_content_stops_and_saves
+    self.assertEqual(d.get('stop_reason'), 'no_content_progress')
+AssertionError: None != 'no_content_progress'
+
+----------------------------------------------------------------------
+Ran 4 tests in 8.414s
+
+FAILED (failures=3, errors=1)
+BASELINE_RESULT EXPECTED_FAILURES_REPRODUCED

@@ -1,0 +1,30 @@
+--help exit=0
+采集程序 2.4-candidate：请保持此窗口打开。
+输出目录：/workspace/scratch/f7b7778aadf1/collector/fenbi_output
+usage: standalone_main.py [-h] [--output OUTPUT] [--profile PROFILE]
+                          [--browser {chromium,chrome}] [--headless]
+                          [--auto-submit | --no-auto-submit]
+                          [--download-images] [--daily-target DAILY_TARGET]
+                          [--max-rounds MAX_ROUNDS] [--plan PLAN]
+                          [--expected-count EXPECTED_COUNT]
+
+粉笔正常页面采集、整卷核验、当前网站V2输出
+
+options:
+  -h, --help            show this help message and exit
+  --output OUTPUT
+  --profile PROFILE
+  --browser {chromium,chrome}
+  --headless            仅已有可用登录时使用；须同时给--plan
+  --auto-submit, --no-auto-submit
+                        默认开启；仅本人已授权练习卷；--no-auto-submit可关闭
+  --download-images     额外保存图片副本，不改写HTML原地址
+  --daily-target DAILY_TARGET
+  --max-rounds MAX_ROUNDS
+  --plan PLAN           JSON数组，每条含url/title/expected_count
+  --expected-count EXPECTED_COUNT
+                        仅单卷模式，须核实后填写
+
+
+--smoke-test exit=0
+Browser smoke test passed.

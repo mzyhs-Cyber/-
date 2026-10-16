@@ -73,7 +73,7 @@ jobs:
                   sys.exit(result.returncode)
       - uses: actions/upload-artifact@v4
         with:
-          name: FenbiCollector-Windows-candidate
+          name: FenbiCollector-Windows-v2.3
           path: dist/FenbiCollector/
           retention-days: 14
           if-no-files-found: error

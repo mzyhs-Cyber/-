@@ -13,7 +13,7 @@ from PIL import Image
 from playwright.async_api import async_playwright
 from bank_core import parse_question, to_v2, validate_exam, validate_question
 from fenbi_crawler_v2 import (crawl_category, daily_entries, ensure_solution,
-    extract_exam_data, save_exam, verify_media, valid_receipt, open_paper, paper_items, list_signature, click_next, NEXT_QUESTION, crawl_current_page, solution_visible)
+    extract_exam_data, save_exam, verify_media, valid_receipt, open_paper, paper_items, list_signature, click_next, NEXT_QUESTION, crawl_current_page, solution_visible, ListingStateError)
 
 buf = io.BytesIO()
 Image.new('RGB', (2, 2), 'white').save(buf, format='PNG')
@@ -272,7 +272,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         await self.context.route('https://www.fenbi.com/**',route)
         await self.page.goto('https://www.fenbi.com/list')
         rows=await paper_items(self.page)
-        worker=await open_paper(self.context,rows[0],'A类',self.page.url,0,list_signature(rows))
+        worker=await open_paper(self.context,rows[0],self.page,list_signature(rows))
         self.assertTrue(worker.url.endswith('/paper/1'))
         self.assertTrue(self.page.url.endswith('/list'))
         await worker.close()
@@ -299,6 +299,96 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(all(r['status']=='success' for r in results),results)
             self.assertEqual(len(daily_entries(Path(td))),5)
             self.assertEqual(await self.page.evaluate('current'),2)
+
+    async def test_session_scoped_listing_opens_paper_in_existing_tab(self):
+        listing='<span class="categories-item">推荐</span><div class="paper-item" onclick="window.open(\'/paper/1\')"><span class="item-info-title">2026合成A卷</span></div>'
+        async def route(r):
+            if r.request.url.endswith('/list'):
+                html='<script>if(sessionStorage.getItem("selectedSubject")){document.write('+json.dumps(listing)+')}</script>'
+            else:
+                html='<h1>2026合成A卷</h1>'+question()
+            await r.fulfill(body=html,content_type='text/html; charset=utf-8')
+        await self.context.route('https://www.fenbi.com/**',route)
+        await self.page.goto('https://www.fenbi.com/list')
+        await self.page.evaluate('sessionStorage.setItem("selectedSubject", "xingce")')
+        await self.page.reload()
+        rows=await paper_items(self.page)
+        worker=await open_paper(self.context,rows[0],self.page,list_signature(rows))
+        self.assertTrue(worker.url.endswith('/paper/1'))
+        self.assertEqual(await worker.evaluate('sessionStorage.getItem("selectedSubject")'),'xingce')
+        self.assertTrue(self.page.url.endswith('/list'))
+        await worker.close()
+
+    async def test_session_listing_same_tab_navigation_restores_three_pages(self):
+        async def route(r):
+            path=r.request.url.split('fenbi.com')[-1]
+            if path.startswith('/paper/'):
+                n=int(path.split('/')[-1])
+                html=f'<h1>2026合成{n}卷</h1><div data-question-count="1"></div>'+question('id'+str(n),1,True)
+            else:
+                pages=[]
+                for j in range(3):
+                    pages.append(''.join(f'<div class="paper-item" onclick="location.href=\'/paper/{n}\'"><span class="item-info-title">2026合成{n}卷</span></div>' for n in range(j*2+1,j*2+3)))
+                listing='<span class="categories-item" onclick="show(0)">推荐</span><main></main><button id="next" onclick="show(current+1)">下一页</button>'
+                script='window.current=0;const pages='+json.dumps(pages)+';window.show=function(n){current=n;document.querySelector("main").innerHTML=pages[n];document.querySelector("#next").disabled=n===2};show(0);'
+                html='<div id="listing"></div><script>if(sessionStorage.getItem("selectedSubject")){setTimeout(()=>{document.querySelector("#listing").innerHTML='+json.dumps(listing)+';'+script+'},250)}</script>'
+            await r.fulfill(body=html,content_type='text/html; charset=utf-8')
+        await self.context.route('https://www.fenbi.com/**',route)
+        await self.page.goto('https://www.fenbi.com/list')
+        await self.page.evaluate('sessionStorage.setItem("selectedSubject","xingce")')
+        await self.page.reload()
+        opened=[]
+        self.context.on('page',lambda p:opened.append(p))
+        with TemporaryDirectory() as td:
+            args=SimpleNamespace(output=Path(td),daily_target=5,max_rounds=10,download_images=False,auto_submit=False)
+            results=await crawl_category(self.context,self.page,'推荐',args,{})
+            self.assertEqual(len(results),5,results)
+            self.assertTrue(all(r['status']=='success' for r in results),results)
+            self.assertEqual(len(daily_entries(Path(td))),5)
+            self.assertEqual(await self.page.locator('.paper-item').count(),2)
+            self.assertIn('2026合成5卷',await self.page.locator('main').inner_text())
+            self.assertEqual(await self.page.evaluate('sessionStorage.getItem("selectedSubject")'),'xingce')
+            self.assertEqual(opened,[])
+            self.assertFalse(self.page.is_closed())
+
+    async def test_listing_failure_stops_after_one_attempt_and_saves_diagnostics(self):
+        from unittest.mock import patch
+        html='<span class="categories-item">推荐</span>'+''.join('<div class="paper-item"><span class="item-info-title">合成卷'+str(i)+'</span></div>' for i in range(8))
+        await self.page.set_content(html)
+        with TemporaryDirectory() as td:
+            args=SimpleNamespace(output=Path(td),daily_target=5,max_rounds=10)
+            with patch('fenbi_crawler_v2.open_paper',new=AsyncMock(side_effect=ListingStateError('找不到分类：推荐'))) as opening:
+                with self.assertRaisesRegex(ListingStateError,'找不到分类'):
+                    await crawl_category(self.context,self.page,'推荐',args,{})
+                opening.assert_awaited_once()
+            self.assertEqual(json.loads((Path(td)/'listing_failure.json').read_text(encoding='utf-8'))['category'],'推荐')
+            self.assertEqual(json.loads((Path(td)/'run_status.json').read_text(encoding='utf-8'))['phase'],'batch_stopped')
+            self.assertTrue((Path(td)/'listing_failure.png').exists())
+            self.assertFalse(self.page.is_closed())
+
+    async def test_changed_listing_is_not_clicked_or_closed(self):
+        await self.page.set_content('<div class="paper-item" onclick="window.clicked=true"><span class="item-info-title">合成A卷</span></div>')
+        rows=await paper_items(self.page)
+        await self.page.locator('.item-info-title').evaluate('(e)=>e.innerText="合成B卷"')
+        with self.assertRaisesRegex(ListingStateError,'列表已变化'):
+            await open_paper(self.context,rows[0],self.page,list_signature(rows))
+        self.assertIsNone(await self.page.evaluate('window.clicked'))
+        self.assertFalse(self.page.is_closed())
+
+    async def test_unrestorable_same_tab_keeps_saved_paper_and_stops_once(self):
+        solution='<h1>2026合成A卷</h1><div data-question-count="1"></div>'+question()
+        listing='<span class="categories-item">推荐</span><div class="paper-item" onclick="document.body.innerHTML=solution"><span class="item-info-title">2026合成A卷</span></div>'
+        async def route(r):
+            await r.fulfill(body=listing+'<script>const solution='+json.dumps(solution)+'</script>',content_type='text/html; charset=utf-8')
+        await self.context.route('https://www.fenbi.com/**',route)
+        await self.page.goto('https://www.fenbi.com/list')
+        with TemporaryDirectory() as td:
+            args=SimpleNamespace(output=Path(td),daily_target=5,max_rounds=10,download_images=False,auto_submit=False)
+            with self.assertRaises(ListingStateError):
+                await crawl_category(self.context,self.page,'推荐',args,{})
+            self.assertEqual(len(daily_entries(Path(td))),1)
+            self.assertTrue((Path(td)/'listing_failure.json').exists())
+            self.assertFalse(self.page.is_closed())
 
 if __name__=='__main__':
     unittest.main()

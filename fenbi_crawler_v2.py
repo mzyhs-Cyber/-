@@ -24,6 +24,9 @@ NEXT_LIST = "button:has-text('下一页'), a:has-text('下一页'), .pagination-
 NEXT_QUESTION = "button:has-text('下一题'), a:has-text('下一题'), .next-question"
 LOG = logging.getLogger('fenbi')
 
+class ListingStateError(RuntimeError):
+    """The listing cannot be trusted; do not repeat the failure for every paper."""
+
 def run_status(output, phase, **details):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -290,7 +293,7 @@ async def crawl_current_page(context, page, args, submitted, expected=None, titl
     json_write(Path(result['path']) / 'receipt.json', result)
     return result
 
-async def paper_items(page):
+async def _read_paper_items(page):
     rows = []
     for i, item in enumerate(await page.locator(PAPER_ITEMS).all()):
         if not await item.is_visible():
@@ -303,52 +306,142 @@ async def paper_items(page):
         rows.append({'title': name, 'href': href, 'index': i})
     return rows
 
+async def paper_items(page):
+    try:
+        return await asyncio.wait_for(_read_paper_items(page), timeout=BROWSER_QUERY_SECONDS)
+    except Exception as exc:
+        raise ListingStateError('读取试卷列表失败：' + type(exc).__name__) from exc
+
 def list_signature(rows):
     return tuple(((r['title'], r['href']) for r in rows))
 
 async def click_filter(page, name):
-    for loc in await page.locator(FILTER_ITEMS).all():
-        if await loc.is_visible() and (await loc.inner_text()).strip() == name:
-            await loc.click()
-            await page.wait_for_timeout(1000)
-            return
-    raise RuntimeError('找不到分类：' + name)
-
-async def open_paper(context, paper, filter_name, list_url, round_no, signature):
-    worker = await context.new_page()
+    async def select():
+        deadline = time.monotonic() + 8
+        while True:
+            matches = []
+            for loc in await page.locator(FILTER_ITEMS).all():
+                if await loc.is_visible() and (await loc.inner_text()).strip() == name:
+                    matches.append(loc)
+            if len(matches) > 1:
+                raise ListingStateError('分类不唯一：' + name)
+            if matches:
+                await matches[0].click(timeout=4000)
+                await page.wait_for_timeout(600)
+                return
+            if time.monotonic() >= deadline:
+                raise ListingStateError('找不到分类：' + name)
+            await asyncio.sleep(0.2)
     try:
-        if paper['href'] and allowed_page(paper['href']):
-            await worker.goto(paper['href'], wait_until='domcontentloaded')
-            return worker
-        await worker.goto(list_url, wait_until='domcontentloaded')
-        await click_filter(worker, filter_name)
-        for _ in range(round_no):
-            if not await click_next(worker, NEXT_LIST):
-                raise RuntimeError('无法恢复列表页，停止按索引打开。')
-        if list_signature(await paper_items(worker)) != signature:
-            raise RuntimeError('列表不一致，停止按索引打开。')
-        popups = []
-
-        def on_page(p):
-            popups.append(p)
-        context.on('page', on_page)
-        try:
-            await worker.locator(PAPER_ITEMS).nth(paper['index']).click()
-            await worker.wait_for_timeout(1200)
-        finally:
-            context.remove_listener('page', on_page)
-        if len(popups) > 1:
-            for p in popups:
-                await p.close()
-            raise RuntimeError('多个新窗口，无法确定目标卷。')
-        if popups:
-            await worker.close()
-            worker = popups[0]
-            await worker.wait_for_load_state('domcontentloaded')
-        return worker
-    except Exception:
-        await worker.close()
+        await asyncio.wait_for(select(), timeout=12)
+    except ListingStateError:
         raise
+    except Exception as exc:
+        raise ListingStateError('分类切换失败：' + name + '；' + type(exc).__name__) from exc
+
+async def visible_categories(page):
+    async def read():
+        names = []
+        for loc in await page.locator(FILTER_ITEMS).all():
+            if await loc.is_visible():
+                name = (await loc.inner_text()).strip()
+                if name and name not in names:
+                    names.append(name)
+        return names
+    return await asyncio.wait_for(read(), timeout=BROWSER_QUERY_SECONDS)
+
+async def open_paper(context, paper, list_page, signature):
+    # Click the observed element in the existing tab. A new tab loaded from just
+    # its URL does not carry the original sessionStorage or in-memory selection.
+    popups = []
+    def on_popup(p):
+        popups.append(p)
+    list_page.on('popup', on_popup)
+    try:
+        async def open_observed():
+            current_rows = await paper_items(list_page)
+            if list_signature(current_rows) != signature:
+                raise ListingStateError('列表已变化，未点击试卷。')
+            matches = [r for r in current_rows if (r['title'], r['href']) == (paper['title'], paper['href'])]
+            if len(matches) != 1:
+                raise ListingStateError('试卷条目不唯一，未点击。')
+            if paper['href'] and not allowed_page(paper['href']):
+                raise ListingStateError('试卷链接不是允许的粉笔页面。')
+            before = list_page.url
+            item = list_page.locator(PAPER_ITEMS).nth(matches[0]['index'])
+            link = item.locator('a[href]').first
+            target = link if paper['href'] and await link.count() else item
+            await target.click(timeout=4000)
+            await asyncio.sleep(0.3)
+            deadline = time.monotonic() + 8
+            while time.monotonic() < deadline:
+                if len(popups) > 1:
+                    raise ListingStateError('试卷打开了多个窗口，无法确定目标。')
+                if popups:
+                    await popups[0].wait_for_load_state('domcontentloaded', timeout=6000)
+                    return popups[0]
+                if list_page.url != before:
+                    return list_page
+                if await list_page.locator('app-question-choice:visible,.correct-answer:visible,.ti-content:visible').count():
+                    return list_page
+                await asyncio.sleep(0.2)
+            raise ListingStateError('点击试卷后未确认打开成功，已停止批量处理。')
+        return await asyncio.wait_for(open_observed(), timeout=14)
+    except Exception as exc:
+        for popup in popups:
+            if not popup.is_closed():
+                await popup.close()
+        if isinstance(exc, ListingStateError):
+            raise
+        raise ListingStateError('打开试卷失败：' + type(exc).__name__) from exc
+    finally:
+        list_page.remove_listener('popup', on_popup)
+
+async def restore_listing(page, list_url, name, round_no, signature):
+    async def restore():
+        if page.is_closed():
+            raise ListingStateError('原试卷列表窗口已关闭。')
+        if list_signature(await paper_items(page)) == signature:
+            return
+        for _ in range(4):
+            if page.url == list_url:
+                break
+            if await page.go_back(wait_until='domcontentloaded', timeout=10000) is None and page.url != list_url:
+                # SPA history traversal can return None; inspect the URL, not
+                # just the navigation response, before deciding it failed.
+                await asyncio.sleep(0.2)
+        if page.url != list_url:
+            raise ListingStateError('无法返回原试卷列表。')
+        if list_signature(await paper_items(page)) == signature:
+            return
+        await click_filter(page, name)
+        for _ in range(round_no):
+            if not await click_next(page, NEXT_LIST):
+                raise ListingStateError('无法恢复原列表页码。')
+        if list_signature(await paper_items(page)) != signature:
+            raise ListingStateError('返回后的列表与原列表不一致。')
+    try:
+        await asyncio.wait_for(restore(), timeout=30)
+    except ListingStateError:
+        raise
+    except Exception as exc:
+        raise ListingStateError('恢复原列表失败：' + type(exc).__name__) from exc
+
+async def listing_diagnostic(page, args, name, error):
+    # Local diagnostics only; never sent to GitHub or another service.
+    detail = {'category': name, 'page_url': page.url, 'error': str(error), 'captured_at': now()}
+    try:
+        detail['categories'] = await visible_categories(page)
+        detail['papers'] = await asyncio.wait_for(paper_items(page), timeout=BROWSER_QUERY_SECONDS)
+    except Exception as exc:
+        detail['inspection_error'] = type(exc).__name__
+    args.output.mkdir(parents=True, exist_ok=True)
+    json_write(args.output / 'listing_failure.json', detail)
+    run_status(args.output, 'batch_stopped', reason=str(error))
+    try:
+        await page.screenshot(path=str(args.output / 'listing_failure.png'), timeout=5000)
+    except Exception:
+        pass
 
 def valid_receipt(entry):
     try:
@@ -373,10 +466,17 @@ def daily_entries(output):
     return complete_entries(output, today_only=True)
 
 async def crawl_category(context, page, name, args, submitted):
-    await click_filter(page, name)
-    list_url, seen_pages, seen_papers, results = (page.url, set(), set(), [])
+    print('[分类] ' + name, flush=True)
+    try:
+        await click_filter(page, name)
+    except ListingStateError as exc:
+        await listing_diagnostic(page, args, name, exc)
+        raise
+    seen_pages, seen_papers, results = (set(), set(), [])
+    consecutive_failures = 0
     for round_no in range(args.max_rounds):
         rows = await paper_items(page)
+        list_url = page.url
         signature = list_signature(rows)
         if not rows or signature in seen_pages:
             break
@@ -396,21 +496,41 @@ async def crawl_category(context, page, name, args, submitted):
                 continue
             worker = None
             try:
-                worker = await open_paper(context, paper, name, list_url, round_no, signature)
+                print('[试卷] ' + paper['title'], flush=True)
+                worker = await open_paper(context, paper, page, signature)
                 result = await crawl_current_page(context, worker, args, submitted, title=paper['title'])
                 cp[key] = result
                 json_write(checkpoint, cp)
                 results.append(result)
+                consecutive_failures = 0
                 LOG.info('%s | %s | %s题', result['status'], result['title'], result['questions'])
+            except ListingStateError as exc:
+                await listing_diagnostic(page, args, name, exc)
+                raise
             except Exception as exc:
                 results.append({'status': 'failed', 'title': paper['title'], 'message': str(exc)})
+                consecutive_failures += 1
                 LOG.warning('本卷失败，继续下一卷：%s', exc)
+                if consecutive_failures >= 3:
+                    error = ListingStateError('连续三卷无法采集，已停止批量处理：' + str(exc))
+                    await listing_diagnostic(page, args, name, error)
+                    raise error from exc
             finally:
-                if worker:
+                if worker and worker is not page:
                     await worker.close()
-            await page.wait_for_timeout(1200)
-        if not await click_next(page, NEXT_LIST):
-            break
+                try:
+                    await restore_listing(page, list_url, name, round_no, signature)
+                except ListingStateError as exc:
+                    await listing_diagnostic(page, args, name, exc)
+                    raise
+            await page.wait_for_timeout(400)
+        try:
+            if not await click_next(page, NEXT_LIST):
+                break
+        except Exception as exc:
+            error = ListingStateError('列表翻页失败：' + str(exc))
+            await listing_diagnostic(page, args, name, error)
+            raise error from exc
     return results
 
 def options():
@@ -479,12 +599,11 @@ async def main():
                 else:
                     if args.expected_count:
                         raise ValueError('--expected-count仅允许单卷模式')
-                    names = []
-                    for x in await page.locator(FILTER_ITEMS).all():
-                        if await x.is_visible():
-                            name = (await x.inner_text()).strip()
-                            if name and name not in names:
-                                names.append(name)
+                    names = await visible_categories(page)
+                    if not names:
+                        error = ListingStateError('当前页没有可识别的试卷分类。')
+                        await listing_diagnostic(page, args, '', error)
+                        raise error
                     if mode == '2':
                         print('\n'.join((f'{i + 1}. {n}' for i, n in enumerate(names))))
                         index = int(await asyncio.to_thread(input, '分类编号：'))
@@ -493,10 +612,14 @@ async def main():
                         names = [names[index - 1]]
                     elif mode != '3':
                         raise ValueError('无效模式')
-                    for name in names:
-                        if len(daily_entries(args.output)) >= args.daily_target:
-                            break
-                        results.extend(await crawl_category(context, page, name, args, submitted))
+                    try:
+                        for name in names:
+                            if len(daily_entries(args.output)) >= args.daily_target:
+                                break
+                            results.extend(await crawl_category(context, page, name, args, submitted))
+                    except ListingStateError as exc:
+                        results.append({'status': 'failed', 'stage': 'listing', 'message': str(exc)})
+                        LOG.error('批量已停止；诊断已保存到输出目录：%s', exc)
         finally:
             await context.close()
             entries = list(daily_entries(args.output).values())

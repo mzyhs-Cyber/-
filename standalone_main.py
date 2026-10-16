@@ -53,7 +53,8 @@ def main():
             asyncio.run(smoke_test())
             exit_code = 0
         else:
-            print('采集程序候选版：请保持此窗口打开。', flush=True)
+            from bank_core import VERSION
+            print('采集程序 ' + VERSION + '：请保持此窗口打开。', flush=True)
             print('输出目录：' + str(app_dir / 'fenbi_output'), flush=True)
             from fenbi_crawler_v2 import main as collect
             exit_code = asyncio.run(collect())

@@ -1,8 +1,10 @@
 {
-  "version": "2.4.1-candidate",
+  "version": "2.5-candidate",
   "synthetic_tests": {
-    "passed": 45,
-    "real_account_acceptance": "6 live DOM/parser/V2 checks; standalone navigation not accepted"
+    "passed": 66,
+    "new_batch_tests": 21,
+    "synthetic_ten_paper_positions": 1350,
+    "real_windows_ten_papers": false
   },
   "baseline_targeted_tests": {
     "tests": 4,
@@ -23,5 +25,6 @@
   "publication_authorization": "User explicitly authorized public repair-branch push and Windows build on 2026-10-16.",
   "windows_2_4_1_build": "passed",
   "live_dom_papers": 6,
-  "live_dom_question_positions": 805
+  "live_dom_question_positions": 805,
+  "windows_2_5_build": "passed"
 }

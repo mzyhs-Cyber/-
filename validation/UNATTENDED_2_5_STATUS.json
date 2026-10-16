@@ -9,11 +9,13 @@
   "full_regressions": {
     "passed": 66
   },
-  "windows_build": "pending",
+  "windows_build": "passed_66_tests_packaging_and_executable_smoke",
   "live_list_selection": "2021-2025 Jiangsu A/B ten-paper selection verified",
   "real_windows_ten_papers": "not_run",
   "current_website_import": "not_run",
   "standalone_unattended_design": "Selected jobs: bounded retries, checkpoint resume, continue after failed paper; auth requires owner.",
   "startup_help": "passed",
-  "startup_browser_smoke": "passed"
+  "startup_browser_smoke": "passed",
+  "windows_run_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38860127376",
+  "tested_commit": "3a61be925fba54d7ba000947338a25c5c98a5195"
 }

@@ -1,0 +1,109 @@
+{
+  "version": "2.5-candidate",
+  "tested_commit": "3a61be925fba54d7ba000947338a25c5c98a5195",
+  "run_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38860127376",
+  "tests": 66,
+  "full_length_synthetic_batch": {
+    "papers": 10,
+    "questions_per_paper": 135,
+    "total_positions": 1350,
+    "no_midrun_input": true
+  },
+  "job": {
+    "id": 116840278815,
+    "name": "windows",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 38860127376,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/setup-python@v5",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Install dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Test synthetic collection workflows",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Build application with browser",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Verify packaged browser and startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Run actions/upload-artifact@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Post Run actions/setup-python@v5",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Post Run actions/checkout@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      }
+    ]
+  },
+  "artifact": {
+    "id": 12028589449,
+    "name": "FenbiCollector-Windows-v2.5-candidate",
+    "size_in_bytes": 399502805,
+    "url": "https://api.github.com/repos/mzyhs-Cyber/-/actions/artifacts/12028589449",
+    "archive_download_url": "https://api.github.com/repos/mzyhs-Cyber/-/actions/artifacts/12028589449/zip",
+    "expired": false,
+    "created_at": "2026-10-16T06:19:42Z",
+    "expires_at": "2026-10-30T06:19:15Z",
+    "updated_at": "2026-10-16T06:19:42Z",
+    "digest": "sha256:56985b701f8c2b07798ebbb77cc8e3e4c223950322ddcd7bc283244d87a9217d",
+    "workflow_run": {
+      "id": 38860127376,
+      "repository_id": 1421398351,
+      "head_repository_id": 1421398351,
+      "head_branch": "fix/capture-state-2.4-20261016",
+      "head_sha": "3a61be925fba54d7ba000947338a25c5c98a5195"
+    }
+  },
+  "real_windows_ten_papers": "not_run",
+  "current_website_import": "not_run"
+}

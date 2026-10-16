@@ -1,0 +1,78 @@
+{
+  "source_commit": "435517f5f22c5f0050f908870b9541248d84606b",
+  "run_url": "https://github.com/mzyhs-Cyber/-/actions/runs/38842205857",
+  "runner": "windows-latest",
+  "status": "success",
+  "synthetic_test_count": 27,
+  "packaged_checks": [
+    "help",
+    "Asia/Shanghai timezone",
+    "bundled Chromium launch"
+  ],
+  "artifact": {
+    "name": "FenbiCollector-Windows-candidate",
+    "displayed_size": "381 MB",
+    "sha256": "f2d77f05097f69911671b90c2e341680db3d5994bbd72ecea71e7a875e500ff3",
+    "retention_days": 14
+  },
+  "steps": [
+    {
+      "name": "Set up job",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:47:16Z"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:47:22Z"
+    },
+    {
+      "name": "Run actions/setup-python@v5",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:47:22Z"
+    },
+    {
+      "name": "Install dependencies",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:48:01Z"
+    },
+    {
+      "name": "Test synthetic collection workflows",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:48:55Z"
+    },
+    {
+      "name": "Build application with browser",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:49:13Z"
+    },
+    {
+      "name": "Verify packaged browser and startup",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:49:14Z"
+    },
+    {
+      "name": "Run actions/upload-artifact@v4",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:49:47Z"
+    },
+    {
+      "name": "Post Run actions/setup-python@v5",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:49:47Z"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:49:49Z"
+    },
+    {
+      "name": "Complete job",
+      "conclusion": "success",
+      "completed_at": "2026-10-16T02:49:50Z"
+    }
+  ],
+  "real_account_collection_verified": false,
+  "daily_five_complete_papers_verified": false,
+  "personal_website_import_verified": false
+}

@@ -23,7 +23,19 @@ jobs:
           python -m pip install "pyinstaller>=6.11,<7"
           python -m playwright install chromium
       - name: Test synthetic collection workflows
-        run: python -m unittest discover -s tests -v
+        shell: python
+        run: |
+          import os
+          import subprocess
+          import sys
+          result = subprocess.run(
+              [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'],
+              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+              text=True, encoding='utf-8', errors='replace')
+          print(result.stdout, end='')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('### Synthetic collection tests\n\n```text\n' + result.stdout[-50000:] + '\n```\n')
+          sys.exit(result.returncode)
       - name: Build application with browser
         run: >-
           python -m PyInstaller --noconfirm --clean --onedir --console

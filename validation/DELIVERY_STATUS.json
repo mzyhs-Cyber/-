@@ -1,9 +1,8 @@
 {
-  "version": "2.4-candidate",
+  "version": "2.4.1-candidate",
   "synthetic_tests": {
-    "passed": 42,
-    "new_regressions": 10,
-    "real_account_acceptance": false
+    "passed": 45,
+    "real_account_acceptance": "6 live DOM/parser/V2 checks; standalone navigation not accepted"
   },
   "baseline_targeted_tests": {
     "tests": 4,
@@ -16,10 +15,13 @@
   "playwright": "1.57.0",
   "startup_help": "passed",
   "browser_smoke_test": "passed",
-  "windows_2_4_build": "pending_push_and_ci",
-  "remote_repair_branch_exists": false,
+  "windows_2_4_build": "2.4 Windows build passed previously",
+  "remote_repair_branch_exists": true,
   "new_real_complete_papers": 0,
   "current_website_import_acceptance": "not_run",
   "publication_block_reason": null,
-  "publication_authorization": "User explicitly authorized public repair-branch push and Windows build on 2026-10-16."
+  "publication_authorization": "User explicitly authorized public repair-branch push and Windows build on 2026-10-16.",
+  "windows_2_4_1_build": "passed",
+  "live_dom_papers": 6,
+  "live_dom_question_positions": 805
 }

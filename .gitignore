@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+fenbi_output/
+fenbi_browser_profile/
+browser_cache/
+dist/
+build/
+*.spec
+*.bak_*
+daily_plan.json

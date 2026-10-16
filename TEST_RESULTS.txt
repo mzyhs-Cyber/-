@@ -1,0 +1,64 @@
+[采集进度] 已读取 1 题；页面声明题数：2
+[采集进度] 已读取 1 题；页面声明题数：2
+[采集进度] 已读取 2 题；页面声明题数：2
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[步骤1] 正在检查试卷和解析页……
+[采集进度] 已读取 1 题；页面声明题数：1
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 1 题；页面声明题数：尚未识别
+[采集进度] 已读取 2 题；页面声明题数：2
+请在浏览器里手动完成交卷，看到标准答案和解析后再回来。
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[步骤1] 正在检查试卷和解析页……
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+[图片检查] 开始核验图片，网络检查可能需要几分钟；题目已先保存。
+test_auto_submit_event_is_recorded_and_never_called_learning (test_crawler.BrowserTests.test_auto_submit_event_is_recorded_and_never_called_learning) ... ok
+test_delayed_custom_div_confirmation_is_automatic (test_crawler.BrowserTests.test_delayed_custom_div_confirmation_is_automatic) ... ok
+test_disabled_auto_submit_does_not_click (test_crawler.BrowserTests.test_disabled_auto_submit_does_not_click) ... ok
+test_navigation_failure_preserves_questions_and_raw_snapshot (test_crawler.BrowserTests.test_navigation_failure_preserves_questions_and_raw_snapshot) ... ok
+test_navigation_query_has_external_deadline (test_crawler.BrowserTests.test_navigation_query_has_external_deadline) ... ok
+test_next_question_collects_two_and_links_only_second_material (test_crawler.BrowserTests.test_next_question_collects_two_and_links_only_second_material) ... ok
+test_nohref_popup_uses_verified_listing_and_preserves_original (test_crawler.BrowserTests.test_nohref_popup_uses_verified_listing_and_preserves_original) ... ok
+test_three_listing_pages_keep_state_and_stop_at_five (test_crawler.BrowserTests.test_three_listing_pages_keep_state_and_stop_at_five) ... ok
+test_uncertain_submission_is_not_retried (test_crawler.BrowserTests.test_uncertain_submission_is_not_retried) ... ok
+test_unknown_count_and_unassociated_material_fail_closed (test_crawler.BrowserTests.test_unknown_count_and_unassociated_material_fail_closed) ... ok
+test_unrecognized_confirmation_waits_for_manual_action_then_resumes (test_crawler.BrowserTests.test_unrecognized_confirmation_waits_for_manual_action_then_resumes) ... ok
+test_unrelated_confirmation_is_not_clicked (test_crawler.BrowserTests.test_unrelated_confirmation_is_not_clicked) ... ok
+test_four_pure_image_options_and_equal_text_options_preserved (test_crawler.CoreTests.test_four_pure_image_options_and_equal_text_options_preserved) ... ok
+test_incomplete_count_orders_and_duplicates_rejected (test_crawler.CoreTests.test_incomplete_count_orders_and_duplicates_rejected) ... ok
+test_inline_math_not_silently_declared_compatible (test_crawler.CoreTests.test_inline_math_not_silently_declared_compatible) ... ok
+test_lazy_image_source_is_normalized_and_missing_source_rejected (test_crawler.CoreTests.test_lazy_image_source_is_normalized_and_missing_source_rejected) ... ok
+test_materials_referenced_in_card_and_conflicts_rejected (test_crawler.CoreTests.test_materials_referenced_in_card_and_conflicts_rejected) ... ok
+test_missing_id_or_order_cannot_be_invented (test_crawler.CoreTests.test_missing_id_or_order_cannot_be_invented) ... ok
+test_missing_rate_is_optional_answer_is_required (test_crawler.CoreTests.test_missing_rate_is_optional_answer_is_required) ... ok
+test_v2_order_and_source_do_not_change_membership (test_crawler.CoreTests.test_v2_order_and_source_do_not_change_membership) ... ok
+test_alias_urls_do_not_count_twice_but_ab_titles_do (test_crawler.SaveTests.test_alias_urls_do_not_count_twice_but_ab_titles_do) ... ok
+test_diagnostics_exist_even_if_first_page_check_fails (test_crawler.SaveTests.test_diagnostics_exist_even_if_first_page_check_fails) ... ok
+test_only_complete_outputs_count_and_tampering_invalidates_receipt (test_crawler.SaveTests.test_only_complete_outputs_count_and_tampering_invalidates_receipt) ... ok
+test_solution_probe_does_not_wait_forever (test_crawler.SaveTests.test_solution_probe_does_not_wait_forever) ... ok
+test_verified_images_stay_portable_and_nonimage_not_accepted (test_crawler.SaveTests.test_verified_images_stay_portable_and_nonimage_not_accepted) ... ok
+test_frozen_app_uses_bundled_browser_and_persistent_output_location (test_standalone.StandaloneTests.test_frozen_app_uses_bundled_browser_and_persistent_output_location) ... ok
+test_startup_error_is_saved_without_interactive_console (test_standalone.StandaloneTests.test_startup_error_is_saved_without_interactive_console) ... ok
+
+----------------------------------------------------------------------
+Ran 27 tests in 53.100s
+
+OK

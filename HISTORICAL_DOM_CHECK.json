@@ -1,0 +1,16 @@
+{
+  "fixture": "historical DOM with verified order/subject/count wrappers; all network requests intercepted",
+  "questions": 130,
+  "audit_ok": true,
+  "issues": [],
+  "material_groups": 5,
+  "material_questions": 25,
+  "answers_match": 130,
+  "rates_match": 130,
+  "checkpoint_saved": true,
+  "capture_seconds": 1.741,
+  "next_control_present": false,
+  "next_query_seconds": 0.007,
+  "live_fenbi_verified": false,
+  "real_windows_verified": false
+}

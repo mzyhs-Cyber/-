@@ -1,0 +1,38 @@
+name: Publish complete AI handoff
+on:
+  workflow_dispatch:
+  create:
+jobs:
+  full-handoff:
+    if: github.event_name == 'workflow_dispatch' || (github.event.ref_type == 'tag' && startsWith(github.event.ref, 'full-handoff-'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify five volumes and reconstruct full archive
+        run: python3 handoff/build_full_release.py --output full-handoff-release
+      - name: Independently verify full archive
+        run: python3 handoff/verify_package.py full-handoff-release/Fenbi_AI_Handoff_20261016_ALL.zip
+      - name: Publish authorized complete download
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          tag = os.environ['GITHUB_REF_NAME']
+          if not tag.startswith('full-handoff-'):
+              tag = 'full-handoff-20261016'
+          files = [str(p) for p in sorted(Path('handoff_full').glob('*.zip'))]
+          files += [str(p) for p in sorted(Path('full-handoff-release').iterdir()) if p.is_file()]
+          exists = subprocess.run(['gh', 'release', 'view', tag], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+          if exists:
+              command = ['gh', 'release', 'upload', tag, '--clobber'] + files
+          else:
+              command = ['gh', 'release', 'create', tag, '--verify-tag',
+                  '--title', '完整 AI 交接包：代码、进度、要求与原四卷资料',
+                  '--notes-file', 'handoff_full/README.md'] + files
+          subprocess.run(command, check=True)

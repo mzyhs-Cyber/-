@@ -1,0 +1,62 @@
+[
+  {
+    "status": "verified",
+    "zip_file": "Fenbi_AI_Handoff_20261016_part01of05.zip",
+    "bytes": 3900133,
+    "zip_sha256": "d7e101810e948256adb06bd0f56e6d7e99391b1cf9aff074ad42bf647e8df505",
+    "payload_files": 108,
+    "zip_entries": 109,
+    "source_commit": "b71cc52d514ec94098a593653dc46cae1fd5d5ba",
+    "kind": "local_full_volume",
+    "all_file_hashes_match": true,
+    "zip_crc_ok": true
+  },
+  {
+    "status": "verified",
+    "zip_file": "Fenbi_AI_Handoff_20261016_part02of05.zip",
+    "bytes": 26084998,
+    "zip_sha256": "a201d64112f3d2c1280fd2663e7ec8bee7c027dcaa9452a93e7438f9bfb20918",
+    "payload_files": 5,
+    "zip_entries": 6,
+    "source_commit": "b71cc52d514ec94098a593653dc46cae1fd5d5ba",
+    "kind": "local_full_volume",
+    "all_file_hashes_match": true,
+    "zip_crc_ok": true
+  },
+  {
+    "status": "verified",
+    "zip_file": "Fenbi_AI_Handoff_20261016_part03of05.zip",
+    "bytes": 26081110,
+    "zip_sha256": "911c5d89e170a7cf0ef9417a85fbad69681b1d47868a68c38497edff38eb9da1",
+    "payload_files": 5,
+    "zip_entries": 6,
+    "source_commit": "b71cc52d514ec94098a593653dc46cae1fd5d5ba",
+    "kind": "local_full_volume",
+    "all_file_hashes_match": true,
+    "zip_crc_ok": true
+  },
+  {
+    "status": "verified",
+    "zip_file": "Fenbi_AI_Handoff_20261016_part04of05.zip",
+    "bytes": 26080203,
+    "zip_sha256": "2fd0d4578b56497f9d302e6320c0b757b7540a1fc9d84e4dd9aa624f91b79427",
+    "payload_files": 5,
+    "zip_entries": 6,
+    "source_commit": "b71cc52d514ec94098a593653dc46cae1fd5d5ba",
+    "kind": "local_full_volume",
+    "all_file_hashes_match": true,
+    "zip_crc_ok": true
+  },
+  {
+    "status": "verified",
+    "zip_file": "Fenbi_AI_Handoff_20261016_part05of05.zip",
+    "bytes": 26082999,
+    "zip_sha256": "48679e84c84a14f61b791982b50f648e6387a86d474430d495d846af8d036d5f",
+    "payload_files": 5,
+    "zip_entries": 6,
+    "source_commit": "b71cc52d514ec94098a593653dc46cae1fd5d5ba",
+    "kind": "local_full_volume",
+    "all_file_hashes_match": true,
+    "zip_crc_ok": true
+  }
+]

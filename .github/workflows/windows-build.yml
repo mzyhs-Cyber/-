@@ -35,6 +35,9 @@ jobs:
           print(result.stdout, end='')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
               summary.write('### Synthetic collection tests\n\n```text\n' + result.stdout[-50000:] + '\n```\n')
+          if result.returncode:
+              detail = result.stdout[-12000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print('::error title=Windows synthetic test details::' + detail)
           sys.exit(result.returncode)
       - name: Build application with browser
         run: >-

@@ -16,6 +16,7 @@ import os
 import re
 import time
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -31,8 +32,55 @@ NEXT_LIST = "button:has-text('下一页'), a:has-text('下一页'), .pagination-
 NEXT_QUESTION = "button:has-text('下一题'), a:has-text('下一题'), .next-question"
 LOG = logging.getLogger('fenbi')
 
+MOCK_CATEGORY = '省考模拟题'
+
+def accepts_paper(category, title):
+    """Only explicit B papers in the Jiangsu mock listing are eligible."""
+    if category != MOCK_CATEGORY:
+        return True
+    title = unicodedata.normalize('NFKC', title).upper()
+    types = set(re.findall(r'(?<![A-Z])([ABC])\s*(?:类|卷)', title))
+    return types == {'B'} and '通用' not in title and not re.search(r'[ABC]\s*[/、&及和]\s*[ABC]', title)
+
+MOCK_REGION_JS = """() => {
+      document.querySelectorAll('[data-fenbi-mock-region]').forEach(e=>e.removeAttribute('data-fenbi-mock-region'));
+      const visible = e => !!e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden';
+      const items = [...document.querySelectorAll('.categories-item')].filter(visible);
+      const anchors = items.filter(e=>e.innerText.trim()==='通用卷');
+      if(anchors.length!==1) return 0;
+      for(let group=anchors[0].parentElement;group && group!==document.body;group=group.parentElement) {
+        const children=items.filter(e=>group.contains(e));
+        if(children.some(e=>e.innerText.trim()==='省考模拟题')) return 0;
+        const matches=children.filter(e=>e.innerText.trim()==='江苏');
+        if(matches.length===1) {matches[0].setAttribute('data-fenbi-mock-region','1'); return 1;}
+      }
+      return 0;
+    }"""
+
+async def select_mock_region(page):
+    # Both levels contain a Jiangsu item. Locate the lower group by its
+    # observed "通用卷" sibling; never use the first text match on the page.
+    mark = '[data-fenbi-mock-region="1"]'
+    deadline = time.monotonic() + 8
+    while time.monotonic() < deadline:
+        if await page.evaluate(MOCK_REGION_JS) == 1:
+            await page.locator(mark).click(timeout=4000)
+            await page.wait_for_timeout(600)
+            await verify_mock_region(page)
+            return
+        await asyncio.sleep(.2)
+    raise ListingStateError('无法唯一定位省考模拟题下的江苏地区，已停止，未回退到通用卷。')
+
 class UserActionRequired(RuntimeError):
     """Authentication or verification needs the account owner; never solve automatically."""
+
+async def verify_mock_region(page):
+    if await page.evaluate(MOCK_REGION_JS) != 1:
+        raise ListingStateError('无法确认江苏地区筛选，已停止。')
+    selected = await page.locator('[data-fenbi-mock-region="1"]').evaluate(
+        "e => e.matches('.active,.selected,.current,.checked,[aria-selected=\"true\"],[aria-pressed=\"true\"]')")
+    if not selected:
+        raise ListingStateError('未确认江苏地区选中状态，已停止，未采集通用卷。')
 
 class ListingStateError(RuntimeError):
     """The listing cannot be trusted; do not repeat the failure for every paper."""
@@ -423,12 +471,14 @@ async def click_filter(page, name):
             if matches:
                 await matches[0].click(timeout=4000)
                 await page.wait_for_timeout(600)
+                if name == MOCK_CATEGORY:
+                    await select_mock_region(page)
                 return
             if time.monotonic() >= deadline:
                 raise ListingStateError('找不到分类：' + name)
             await asyncio.sleep(0.2)
     try:
-        await asyncio.wait_for(select(), timeout=12)
+        await asyncio.wait_for(select(), timeout=22)
     except ListingStateError:
         raise
     except Exception as exc:
@@ -614,12 +664,16 @@ async def crawl_category(context, page, name, args, submitted):
     consecutive_failures = 0
     for round_no in range(args.max_rounds):
         rows = await paper_items(page)
+        if name == MOCK_CATEGORY:
+            await verify_mock_region(page)
         list_url = page.url
         signature = list_signature(rows)
         if not rows or signature in seen_pages:
             break
         seen_pages.add(signature)
         for paper in rows:
+            if not accepts_paper(name, paper['title']):
+                continue
             if len(daily_entries(args.output)) >= args.daily_target:
                 return results
             key = paper['href'] or name + '|' + paper['title']

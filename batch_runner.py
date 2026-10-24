@@ -12,6 +12,10 @@ from bank_core import VERSION, json_write
 SELECTION_PAGE_WAIT_SECONDS = 8
 
 
+def mock_scope(category):
+    return {'region': '江苏', 'paper_type': 'B'} if category == '省考模拟题' else {}
+
+
 def submission_key(url):
     p = urlsplit(url)
     path = re.sub(r'/exam/(?:exercise|solution)/', '/exam/paper/', p.path)
@@ -104,7 +108,7 @@ def select_ab_pairs(rows, pairs=5):
 
 
 def validate_targets(targets):
-    from fenbi_crawler_v2 import allowed_page
+    from fenbi_crawler_v2 import allowed_page, accepts_paper, MOCK_CATEGORY
     if not isinstance(targets, list) or not targets:
         raise ValueError('任务须包含非空试卷数组')
     unique, titles, urls = [], set(), {}
@@ -122,6 +126,11 @@ def validate_targets(targets):
                 raise ValueError('列表页码无效')
             if not isinstance(listing.get('category'), str) or not isinstance(listing.get('signature'), list):
                 raise ValueError('选卷任务缺分类或列表证据')
+            if listing['category'] == MOCK_CATEGORY:
+                if not accepts_paper(MOCK_CATEGORY, target['title']):
+                    raise ValueError('省考模拟题默认仅采集江苏B卷，请重新选卷；未采集通用卷或其他卷型')
+                if listing.get('region') != '江苏' or listing.get('paper_type') != 'B':
+                    raise ValueError('旧模拟卷任务缺少江苏B卷筛选证据，请重新选卷')
         elif not allowed_page(target.get('url', '')):
             raise ValueError('每卷须有正常粉笔HTTPS url或保存的列表位置')
         title = target['title'].strip()
@@ -156,7 +165,7 @@ def paper_year(title):
 
 async def scan_year_targets(page, categories, year_start, year_end, output=None):
     from fenbi_crawler_v2 import (click_filter, reset_listing_first_page, wait_paper_items,
-                                 list_signature, click_next, NEXT_LIST, now)
+                                 list_signature, click_next, NEXT_LIST, now, accepts_paper, verify_mock_region)
     selected = []
     report = {'year_start': year_start, 'year_end': year_end, 'status': 'scanning', 'categories': []}
     def persist():
@@ -174,6 +183,8 @@ async def scan_year_targets(page, categories, year_start, year_end, output=None)
                 if page_index == 300:
                     raise RuntimeError('列表超过300页，已停止并保留选卷进度')
                 rows = await wait_paper_items(page)
+                if category == '省考模拟题':
+                    await verify_mock_region(page)
                 if not rows:
                     raise RuntimeError('无法读取分类列表：' + category)
                 signature = tuple(tuple(row) for row in list_signature(rows))
@@ -181,11 +192,13 @@ async def scan_year_targets(page, categories, year_start, year_end, output=None)
                     raise RuntimeError('翻页后列表未变化或发生循环：' + category)
                 seen.add(signature)
                 for row in rows:
+                    if not accepts_paper(category, row['title']):
+                        continue
                     year = paper_year(row['title'])
                     if year is None:
                         item['undated_titles'].append(row['title'])
                     elif year_start <= year <= year_end:
-                        selected.append({'title': row['title'], 'listing': {'url': page.url, 'category': category,
+                        selected.append({'title': row['title'], 'listing': {**mock_scope(category), 'url': page.url, 'category': category,
                             'page_index': page_index, 'signature': [list(r) for r in signature]}})
                         if year not in item['years_found']:
                             item['years_found'].append(year)
@@ -219,11 +232,11 @@ async def scan_year_targets(page, categories, year_start, year_end, output=None)
 
 
 async def choose_targets(page, args):
-    from fenbi_crawler_v2 import visible_categories, click_filter, paper_items, wait_paper_items, list_signature, click_next, NEXT_LIST
+    from fenbi_crawler_v2 import visible_categories, click_filter, paper_items, wait_paper_items, list_signature, click_next, NEXT_LIST, accepts_paper, verify_mock_region
     names = await visible_categories(page)
     if not names:
-        raise ValueError('请先在浏览器打开历年真题列表，再选择选卷模式')
-    print('\n'.join(f'{i+1}. {name}' for i, name in enumerate(names)))
+        raise ValueError('请先在浏览器打开真题或模拟题列表，再选择选卷模式')
+    print('\n'.join(f'{i+1}. {name}' + ('（默认江苏B卷）' if name == '省考模拟题' else '') for i, name in enumerate(names)))
     while True:
         value = await asyncio.to_thread(input, '分类编号（可多选，例如2,5,6,19；也可5-8）：')
         try:
@@ -250,6 +263,8 @@ async def choose_targets(page, args):
         print(f'\n正在选卷：{category}（分类{position+1}/{len(category_indices)}）', flush=True)
         while True:
             rows = await wait_paper_items(page)
+            if category == '省考模拟题':
+                await verify_mock_region(page)
             if not rows:
                 raise ValueError('当前分类没有读取到试卷：' + category)
             print('\n'.join(f'{i+1}. {row["title"]}' for i, row in enumerate(rows)))
@@ -273,7 +288,10 @@ async def choose_targets(page, args):
                 print(str(exc), flush=True)
                 continue
             for i in indices:
-                selected.append({'title': rows[i]['title'], 'listing': {'url': page.url, 'category': category,
+                if not accepts_paper(category, rows[i]['title']):
+                    print('跳过非江苏B卷：' + rows[i]['title'], flush=True)
+                    continue
+                selected.append({'title': rows[i]['title'], 'listing': {**mock_scope(category), 'url': page.url, 'category': category,
                     'page_index': page_index, 'signature': [list(r) for r in list_signature(rows)]}})
             selected = validate_targets(selected)
     return validate_targets(selected)
@@ -286,7 +304,7 @@ async def open_target(context, page, target):
         await page.goto(target['url'], wait_until='domcontentloaded')
         return page
     signature = tuple(tuple(row) for row in listing['signature'])
-    if list_signature(await paper_items(page)) != signature:
+    if listing['category'] == '省考模拟题' or list_signature(await paper_items(page)) != signature:
         if page.url != listing['url']:
             await page.goto(listing['url'], wait_until='domcontentloaded')
         await click_filter(page, listing['category'])

@@ -1,0 +1,7 @@
+candidate_id,model_id,source,media_check,independent_method,answer_consistent,source_alias,status,use_policy
+paper-1nqoxnu::3_1_4duol,G03,2022江苏C85,viewed,manual-geometry,yes,,reserved-stage-check,recent-Jiangsu-reserve
+paper-1nqoxnu::3_1_4dum2,G03,2022江苏C86,viewed,manual-geometry,yes,2022江苏B86,reserved-stage-check,count-once
+paper-10xb5cp::3_1_5fkpm,G03,2023江苏A86,viewed,manual-geometry,yes,,reserved-stage-check,recent-Jiangsu-reserve
+paper-p5qdo4::3_1_h298s,G02,2024江苏C86,viewed,grid-exact-cover,yes,,reserved-stage-check,recent-Jiangsu-reserve
+paper-1ckhc0y::3_1_aeu0p,G05,2024江苏A88,viewed,cube-eight-vertices,yes,,model-matched,private-eligibility-gate
+paper-p5qdo4::3_1_bngf7,G05,2024江苏C88,viewed,cube-eight-vertices,yes,2024江苏B88,reserved-stage-check,count-once

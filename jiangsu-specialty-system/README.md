@@ -26,9 +26,8 @@
 ## 目录
 
 - `models/model-registry.csv`：25 个江苏模型及当前阶段。
-- `candidates/candidate-ledger.csv`：脱敏候选题和已用题身份。
-- `progress/current-cycle.yaml`：当前周期、主攻/复测与证据。
-- `day3/plan.md`：明日 Day 3 的证据边界与组卷门槛。
+- `candidates/public-candidate-template.csv`：公开候选记录模板与江苏锚点示例，不含个人学习关联。
+- `progress/system-roadmap.md`：通用周期与推进门槛。
 - `protocols/source-and-verification.md`：题源、版权、完整性和独立核验。
 - `protocols/feedback-loop.md`：反馈式学习与升级/降阶规则。
 - `schemas/candidate.schema.json`：候选记录机读规范。
@@ -37,6 +36,6 @@
 
 ## 隐私与公开边界
 
-本仓库为公开仓库。这里只保存模型、原题ID、年份、地区、公开链接、结构摘要和核验状态；不提交完整私密题面、完整受限解析、个人答案、sessionId、账号、令牌、密钥或未脱敏备份。
+本仓库为公开仓库。这里只保存模型、公开年份/题号锚点、结构摘要、研究方法和通用核验状态；不提交私密题库原题ID、个人使用批次、答案、错因、sessionId、账号、令牌、密钥或未脱敏备份。个人候选与Day 3证据只保存在私密Notion。
 
 长期追踪入口：GitHub Issue #5。

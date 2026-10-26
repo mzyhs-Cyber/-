@@ -1,13 +1,20 @@
 {
-  "status": "authorized_pending_commit",
+  "status": "verified",
   "repository": "mzyhs-Cyber/-",
   "visibility": "public",
   "branch": "zhiyaoji-handoff-20261026",
+  "verified_content_commit": "e48e46a9f4f1ab5adce95168ebc07792240b5a93",
   "base_commit": "48a3aa7e16f2fccaf3e0ab1772903e73c4618e65",
+  "project_files_verified": 39,
+  "blob_hash_mismatches": [],
+  "original_files_verified_unchanged": 36,
+  "main_unchanged": true,
+  "key_document_content_read_back": "zhiyaoji/PROJECT_STATE.md",
   "authorization": "用户明确同意把脱敏代码和项目档案提交到现有公开仓库",
-  "not_uploaded": [
+  "excluded": [
     "full learning backup",
     "question bank",
     "birthday photos and letter"
-  ]
+  ],
+  "note": "This record verifies the content commit; the subsequent acceptance-record commit is checked again before final delivery."
 }

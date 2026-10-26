@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mzyhs-Cyber/-/jiangsu-specialty-system/schemas/candidate.schema.json",
+  "title": "Zhiyaoji Jiangsu Specialty Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidate_id", "model_id", "source_type", "content_access", "status"],
+  "properties": {
+    "candidate_id": {"type": "string", "minLength": 1},
+    "model_id": {"type": "string", "pattern": "^(G0[1-6]|L0[1-5]|V0[1-4]|Q0[1-3]|D0[1-4]|C0[1-2]|K01)$"},
+    "subtype": {"type": "string"},
+    "jiangsu_anchor": {"type": "string"},
+    "source_type": {"enum": ["official", "recall", "institution", "simulation", "private-bank"]},
+    "source_year": {"type": ["integer", "null"], "minimum": 2000, "maximum": 2100},
+    "source_region": {"type": "string"},
+    "source_question_id": {"type": "string"},
+    "public_url": {"type": ["string", "null"], "format": "uri"},
+    "content_access": {"enum": ["full", "partial", "metadata-only", "private-bank"]},
+    "material_complete": {"type": "boolean"},
+    "media_complete": {"type": "boolean"},
+    "independent_answer_check": {"enum": ["pending", "passed", "failed"]},
+    "cross_check": {"type": "string"},
+    "same_constraints": {"type": "string"},
+    "changed_dimension": {"type": "string"},
+    "difficulty": {"enum": ["foundation", "standard", "challenge", "unknown"]},
+    "status": {"enum": ["lead", "source-read", "content-complete", "independently-solved", "cross-checked", "model-matched", "eligible", "used", "retest-due", "hold-dedup", "reserved-stage-check", "retired"]},
+    "used_pack": {"type": ["string", "null"]},
+    "notes": {"type": "string"}
+  }
+}

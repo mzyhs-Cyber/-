@@ -1,0 +1,6 @@
+candidate_key,model_id,jiangsu_anchor,source_type,source_year,source_region,public_url,content_access,material_complete,media_complete,independent_answer_check,cross_check,status,notes
+anchor-G01-2021B83,G01,2021B83,recall,2021,江苏,,metadata-only,false,false,pending,,lead,只作公开锚点示例
+anchor-G04-2025B89,G04,2025B89,recall,2025,江苏,,metadata-only,false,false,pending,,reserved-stage-check,近期江苏题保留阶段检测
+anchor-D02-2025B122,D02,2025B122,recall,2025,江苏,,metadata-only,false,false,pending,,reserved-stage-check,需从合法完整来源核验
+anchor-L03-2025B104-105,L03,2025B104-105,recall,2025,江苏,,metadata-only,false,false,pending,,reserved-stage-check,一拖二完整材料不可拆
+anchor-V01-2025B46,V01,2025B46,recall,2025,江苏,,metadata-only,false,false,pending,,reserved-stage-check,篇章组完整保留

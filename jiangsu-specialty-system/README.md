@@ -32,6 +32,10 @@
 - `protocols/feedback-loop.md`：反馈式学习与升级/降阶规则。
 - `schemas/candidate.schema.json`：候选记录机读规范。
 - `audits/2026-10-26-crosscheck.md`：网站、备份、Notion、GitHub交叉核验。
+- `research/model-value-audit-2026-10-27.md`：除D02、G04外其余23模型的价值分层与纠偏。
+- `research/model-value-scores-2026-10-27.csv`：23模型五维评分及保留/合并/观察决策。
+- `research/candidate-discovery-2026-10-27.md`：近5年外省/国考候选线索与精确同构缺口。
+- `research/web-source-ledger-2026-10-27.csv`：官方、机构、讲师与社交平台来源台账。
 - `tools/validate_ledgers.py`：台账静态校验。
 
 ## 隐私与公开边界

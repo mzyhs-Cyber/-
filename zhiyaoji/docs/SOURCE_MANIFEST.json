@@ -1,0 +1,171 @@
+{
+  "snapshot": "V2.9.18-r7",
+  "build": "20261021-r7",
+  "formal_baseline": "unknown",
+  "archive_name": "知遥集_V2.9.18_修正版7_断点同步与笔迹修复部署包.zip",
+  "archive_sha256": "a00b9a38f562c9fe1cb49f23d4e92f8d1d8b0efc4bd62e25fbb315375a43fe82",
+  "provenance": "user attachment in this conversation",
+  "entries": [
+    {
+      "path": "FONT-LICENSE.txt",
+      "bytes": 4301,
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "_headers",
+      "bytes": 286,
+      "sha256": "3ff9fd21d056bc06217e229fc6b07b3d637e3d97b2d008d24971f4954f0ff1c2",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "_routes.json",
+      "bytes": 68,
+      "sha256": "156e4e8acd2948a9c2bf5ad1aaf8c517289c06c096ab54edc3d4e1544b2708a1",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "_worker.js",
+      "bytes": 29330,
+      "sha256": "b30c0eb894d71043a655e054591978cdfdcefba1ffa4f7dcedd6238c4b53d28c",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "bank-config.js",
+      "bytes": 215,
+      "sha256": "9382f5be7bc3de353527afc33d61c47d42e3d172c0dbae310913d1d93a016dec",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "birthday.html",
+      "bytes": 863863,
+      "sha256": "2d2e2dfd8ff5f356240040bb191905c4e1f3780c113e4725b6663c272d9c3eba",
+      "tracked": false,
+      "reason": "private photo and personal letter"
+    },
+    {
+      "path": "bundle.js",
+      "bytes": 1829414,
+      "sha256": "2c7bd9c8468e4c0c5ee2c2a7598c16f0ad3d07818df290a1316c28b04b6f43ea",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "home.css",
+      "bytes": 13590,
+      "sha256": "cbcf51ba2e1973f8bcf7b3d4c6d54aad4b18c7287de24d68fac4a911d707fc8d",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "icon-180.png",
+      "bytes": 10746,
+      "sha256": "eb1d97bcbcc1ad79ddd3e0b06dc3055f789ca8f04e1e81bc68b0496931c9af3b",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "icon-192.png",
+      "bytes": 11618,
+      "sha256": "fba786dccec936bd5c3b0735e0b421f9e599c23ee9c345df7ef6dfa57a90f873",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "icon-512.png",
+      "bytes": 46911,
+      "sha256": "a47bf89721978d4ec5e01097852c207ad36d1adbfb5fcb2325949fbeb7f24e57",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "icon.svg",
+      "bytes": 1070,
+      "sha256": "d3ae10d381388dd674194d69db77c6b97166ec13ede9669f6ee8c68d8fb76647",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "index.html",
+      "bytes": 3071,
+      "sha256": "e9c464b2a619a81d11bd6c05c68f56a86a6d1023afb06342b9bd3aba99220ff2",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "manifest.webmanifest",
+      "bytes": 434,
+      "sha256": "21aa1d811964753ad694efa722d2629076406eb8abdccea511c6e0a217f347b6",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "performance-diagnostics.js",
+      "bytes": 21050,
+      "sha256": "f1059129f7528923b2e80ca8f372d5e6386ca315a95534a65ab362e37474e5b5",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "r2-check.html",
+      "bytes": 1820,
+      "sha256": "516275740283a84d7ab71cda92be97808a3cf3bce8c5963064fccedf1b883ca0",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "reading.css",
+      "bytes": 23161,
+      "sha256": "a10d52f1ced24e46d2b379a0cdca7d195f1036892dbc09d92f9167523adf94c8",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "report.css",
+      "bytes": 16084,
+      "sha256": "7b8d68a48a6cf6c04c5c73c0b8adaa4368a2b02abaadaaeafc234e4fd6370df7",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "storage-check.html",
+      "bytes": 1826,
+      "sha256": "0f3e31116a7af88ecf93ba934304049bcfe7574437a1ecbbbc450c3e6edc25b3",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "storage-check.js",
+      "bytes": 15995,
+      "sha256": "5ee9ccdbdad68dc8ef95bce9036c4e24be26795efc25f5b9deb71c0cab3aee83",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "styles.css",
+      "bytes": 60733,
+      "sha256": "b097d99455e9fb36f00e10f7c83003ae55121e7ae1a430f357f166b9e8d6eaeb",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "sw.js",
+      "bytes": 2904,
+      "sha256": "b381d6793d5a2a2f2a13790527f4d9509b98da48b016020ab52bcb449b1db793",
+      "tracked": true,
+      "reason": null
+    },
+    {
+      "path": "部署前请看.txt",
+      "bytes": 1232,
+      "sha256": "8ecdd92de25f682f13b1287010ab90db30ef6bd2d95779c0bbcd205b2f5eda65",
+      "tracked": true,
+      "reason": null
+    }
+  ]
+}

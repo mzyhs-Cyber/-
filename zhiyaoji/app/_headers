@@ -1,0 +1,16 @@
+/index.html
+  Cache-Control: no-cache
+/
+  Cache-Control: no-cache
+/bundle.js
+  Cache-Control: no-cache
+/bank-config.js
+  Cache-Control: no-cache
+/styles.css
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+  Service-Worker-Allowed: /
+
+/r2-check.html
+  Cache-Control: no-cache

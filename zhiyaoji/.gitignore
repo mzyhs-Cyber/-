@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+*.pyc
+private/
+output/
+*.zip
+*.rar
+app/birthday.html
+*备份*.json
+*backup*.json
+fenbi_output/
+browser_profile/

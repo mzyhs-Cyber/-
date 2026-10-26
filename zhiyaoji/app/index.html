@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f5f7fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>知遥集 · V2.9.18 修正版7</title>
+<link rel="icon" href="icon.svg"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><meta name="apple-mobile-web-app-title" content="知遥集">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css?v=2.9.18-r7"><link rel="stylesheet" href="home.css?v=2.9.18-r7"><link rel="stylesheet" href="report.css?v=2.9.18-r7">
+<link rel="stylesheet" href="reading.css?v=2.9.18-r7">
+</head>
+<body>
+<div id="app-shell" class="app-shell">
+<header class="app-header" id="app-header"></header>
+<main id="view"><div class="boot-screen"><div class="boot-logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="paper" x1="0" x2="1" y2="1"><stop stop-color="#fffdf5"/><stop offset=".55" stop-color="#f5f8ee"/><stop offset="1" stop-color="#e8f0e3"/></linearGradient><radialGradient id="glow"><stop stop-color="#efd797" stop-opacity=".45"/><stop offset="1" stop-color="#f8edce" stop-opacity="0"/></radialGradient></defs><path d="M0 0h512v512H0z" fill="url(#paper)"/><circle cx="340" cy="154" r="146" fill="url(#glow)"/><circle cx="330" cy="146" r="25" fill="#dfbf73"/><path d="M124 199q68-26 132 18 64-44 132-18v164q-68-26-132 18-64-44-132-18z" fill="#ffffffa8" stroke="#718f7a" stroke-width="11" stroke-linejoin="round"/><path d="M256 217v164" fill="none" stroke="#718f7a" stroke-width="9"/><g fill="none" stroke="#a9bd9f" stroke-width="8" stroke-linecap="round"><path d="M160 252q29-1 62 17M160 288q29-1 62 17M352 252q-29-1-62 17M352 288q-29-1-62 17"/></g><path d="M152 340q28-8 53 6M306 346q27-15 53-6" fill="none" stroke="#dbcbac" stroke-width="5" stroke-linecap="round" opacity=".7"/></svg></div><svg class="boot-ring" viewBox="0 0 120 120" role="progressbar" aria-label="准备进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><circle cx="60" cy="60" r="55" fill="none" stroke="#9aae9a" stroke-opacity=".1" stroke-width="1"/><circle id="boot-progress" cx="60" cy="60" r="55" pathLength="100" fill="none" stroke="#91a991" stroke-opacity=".3" stroke-width="1" stroke-dasharray="0 100" transform="rotate(-90 60 60)"/></svg><p>一页一页，慢慢向前。</p></div></main>
+</div>
+<section id="workspace" hidden></section>
+<div id="dialog-host" class="dialog-host" hidden></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="bank-config.js?v=2.9.18-r7"></script>
+<script src="storage-check.js?v=2.9.18-r7"></script>
+<script src="bundle.js?v=2.9.18-r7"></script>
+<script src="performance-diagnostics.js?v=2.9.18-r7"></script>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).catch(()=>{});
+}
+</script>
+</body>
+</html>

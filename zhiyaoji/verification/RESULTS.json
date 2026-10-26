@@ -1,0 +1,97 @@
+{
+  "executed_at": "2026-10-26T14:38:35.017155+00:00",
+  "scope": "archive and static only",
+  "passed": true,
+  "checks": [
+    {
+      "name": "A01_snapshot_sha256",
+      "passed": true,
+      "detail": {
+        "files": 22,
+        "mismatches": []
+      }
+    },
+    {
+      "name": "A01_source_archive",
+      "passed": true,
+      "detail": {
+        "crc_ok": true,
+        "archive_sha256_matches": true,
+        "entry_count": 23
+      }
+    },
+    {
+      "name": "A02_javascript_syntax",
+      "passed": true,
+      "detail": [
+        {
+          "file": "bank-config.js",
+          "passed": true
+        },
+        {
+          "file": "storage-check.js",
+          "passed": true
+        },
+        {
+          "file": "sw.js",
+          "passed": true
+        },
+        {
+          "file": "_worker.js",
+          "passed": true
+        },
+        {
+          "file": "performance-diagnostics.js",
+          "passed": true
+        },
+        {
+          "file": "bundle.js",
+          "passed": true
+        },
+        {
+          "file": "r2-check.html:inline-0",
+          "passed": true
+        },
+        {
+          "file": "index.html:inline-0",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "A02_html_asset_references",
+      "passed": true,
+      "detail": {
+        "missing": []
+      }
+    },
+    {
+      "name": "A03_json_metadata",
+      "passed": true,
+      "detail": {
+        "checked": 6,
+        "invalid": []
+      }
+    },
+    {
+      "name": "A03_private_files_and_common_credentials",
+      "passed": true,
+      "detail": {
+        "unexpected_paths": [],
+        "credential_pattern_paths": [],
+        "scope": "heuristic, not security audit"
+      }
+    },
+    {
+      "name": "A04_entry_docs_links_version",
+      "passed": true,
+      "detail": {
+        "missing_docs": [],
+        "broken_links": [],
+        "snapshot_markers_match": true
+      }
+    }
+  ],
+  "business_tests": "not executed",
+  "remote_verification": "see verification/REMOTE.json"
+}

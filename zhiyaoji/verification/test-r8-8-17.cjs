@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const base='/workspace/scratch/a9a2157870b6/r8_8_17/';
+const path=require('node:path');const base=fs.existsSync(path.join(__dirname,'r8_8_17'))?path.join(__dirname,'r8_8_17')+'/':path.join(__dirname,'../app')+'/';
 const M=require(base+'training-memory.js');let now=Date.parse('2026-10-27T15:59:00Z');
 const values=new Map(),storage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
 let m=new M.DailyTrainingMemory(storage,'a',()=>now);m.write('timed',{chosen:'33',subject:'资料分析'});m.write('papers',{id:'32'});

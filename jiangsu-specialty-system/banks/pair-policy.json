@@ -1,0 +1,11 @@
+{
+  "version": "PAIR-20261027-v1",
+  "effective_from": "2026-10-28",
+  "timezone": "Asia/Shanghai",
+  "order": ["quant", "core"],
+  "quant": {"name": "数量稳分", "sequence_base": 5, "reinforcement_default": 2, "reinforcement_allowed": [0, 2, 3], "math": {"current_model": 3, "retest": 2, "do_or_skip": 1}, "total_allowed": [11, 13, 14]},
+  "core": {"name": "三科进阶", "range": [14, 17], "default": {"言语理解": 4, "判断推理": 6, "资料分析": 5}, "jiangsu_target": [4, 5], "jiangsu_model_min": 2},
+  "envelope": {"title_prefix": "知遥集双轨｜", "publish_calls_per_date": 1, "required_client": "R8.8.28", "legacy_fallback": "core-only; disclose quantity pending client update"},
+  "gates": ["complete-material-media", "independent-solution", "source-answer-check", "strict-model-match", "live-dedup", "no-unresolved-dispute", "protect-started-child"],
+  "public_content": "source metadata only; no private questions, original private bank IDs, answers, sessions or ink"
+}

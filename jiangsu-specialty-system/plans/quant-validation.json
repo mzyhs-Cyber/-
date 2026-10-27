@@ -1,0 +1,236 @@
+{
+  "version": "QS-HALF-20261027-v1",
+  "scope": "selected text-readable anchors, not 100 solved questions and not a released exercise pool",
+  "historical_rows": 100,
+  "numeric_rows": 25,
+  "arithmetic_rows": 75,
+  "checks": 28,
+  "results": [
+    {
+      "year": 2021,
+      "paper": "江苏B回忆版",
+      "question_number": 46,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2021,
+      "paper": "江苏B回忆版",
+      "question_number": 47,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2023,
+      "paper": "江苏B回忆版",
+      "question_number": 47,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 46,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 47,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 51,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 52,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 53,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2021,
+      "paper": "江苏B回忆版",
+      "question_number": 51,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2021,
+      "paper": "江苏B回忆版",
+      "question_number": 52,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2021,
+      "paper": "江苏B回忆版",
+      "question_number": 64,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2022,
+      "paper": "江苏B回忆版",
+      "question_number": 55,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2022,
+      "paper": "江苏B回忆版",
+      "question_number": 57,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2022,
+      "paper": "江苏B回忆版",
+      "question_number": 59,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2022,
+      "paper": "江苏B回忆版",
+      "question_number": 63,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2023,
+      "paper": "江苏B回忆版",
+      "question_number": 51,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2023,
+      "paper": "江苏B回忆版",
+      "question_number": 52,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 51,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 52,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 59,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 61,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 63,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2024,
+      "paper": "江苏B回忆版",
+      "question_number": 64,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 56,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 60,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 61,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 63,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    },
+    {
+      "year": 2025,
+      "paper": "江苏B回忆版",
+      "question_number": 65,
+      "independent_calculation": "passed",
+      "source_option_match": "unique",
+      "media_check": "not claimed"
+    }
+  ],
+  "personal_records_exported": false,
+  "source_questions_exported": false
+}

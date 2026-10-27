@@ -1,0 +1,13 @@
+source_id,source_layer,title,url,supported_claim,reliability,use_limit
+W01,official,江苏省2026年度考试录用公务员公共科目笔试考试大纲,https://www.jszzb.gov.cn/tzgg/art/2025/art_4b4f6c1ef283b21741ec26bc3c0ecc30.html,2026继续设置政治理论与五大行测模块并列且明确文章阅读和数字推理,high,用于考试结构不用于细题答案
+W02,institution,2022江苏省考行测各模块试题分析,https://js.huatu.com/gwy/1262731.html,江苏高度重视分析推理且平面和立体重构占比高,medium-high,教研观点需与真题回标交叉
+W03,institution,2022江苏图形推理平面拼接再创新,https://gd.huatu.com/2021/1217/2583137.html,黑白双面和旋转翻转属于江苏平面拼合创新,medium-high,不复制受限题面
+W04,institution,2023江苏省考新变化,https://m.js.huatu.com/gwy/1314319.html,字符型类比和图形拼合被明确列为江苏特色且小材料推理重要,medium-high,用于模型价值判断
+W05,institution,2023江苏省考数资考情,https://www.sohu.com/a/612306723_100045484,数字推理机械划分和多级数列高频且资料调查类材料具江苏特色,medium,需与本地真题统计交叉
+W06,institution,2022江苏公务员考试大纲全面解读,https://gd.huatu.com/2021/1030/2374152.html,文章阅读综合考查且数字推理数学运算结构稳定,medium-high,用于题型结构
+W07,institution,江苏数量与资料分析备考建议,https://jl.huatu.com/2022/1206/2414930.html,江苏资料分析计算量大且年均增长口径与比重为重点,medium,教研建议非官方标准
+W08,institution,2025江苏大纲新增政治理论,https://js.huatu.com/gwy/1350166.html,2025新增政治理论并强调党的创新理论和国家方针政策,medium-high,与官方2026大纲交叉
+W09,self_media,江苏省考特殊题型梳理,https://zhuanlan.zhihu.com/p/670661383,平面拼合的特殊线和平行等长消去训练方法,medium-low,只作方法线索
+W10,instructor_video,2023江苏B类资料分析真题讲解,https://www.bilibili.com/video/BV1EN4y1k7QS/,存在按整卷逐题讲解的讲师来源可用于发现模型线索,medium-low,未经授权不得转载视频或讲义
+W11,social_video,江苏数字推理历年考点汇总,https://www.douyin.com/video/7684053797085510611,数字推理五题与ABC类差异的讲师归纳线索,low,必须回到真题核对
+W12,social_video,2025江苏图推解析,https://www.douyin.com/video/7590732280893689130,2025图推黑白翻转与视图题线索,low,只作发现入口

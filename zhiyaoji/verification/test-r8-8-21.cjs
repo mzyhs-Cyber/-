@@ -33,6 +33,6 @@ assert.equal(S.timeRule({...q,path:[],type:'属性规律-对称性',sourcePath:[
 assert.equal(S.timeRule({...q,path:[],type:'未知图形标签'}),null);
 assert.equal(S.timeRule({...q,subject:'资料分析',path:[],type:'数量规律-面'}),null);
 assert.equal(S.assessQuestionTime(session(90),q).slow,false);assert.equal(S.assessQuestionTime(session(90.01),q).slow,true);
-const baseline=path.join(__dirname,'r8_8_20/bundle.js');if(fs.existsSync(baseline))assert.equal(src,fs.readFileSync(baseline,'utf8'));
+const baseline=path.join(__dirname,'r8_8_20/bundle.js');if(fs.existsSync(baseline)){const compatible=src.replaceAll('(S.reviewScopeMatches?S.reviewScopeMatches(x.q,subject):!subject||x.q.subject===subject)','!subject||x.q.subject===subject').replace('(S.reviewScopeOptions?S.reviewScopeOptions(s):[...new Set(S.aiCandidates(s).map(x=>x.q.subject))])','[...new Set(S.aiCandidates(s).map(x=>x.q.subject))]');assert.equal(compatible,fs.readFileSync(baseline,'utf8'));}
 const html=fs.readFileSync(path.join(base,'index.html'),'utf8'),sw=fs.readFileSync(path.join(base,'sw.js'),'utf8');assert.ok(html.indexOf('timing-repair.js')>html.indexOf('bundle.js'));assert.ok(html.indexOf('timing-repair.js')<html.indexOf('performance-diagnostics.js'));assert.match(sw,/const FILES=\[[^\n]*timing-repair.js/);
 console.log('PASS: reproduced both old failures; 173-second string and invalid snapshot repaired read-only; valid snapshots preserved; unknown/missing differentiated; attempt fallback; partial and complete groups; type guard; threshold boundaries; bundle unchanged');

@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r8-2';
+  const VERSION = 'D2-r8-20';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;
@@ -15,6 +15,8 @@
   const DIAG = {version:VERSION, sessionStart:Date.now(), currentRoute:'boot', memorySupported:false, longTaskSupported:false};
   window.__ZhiyaojiPerfDiagnostics = DIAG;
   let events = [];
+  let criticalEvents=[];
+  const criticalTypes=new Set(['page_start','pagehide','script_error','unhandled_rejection','navigation_error','visibility','timer_delay','shell_redirect_normalized']);
   let accountDetails=[],accountFailures=[];const DETAIL_LIMIT=64;
   let previousRun = null;
   let dirty = false;
@@ -37,8 +39,10 @@
   function truncate(){
     const cutoff=Date.now()-MAX_AGE_MS;
     events=events.filter(x=>x && x.at>=cutoff).slice(-MAX_EVENTS);
+    criticalEvents=criticalEvents.filter(x=>x&&x.at>=cutoff).slice(-48);
   }
   const stored=read();
+  if(stored)criticalEvents=Array.isArray(stored.criticalEvents)?stored.criticalEvents:stored.events.filter(e=>criticalTypes.has(e.type));
   if(stored){accountFailures=Array.isArray(stored.accountFailures)?stored.accountFailures.slice(-12):[];accountDetails=Array.isArray(stored.accountDetails)?stored.accountDetails.slice(-DETAIL_LIMIT):[];events=stored.events;previousRun=stored.run||null;truncate();}
   function write(force=false){
     if(flushing||disposed||(!dirty&&!force)||(!force&&S.activeInkPointer))return;
@@ -47,7 +51,7 @@
     flushing=true;
     try{
       truncate();
-      localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events,accountDetails,accountFailures,
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events,criticalEvents,accountDetails,accountFailures,
         run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:DIAG.currentRoute,visible:document.visibilityState,ended:false}}));
       dirty=false;lastFlush=now;
     }catch{
@@ -59,6 +63,7 @@
     if(disposed)return;
     const e={at:Date.now(),t:number(performance.now()-startAt),run:ownSession,n:++seq,type,...data};
     events.push(e);
+    if(criticalTypes.has(type)){criticalEvents.push(e);if(criticalEvents.length>48)criticalEvents.shift();}
     if(events.length>MAX_EVENTS+40)events.splice(0,events.length-MAX_EVENTS);
     dirty=true;
     // Coalesce diagnostic persistence; failures must not cause a synchronous storage burst.
@@ -81,10 +86,10 @@
   },true);
   DIAG.report=()=>({schema:1,diagnosticVersion:VERSION,createdAt:new Date().toISOString(),
     description:'本地诊断信息。手写延迟为JS事件至画布绘制指令完成的估计，非真实屏幕呈现延迟；异常刷新和CPU/内存原因不可直接推定。',
-    applicationBase:'V2.9.18 修正版8.6（存储错误与重定向诊断）',
+    applicationBase:S.BUILD||S.VERSION||'unknown',
     metrics:{eventCount:events.length,longTaskSupported:DIAG.longTaskSupported,memorySupported:DIAG.memorySupported,
       currentRoute:DIAG.currentRoute,viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
-    accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,events:events.slice()});
+    accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,criticalEvents:criticalEvents.slice(),events:events.slice()});
   S.accountSync.traceDiagnostic=(name,data)=>{accountDetails.push({at:Date.now(),run:ownSession,build:S.BUILD||'unknown',name,...data});if(accountDetails.length>DETAIL_LIMIT)accountDetails.splice(0,accountDetails.length-DETAIL_LIMIT);if(data.ok===false){accountFailures.push(accountDetails.at(-1));if(accountFailures.length>12)accountFailures.shift();}dirty=true;};
   navigator.serviceWorker?.addEventListener?.('message',e=>{if(e.data?.type==='shell-redirect-normalized')add('shell_redirect_normalized');});
   DIAG.export=function(){

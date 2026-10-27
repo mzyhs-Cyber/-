@@ -3,7 +3,7 @@ window.Study = window.Study || {};
 (function(S) {
 'use strict';
 S.VERSION='2.9.18';
-S.BUILD='20261027-r8-8-19';
+S.BUILD='20261027-r8-8-20';
 S.DB_NAME='mzy-study-clean-v2';
 S.SUBJECTS=['政治理论','常识判断','言语理解','数量关系','判断推理','资料分析'];
 S.LETTERS=['A','B','C','D'];
@@ -3952,6 +3952,7 @@ S.SyncTransport={
   const snapshot=await K.decode(head.hash,reader.get,S.NoteVault?.enabled()?{mapNote:note=>S.NoteVault.packNote(note)}:{});return {head,snapshot:S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(snapshot):snapshot};
  },
  async commit(api,profile,snapshot,head,status,deviceId){
+  await S.waitForSyncSlot?.();
   const graph=await K.encode(snapshot);
   if(graph.root===head.hash)return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size}};
   const hashes=[...new Set([...graph.objects.keys(),...graph.external||[]])],known=new Set([head.hash].filter(Boolean)),unknown=hashes.filter(h=>!known.has(h));
@@ -4060,6 +4061,7 @@ C.deviceId=(()=>{try{const key='zhiyaoji-sync-device';let id=localStorage.getIte
 const encode=new TextEncoder();
 const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',encode.encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 async function api(path,data,{timeoutMs=25000}={}){
+ if(/^\/api\/sync\/v2\/(?:known|put|commit)(?:\?|$)/.test(path))await S.waitForSyncSlot?.();
  const endpoint=String(path).split('?')[0],method=data===undefined?'GET':'POST',bodyText=data===undefined?undefined:JSON.stringify(data);
  const canRetry=['/api/account/health','/api/account/me','/api/sync/head','/api/sync/chunk','/api/sync/v2/head','/api/sync/v2/read','/api/sync/v2/known','/api/sync/v2/put'].includes(endpoint);
  for(let attempt=1;attempt<=(canRetry?2:1);attempt++){
@@ -4275,7 +4277,10 @@ function clearScheduleSuccess(j,generation){
 }
 C.sync=async function(options={}){
  if(C.adopting)return C.adopting.then(ready=>ready?C.sync(options):undefined);
- if(cycle){const running=cycle;if(!options.pullOnly&&(C.cyclePullOnly||scheduleState().generation!==C.cycleGeneration))return running.then(()=>C.sync(options));return running;}
+ if(cycle){const running=cycle;if(!options.pullOnly&&(C.cyclePullOnly||scheduleState().generation!==C.cycleGeneration)){
+  if(!C.queuedCycle){const owner=C.user?.id;C.queuedCycle=running.then(()=>{C.queuedCycle=null;if(C.user?.id!==owner)return;return C.sync(options);},error=>{C.queuedCycle=null;throw error;});}
+  return C.queuedCycle;
+ }return running;}
  const j=scheduleState(),generation=j.generation;C.cycleGeneration=generation;C.cyclePullOnly=!!options.pullOnly;
  if(j.blockedUntil>Date.now()){status('今日云端写入额度已用完，本机待上传记录已保留');return;}
  cycle=run(options).then(ok=>{if(ok&&!options.pullOnly)clearScheduleSuccess(j,generation);return ok;}).catch(e=>{
@@ -4303,7 +4308,7 @@ C.requestSync=async function(reason='manual'){
  if(C.verified)return C.sync();return C.init();
 };
 C.scheduleTick=async function(){
- if(!C.user?.id||document.hidden||navigator.onLine===false||S.activeInkPointer)return;
+ if(!C.user?.id||document.hidden||navigator.onLine===false||S.activeInkPointer||busyExam()||cycle)return;
  if(C.pendingInitialization){if(!busyExam())return C.connect();return;}
  if(!C.profileReady&&(C.verified||profileFaults.has(C.user.id)))return;
  const j=scheduleState(),now=Date.now();if(now<j.retryAt||now<j.blockedUntil)return;

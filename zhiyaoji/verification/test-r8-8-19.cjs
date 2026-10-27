@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const base=fs.existsSync(path.join(__dirname,'r8_8_19'))?path.join(__dirname,'r8_8_19'):path.join(__dirname,'../app');
+const base=process.env.ZHIYAOJI_TEST_APP||(fs.existsSync(path.join(__dirname,'r8_8_19'))?path.join(__dirname,'r8_8_19'):path.join(__dirname,'../app'));
 const code=fs.readFileSync(path.join(base,'reading-continuity.js'),'utf8'),bundle=fs.readFileSync(path.join(base,'bundle.js'),'utf8');
 let frames=[],now=0,saved=0,down=0,pulses=0,removed=0,body=null,overlay=null;
 const canvas={getBoundingClientRect:()=>({left:0,right:500,top:50,bottom:600})},view={alive:true,visible:true,enabled:true,canvas,scroll:{isConnected:true,getBoundingClientRect:()=>({height:500})},down(e){down++;this.lastPointer=e.pointerId},invalidate(){}};

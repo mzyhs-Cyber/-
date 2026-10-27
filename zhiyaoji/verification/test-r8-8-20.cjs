@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const base=fs.existsSync(path.join(__dirname,'r8_8_20'))?path.join(__dirname,'r8_8_20'):path.join(__dirname,'../app');
+const source=fs.readFileSync(path.join(base,'bundle.js'),'utf8');
+async function main(){
+ let now=0,ticks=[],S={},document={hidden:false};const context=vm.createContext({window:{Study:S},S,document,performance:{now:()=>now},setTimeout:f=>ticks.push(f)});vm.runInContext(fs.readFileSync(path.join(base,'sync-cooperate.js'),'utf8'),context);
+ assert.equal(S.syncCanTransfer(),true);S.exam={s:{finished:false},disposed:false};assert.equal(S.syncCanTransfer(),false);
+ let done=false;const wait=S.waitForSyncSlot().then(()=>done=true);await Promise.resolve();assert.equal(done,false);assert.equal(S.syncTransferMetrics.waits,1);now=1000;S.exam.disposed=true;ticks.shift()();await wait;assert.equal(done,true);assert.equal(S.syncTransferMetrics.deferredMs,1000);
+ for(const mutate of [()=>{document.hidden=true},()=>{S.activeInkPointer={}},()=>{S.bankImporting=true},()=>{S.review={disposed:false}}]){S.exam=null;document.hidden=false;S.activeInkPointer=null;S.bankImporting=false;S.review=null;mutate();assert.equal(S.syncCanTransfer(),false);}
+ document.hidden=false;S.activeInkPointer=null;S.bankImporting=false;S.review=null;
+ // Actual C.sync orchestration: thirty in-flight callers produce just one follow-up.
+ const start=source.indexOf('C.sync=async function(options={}){'),text=source.slice(start,source.indexOf('\n};',start)+4);
+ let runCount=0,generation=0,resolveRun=[],journal={generation:0,blockedUntil:0};const C={user:{id:'one'},verified:true};
+ const syncCtx=vm.createContext({C,S:{renderHeader(){}},profile:null,cycle:null,scheduleState:()=>journal,status(){},saveSchedule(){},clearScheduleSuccess(j,g){if(j.generation===g)j.dirty=false;},run:()=>{runCount++;return new Promise(resolve=>resolveRun.push(resolve));},Date});vm.runInContext(text,syncCtx);
+ const first=C.sync();assert.equal(runCount,1);journal.generation=1;const repeats=Array.from({length:30},()=>C.sync());assert.equal(runCount,1);resolveRun.shift()(true);await first;for(let i=0;i<5;i++)await Promise.resolve();assert.equal(runCount,2);resolveRun.shift()(true);await Promise.all(repeats);assert.equal(runCount,2);assert.equal(C.queuedCycle,null);
+ // The bulk transfer gate covers writes, never note reads or device leases.
+ const api=source.slice(source.indexOf('async function api(path'),source.indexOf('async function api(path')+330);assert.match(api,/known\|put\|commit/);assert.doesNotMatch(api,/known\|read/);
+ // Wire encoder and local persistence are not rewritten by this optimization.
+ const previous=path.join(base,'../r8_8_19/bundle.js');if(fs.existsSync(previous)){const old=fs.readFileSync(previous,'utf8');const block=(s,from,to)=>{const p=s.indexOf(from);assert.ok(p>=0);const q=s.indexOf(to,p);assert.ok(q>p);return s.slice(p,q);};assert.equal(block(old,'async function encode(snapshot){','async function decode('),block(source,'async function encode(snapshot){','async function decode('));assert.equal(block(old,'function drainHot(){','S.saveHot=function'),block(source,'function drainHot(){','S.saveHot=function'));assert.equal(block(old,'class WorkspaceView{','S.approvedInkCurve='),block(source,'class WorkspaceView{','S.approvedInkCurve='));}
+ console.log('PASS: study/ink/import/background transfer deferral and resumption; 30 concurrent requests coalesce to one follow-up; write-only gating; lossless encoder/local-save/ink engine preserved');
+ const diag=fs.readFileSync(path.join(base,'performance-diagnostics.js'),'utf8');const preamble=diag.slice(0,diag.indexOf('  const navigation='));const win={Study:{}};const diagCtx=vm.createContext({window:win,Date,performance:{now:()=>0},localStorage:{getItem:()=>null,setItem(){}},document:{visibilityState:'visible'}});vm.runInContext(preamble+'window.testDiagnostic={add,get:()=>({events,criticalEvents})};})(window.Study);',diagCtx);win.testDiagnostic.add('page_start',{build:'test'});for(let i=0;i<500;i++)win.testDiagnostic.add('network');win.testDiagnostic.add('script_error',{errorType:'test'});const log=win.testDiagnostic.get();assert.ok(log.criticalEvents.some(e=>e.type==='page_start'));assert.ok(log.criticalEvents.some(e=>e.type==='script_error'));assert.ok(log.events.length<=340);console.log('PASS: critical lifecycle/error evidence survives 500 network events');
+}
+main().catch(e=>{console.error(e);process.exitCode=1;});

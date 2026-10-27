@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const base=fs.existsSync(path.join(__dirname,'r8_8_20'))?path.join(__dirname,'r8_8_20'):path.join(__dirname,'../app');
+const base=process.env.ZHIYAOJI_TEST_APP||(fs.existsSync(path.join(__dirname,'r8_8_20'))?path.join(__dirname,'r8_8_20'):path.join(__dirname,'../app'));
 const source=fs.readFileSync(path.join(base,'bundle.js'),'utf8');
 async function main(){
  let now=0,ticks=[],S={},document={hidden:false};const context=vm.createContext({window:{Study:S},S,document,performance:{now:()=>now},setTimeout:f=>ticks.push(f)});vm.runInContext(fs.readFileSync(path.join(base,'sync-cooperate.js'),'utf8'),context);

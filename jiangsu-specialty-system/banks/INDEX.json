@@ -1,0 +1,128 @@
+{
+  "version": "BANK-20261027-v1",
+  "basis": "authorized backup metadata; source deduplicated; no latest personal dedup",
+  "eligible": 0,
+  "streams": {
+    "01-quantity": {
+      "candidates": 84,
+      "buckets": {
+        "QS-N01": {
+          "name": "差分",
+          "candidates": 8
+        },
+        "QS-N02": {
+          "name": "因数比值短递推",
+          "candidates": 8
+        },
+        "QS-N03": {
+          "name": "分数",
+          "candidates": 8
+        },
+        "QS-N04": {
+          "name": "小数拆分",
+          "candidates": 6
+        },
+        "QS-N05": {
+          "name": "根式",
+          "candidates": 0
+        },
+        "QS-N06": {
+          "name": "数位机械划分",
+          "candidates": 6
+        },
+        "QS-M01": {
+          "name": "比例方程简单利润",
+          "candidates": 8
+        },
+        "QS-M02": {
+          "name": "定量工程等时",
+          "candidates": 8
+        },
+        "QS-M03": {
+          "name": "基本行程",
+          "candidates": 8
+        },
+        "QS-M04": {
+          "name": "等差均值",
+          "candidates": 8
+        },
+        "QS-M05": {
+          "name": "整除余数代入",
+          "candidates": 8
+        },
+        "QS-M06": {
+          "name": "基础容斥",
+          "candidates": 8
+        }
+      }
+    },
+    "02-three-subjects": {
+      "candidates": 118,
+      "buckets": {
+        "CORE-V-FILL": {
+          "name": "言语填空",
+          "candidates": 8
+        },
+        "CORE-V-PASSAGE": {
+          "name": "篇章阅读",
+          "candidates": 8
+        },
+        "CORE-V-DETAIL": {
+          "name": "细节与中心",
+          "candidates": 8
+        },
+        "CORE-V-ORDER": {
+          "name": "语句排序衔接",
+          "candidates": 8
+        },
+        "CORE-G-SPATIAL": {
+          "name": "空间重构候选",
+          "candidates": 8
+        },
+        "CORE-G-GRAPH": {
+          "name": "平面图形候选",
+          "candidates": 8
+        },
+        "CORE-L-TRANSLATE": {
+          "name": "翻译与条件逻辑候选",
+          "candidates": 8
+        },
+        "CORE-L-MATERIAL": {
+          "name": "材料与分析推理候选",
+          "candidates": 6
+        },
+        "CORE-L-ARGUMENT": {
+          "name": "论证结构候选",
+          "candidates": 8
+        },
+        "CORE-C-DEFINITION": {
+          "name": "定义条件边界",
+          "candidates": 8
+        },
+        "CORE-C-ANALOGY": {
+          "name": "类比关系层级",
+          "candidates": 8
+        },
+        "CORE-D-PART": {
+          "name": "比重贡献候选",
+          "candidates": 8
+        },
+        "CORE-D-GROWTH": {
+          "name": "跨期与增长候选",
+          "candidates": 8
+        },
+        "CORE-D-MEAN": {
+          "name": "均值倍数候选",
+          "candidates": 8
+        },
+        "CORE-D-COMPARE": {
+          "name": "比较与综合候选",
+          "candidates": 8
+        }
+      }
+    }
+  },
+  "local_sequence_checks": 10,
+  "radical_fallback_leads": 3,
+  "recent_non_jiangsu_radical_candidates": 0
+}

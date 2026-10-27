@@ -1,6 +1,23 @@
 /* The review button never invokes account sync or sends a note object. */
 (function(S){
  'use strict';
+ // Category defaults apply before the existing wrong/unanswered/favorite rule.
+ // reviewFeedbackFor retains explicit per-question choices, including legacy ones.
+ const included=S.reviewDefaultIncluded;
+ S.reviewDefaultScopeExcluded=function(q){
+  const subject=String(q?.subject||'').trim();
+  if(['政治理论','常识判断','常识'].includes(subject))return true;
+  if(subject!=='数量关系')return false;
+  let paths=[];try{paths=S.displayTopicPaths?.(q)||[];}catch{}
+  if(paths.some(p=>p[0]==='数字推理'))return false;
+  if(paths.some(p=>p[0]==='数学运算'))return true;
+  const labels=[...(q.path||[]),...(q.sourcePath||[]),...(q.tags||[]),q.type].filter(x=>typeof x==='string');
+  return !(/^QUANT_SEQUENCE_/.test(q.classification?.primaryId||'')||labels.some(x=>x.split(/[/>＞|·]/).some(t=>t.trim()==='数字推理')));
+ };
+ S.reviewDefaultIncluded=function(s,qid){
+  const q=s?.questions?.find(q=>q.id===qid);
+  return q&&!S.reviewDefaultScopeExcluded(q)?included(s,qid):false;
+ };
  const select=(value,keys)=>Object.fromEntries(keys.filter(k=>value?.[k]!==undefined).map(k=>[k,value[k]]));
  const feedback=s=>Object.fromEntries(s.questions.map(q=>{const f=S.reviewFeedbackFor(s,q.id);return [q.id,{userCause:String(f.userCause||''),exclusionReason:String(f.exclusionReason||''),excludeFromLearning:f.excludeFromLearning===true,inclusionOverride:f.inclusionOverride!==false,...(Number.isFinite(f.updatedAt)?{updatedAt:f.updatedAt}:{}),...(f.causeOrigin==='user'?{causeOrigin:'user'}:{})}];}));
  S.reviewOnlyRecord=function(s){
@@ -33,5 +50,5 @@
  };
  const finish=S.reviewFinishButton;
  S.reviewFinishButton=function(s,root){const result=finish(s,root);const p=root.querySelector('.review-finish-status'),r=S.reviewUploadReceipts.get(s.id);if(p)p.textContent=S.reviewUploading.has(s.id)?'正在上传复盘文字与状态，不含笔迹。':r&&r.revision===(s.reviewRevision||0)&&r.notesUploaded===false?'复盘已更新；再次上传会更新同一条记录，不含笔迹。':'上传错因、纳入状态及复盘确认，不含笔迹。';return result;};
- S.BUILD='20261027-r8-8-25';
+ S.BUILD='20261027-r8-8-26';
 })(window.Study);

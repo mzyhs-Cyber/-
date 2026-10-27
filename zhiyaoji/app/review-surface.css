@@ -1,15 +1,16 @@
-/* Keep the approved 90px fade. Align its box with the review pane border. */
-.exam-shell.review-workspace:not([data-reading="night"]):not(.reading-ink) .split-questions{
+/* One card boundary in reading, writing and night modes; keep text positions. */
+.exam-shell .split-questions{
  --review-gutter-x:12px;--review-gutter-top:8px;
  padding-left:0;padding-right:0;padding-top:0;
 }
-.exam-shell.review-workspace:not([data-reading="night"]):not(.reading-ink) .split-questions>.qpaper{
+.exam-shell .split-questions>.qpaper{
  padding-left:var(--review-gutter-x);padding-right:var(--review-gutter-x);
+ padding-bottom:10px;margin-bottom:0;
  background-origin:border-box;background-clip:border-box;
 }
-.exam-shell.review-workspace:not([data-reading="night"]):not(.reading-ink) .split-questions>.qpaper:first-child{
+.exam-shell .split-questions>.qpaper:first-child{
  padding-top:var(--review-gutter-top);
 }
 @media(max-width:760px){
- .exam-shell.review-workspace:not([data-reading="night"]):not(.reading-ink) .split-questions{--review-gutter-x:4px;--review-gutter-top:4px}
+ .exam-shell .split-questions{--review-gutter-x:4px;--review-gutter-top:4px}
 }

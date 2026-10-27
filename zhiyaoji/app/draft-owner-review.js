@@ -5,8 +5,10 @@
  const validOwner=e=>Number.isInteger(e.noteOwnerIndex)&&!!e.s.questions[e.noteOwnerIndex];
  p.setNoteMode=function(index,enabled){
   if(this.disposed||this.submitting||this.editBlocked||this.s.paused||!this.s.questions[index])return;
-  if(this.inkOn&&validOwner(this)&&index!==this.noteOwnerIndex)return;
-  const next=enabled===undefined?!this.inkOn:!!enabled;
+  const owned=this.inkOn&&validOwner(this),switching=owned&&index!==this.noteOwnerIndex;
+  const next=switching?true:enabled===undefined?!(owned&&index===this.noteOwnerIndex):!!enabled;
+  // Commit a pending stroke with its original owner before handing over.
+  if(next&&index!==this.noteOwnerIndex)for(const layer of this.layers.values())layer.finish();
   if(next)this.noteOwnerIndex=index;
   const result=setMode.call(this,index,next);
   if(!this.inkOn)this.noteOwnerIndex=null;
@@ -18,9 +20,7 @@
   let result;try{result=controls.apply(this,args);}finally{this.toolIndex=physical;}
   if(this.disposed)return result;
   for(const b of S.$$('[data-exam="pen"]',this.root)){
-   const blocked=owned&&Number(b.dataset.index)!==this.noteOwnerIndex;
-   b.disabled=blocked;b.setAttribute('aria-disabled',String(blocked));
-   if(blocked){b.title='请先关闭第 '+(this.noteOwnerIndex+1)+' 题草稿';b.setAttribute('aria-label',b.title);}
+   b.disabled=false;b.setAttribute('aria-disabled','false');
   }
   const target=S.$('#reading-note-target',this.root);
   if(owned&&target)target.textContent='第 '+(this.noteOwnerIndex+1)+' 题草稿';
@@ -74,5 +74,5 @@
   if(result?.then)return result.then(value=>{ready();return value;});ready();return result;
  };
  for(const type of ['pagehide','visibilitychange'])window.addEventListener(type,()=>save(S.review?.controller));
- S.BUILD='20261027-r8-8-23';
+ S.BUILD='20261027-r8-8-24';
 })(window.Study);

@@ -3413,7 +3413,7 @@ class ReleaseExam extends Base{
    if(active&&(e.pointerType==='pen'||active.layer?.canvas?.hasPointerCapture&& !active.layer.canvas.hasPointerCapture(active.id)))active.layer?.finish?.();
    if(S.activeInkPointer){e.preventDefault();e.stopImmediatePropagation();this.controlClicks.add(b);return;}
    if(this.submitting||this.editBlocked||this.s.paused)return;
-   gesture={b,id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,enabled:!(this.inkOn&&this.toolIndex===Number(b.dataset.index))};
+   gesture={b,id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,enabled:!(this.inkOn&&(this.noteOwnerIndex??this.toolIndex)===Number(b.dataset.index))};
    e.preventDefault();e.stopImmediatePropagation();try{b.setPointerCapture(e.pointerId);}catch{}
   },{capture:true,signal:this.abort.signal});
   this.root.addEventListener('pointermove',e=>{if(gesture&&gesture.id===e.pointerId&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>12)gesture.moved=true;},{capture:true,signal:this.abort.signal});
@@ -3937,6 +3937,7 @@ async function wireReader(api,profile,status){
  return {get,prefetch,metrics};
 }
 
+const verifiedUploadGraphs=new WeakMap();
 S.SyncTransport={
  async remote(api,profile,legacy,status){
   const head=await api('/api/sync/v2/head');if(!head.rev){const old=await legacy();return {head,snapshot:S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(old.snapshot):old.snapshot,migrating:!!old.head.rev};}
@@ -3954,9 +3955,11 @@ S.SyncTransport={
  async commit(api,profile,snapshot,head,status,deviceId){
   await S.waitForSyncSlot?.();
   const graph=await K.encode(snapshot);
-  if(graph.root===head.hash)return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size}};
-  const hashes=[...new Set([...graph.objects.keys(),...graph.external||[]])],known=new Set([head.hash].filter(Boolean)),unknown=hashes.filter(h=>!known.has(h));
-  for(let i=0;i<unknown.length;i+=80){const r=await api('/api/sync/v2/known',{hashes:unknown.slice(i,i+80)});r.known.forEach(h=>known.add(h));}
+  if(graph.root===head.hash){verifiedUploadGraphs.set(profile,{root:head.hash,hashes:new Set([...graph.objects.keys(),...graph.external||[]])});return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size,knownRequests:0,reusedVerifiedObjects:graph.objects.size}};}
+  const hashes=[...new Set([...graph.objects.keys(),...graph.external||[]])],known=new Set([head.hash].filter(Boolean)),verified=verifiedUploadGraphs.get(profile);let reusedVerifiedObjects=0,knownRequests=0;
+  if(verified?.root===head.hash)for(const hash of hashes)if(verified.hashes.has(hash)){known.add(hash);reusedVerifiedObjects++;}
+  const unknown=hashes.filter(h=>!known.has(h));
+  for(let i=0;i<unknown.length;i+=80){status('核验云端内容 '+Math.min(i+80,unknown.length)+'/'+unknown.length);knownRequests++;const r=await api('/api/sync/v2/known',{hashes:unknown.slice(i,i+80)});r.known.forEach(h=>known.add(h));}
   const missing=hashes.filter(h=>!known.has(h));let sent=0,chars=0,batch=[],failure;const active=new Set(),ack=new Map();
   async function flush(){if(failure)throw failure;if(!batch.length)return;const parts=batch;batch=[];
    const task=(async()=>{try{await api('/api/sync/v2/put',{parts});for(const p of parts){const count=(ack.get(p.hash)||0)+1;ack.set(p.hash,count);if(count===p.total)sent++;}status('正在同步新增或修改内容 '+sent+'/'+missing.length);}catch(e){failure=failure||e;}})();active.add(task);task.finally(()=>active.delete(task));if(active.size>=2)await Promise.race(active);if(failure)throw failure;
@@ -3972,7 +3975,8 @@ S.SyncTransport={
   const result=await api('/api/sync/v2/commit',{hash:graph.root,baseRev:head.rev,deviceId});
   // Keep only the current content graph in this account's cache. Original
   // snapshot and server's previous root remain available for recovery.
-  delete profile.objectCache;return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size}};
+  verifiedUploadGraphs.set(profile,{root:graph.root,hashes:new Set(hashes)});
+  delete profile.objectCache;return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size,knownRequests,reusedVerifiedObjects}};
  }
 };
 })(window.Study);
@@ -5036,7 +5040,7 @@ S.setReviewFeedback=function(s,qid,patch){
 S.reviewFeedbackText=function(s,qid){const f=S.reviewFeedbackFor(s,qid);return '我的错误原因（本人填写）：'+(f.userCause||'未填写；AI推测不得当作本人自述')+'\n本次错误不纳入后续学习：'+(f.excludeFromLearning?'是':'否')+'\n排除原因：'+(f.exclusionReason||'未填写')+'\n复盘确认：'+(S.reviewReady(s)?'已确认':'未确认或修改后待重新确认')+'\n';};
 S.reviewFeedbackMarkup=function(s,qid){const f=S.reviewFeedbackFor(s,qid);return `<section class="review-feedback" data-review-feedback="${E(qid)}"><label>我的错误原因<textarea data-feedback-field="userCause" maxlength="5000" placeholder="例如：看漏了“不正确”，或两个选项分不清">${E(f.userCause||'')}</textarea></label><p data-feedback-status role="status">输入后自动保存到本机，复盘结束后确认上传。</p><button type="button" class="button primary" data-feedback-done>完成</button></section>`;};
 S.reviewChips=function(s,qid){const f=S.reviewFeedbackFor(s,qid);return `<button type="button" class="review-chip review-cause-chip${f.userCause?' has-cause':''}" data-review-action="cause" data-feedback-qid="${E(qid)}" aria-haspopup="dialog" aria-label="填写本题错误原因">错误原因</button><button type="button" class="review-chip review-learning-chip${f.excludeFromLearning?' is-excluded':''}" data-review-action="toggle" data-feedback-qid="${E(qid)}" aria-pressed="${!f.excludeFromLearning}" title="${f.excludeFromLearning?'点击恢复纳入后续学习':'点击将本次错误排除出后续学习'}">${f.excludeFromLearning?'不纳入':'纳入'}</button>`;};
-S.refreshReviewChips=function(s,root=S.review?.root){if(!root)return;for(const b of root.querySelectorAll('[data-review-action]')){const f=S.reviewFeedbackFor(s,b.dataset.feedbackQid);if(b.dataset.reviewAction==='toggle'){b.textContent=f.excludeFromLearning?'不纳入':'纳入';b.classList.toggle('is-excluded',!!f.excludeFromLearning);b.setAttribute('aria-pressed',String(!f.excludeFromLearning));b.title=f.excludeFromLearning?'点击恢复纳入后续学习':'点击将本次错误排除出后续学习';}else b.classList.toggle('has-cause',!!f.userCause);}for(const b of root.querySelectorAll('.review-finish'))b.textContent=S.reviewReady(s)?'复盘已确认 · 重试上传':'确认复盘结束并上传';};
+S.refreshReviewChips=function(s,root=S.review?.root){if(!root)return;for(const b of root.querySelectorAll('[data-review-action]')){const f=S.reviewFeedbackFor(s,b.dataset.feedbackQid);if(b.dataset.reviewAction==='toggle'){b.textContent=f.excludeFromLearning?'不纳入':'纳入';b.classList.toggle('is-excluded',!!f.excludeFromLearning);b.setAttribute('aria-pressed',String(!f.excludeFromLearning));b.title=f.excludeFromLearning?'点击恢复纳入后续学习':'点击将本次错误排除出后续学习';}else b.classList.toggle('has-cause',!!f.userCause);}for(const b of root.querySelectorAll('.review-finish'))b.textContent=S.reviewUploading.has(s.id)?'正在上传复盘…':S.reviewReady(s)?'再次上传并更新':'确认复盘结束并上传';};
 S.openReviewCause=function(s,qid){
  let editor=null,status=null,composing=false;
  const record=()=>{
@@ -5088,7 +5092,7 @@ S.completeReview=async function(id){
  try{
   // Persist resolved defaults for cloud readers, retaining their derived/manual identity.
   S.refreshReviewDefaults(s,true);
-  if(!S.reviewReady(s)){s.reviewCompletion={version:1,status:'confirmed',confirmedAt:Date.now(),revision:s.reviewRevision||0,feedbackSignature:S.SyncModel.stable(s.reviewFeedback||{})};S.touchSession(s);}
+  s.reviewCompletion={version:1,status:'confirmed',confirmedAt:Date.now(),revision:s.reviewRevision||0,feedbackSignature:S.SyncModel.stable(s.reviewFeedback||{})};S.touchSession(s);
   await S.saveHot();
   // Existing sync defers remote application while the review workspace is open.
   S.closeReview?.();S.showReport(id);
@@ -5099,11 +5103,11 @@ S.completeReview=async function(id){
   if(!S.reviewReady(s))throw Error('同步后复盘版本有变化，请核对后重新确认');
   if(S.state.meta?.syncConflicts?.some(c=>!c.resolved&&c.path?.[0]==='sessions'&&c.path?.[1]===id))throw Error('本次练习存在同步冲突，请在设置中核对后重试');
   S.reviewUploadReceipts.set(id,{revision:s.reviewRevision||0,at:Date.now()});
-  S.toast('复盘已确认并上传，AI可读取本次错因和排除标记');return true;
+  S.toast('复盘已上传并更新，本次练习以最新复盘为准');return true;
  }catch(e){S.toast(e.message);return false;}
  finally{S.reviewUploading.delete(id);if(S.route==='report')S.showReport(id);}
 };
-S.reviewFinishButton=function(s,root){const b=document.createElement('button');b.type='button';b.className='button primary review-finish';b.textContent=S.reviewReady(s)?'复盘已确认 · 重试上传':'确认复盘结束并上传';b.disabled=S.reviewUploading.has(s.id);b.onclick=()=>S.completeReview(s.id);root.append(b);const status=document.createElement('p');status.className='review-finish-status';status.setAttribute('role','status');const r=S.reviewUploadReceipts.get(s.id);status.textContent=r&&r.revision===(s.reviewRevision||0)?'本次复盘已上传':S.reviewReady(s)?'本机已确认；云端状态以同步结果为准':'补充后请确认复盘结束；修改已确认内容后需重新确认。';root.append(status);};
+S.reviewFinishButton=function(s,root){const b=document.createElement('button');b.type='button';b.className='button primary review-finish';b.textContent=S.reviewUploading.has(s.id)?'正在上传复盘…':S.reviewReady(s)?'再次上传并更新':'确认复盘结束并上传';b.disabled=S.reviewUploading.has(s.id);b.onclick=()=>S.completeReview(s.id);root.append(b);const status=document.createElement('p');status.className='review-finish-status';status.setAttribute('role','status');const r=S.reviewUploadReceipts.get(s.id);status.textContent=S.reviewUploading.has(s.id)?'正在更新复盘；若还有未同步的笔迹，需要一并完成。':r&&r.revision===(s.reviewRevision||0)?'本次复盘已上传；再次上传将更新同一条记录':S.reviewReady(s)?'本机已确认；上传后更新同一场练习的复盘':'补充后请确认复盘结束；修改已确认内容后需重新确认。';root.append(status);};
 const open=S.openReview;S.openReview=function(...args){const result=open(...args),r=S.review;if(!r)return result;
  S.bindCompactReviewFeedback(r);
  // Inputs sit outside the ink surface and keep native keyboard/touch behavior.

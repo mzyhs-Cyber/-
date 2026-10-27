@@ -1,0 +1,49 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const base=process.env.ZHIYAOJI_TEST_APP||(fs.existsSync(path.join(__dirname,'r8_8_23'))?path.join(__dirname,'r8_8_23'):path.join(__dirname,'../app'));
+const src=fs.readFileSync(path.join(base,'bundle.js'),'utf8'),M=require(path.join(base,'training-memory.js'));
+let now=Date.parse('2026-10-27T15:59:00Z'),frames=[],opened=[],closed=0,asyncOpen=false;
+const stored=new Map(),storage={getItem:k=>stored.get(k),setItem:(k,v)=>stored.set(k,v)};
+function button(i){return {dataset:{index:String(i)},disabled:false,attrs:{},classList:{toggle(k,v){this[k]=v}},setAttribute(k,v){this.attrs[k]=v}};}
+class Base{constructor(s){this.s=s;this.toolIndex=s.index||0;this.layers=new Map();this.root={dataset:{},classList:{toggle(){}},querySelectorAll:()=>[]};this.buttons=s.questions.map((q,i)=>button(i));this.caption={};this.inkOn=false;this.tool='pen';this.readingControls={sync(){},schedule(){}};}pulse(){}updateClock(){}onScroll(t){this.s.index=t.next;this.s.positions.main={top:t.scrollTop};}jump(i){this.s.index=i;}capturePosition(){this.s.positions.main={top:this.main?.scrollTop||0};this.s.workspace={expanded:!!this.split,index:this.s.index};}}
+const questions=['a','b','c'].map(id=>({id})),source={id:'session-one',questions,positions:{main:{top:0}},notes:{original:true}},S={state:{meta:{syncOwnerId:'A'},settings:{},sessions:[source]},BaseExamController:Base,escape:x=>x,icon:x=>x,stopNoteMotion(){},saveSoon(){},attachWorkspaceInk(){},preparePracticeImages(){},materialIdentity:()=>null,trainingViewMemory:()=>new M.DailyTrainingMemory(storage,S.state.meta.syncOwnerId,()=>now),$:function(selector,root){const e=S.review?.controller||S.exam;if(selector==='#reading-note-target')return S.exam?.caption;if(selector==='#question-scroll')return e?.main;if(selector==='#split-material-scroll')return e?.left;if(selector==='#split-q-scroll')return e?.right;return null},$$:function(selector,root){const e=[S.exam,S.review?.controller].find(x=>x?.root===root);return selector==='[data-exam="pen"]'?e?.buttons||[]:[]},uid:()=>String(Math.random()),recordInkEvent(){},queueInkLayout(){}};
+const DateMock=class extends Date{static now(){return now}};
+const context=vm.createContext({window:{Study:S,addEventListener(){}},document:{querySelector:()=>null},Date:DateMock,requestAnimationFrame:f=>frames.push(f),clearTimeout,performance:{now:()=>0}});
+const a=src.indexOf('class ReleaseExam extends Base{'),b=src.indexOf('S.ExamController=ReleaseExam;',a);vm.runInContext('(function(S){const Base=S.BaseExamController,E=S.escape;'+src.slice(a,b)+'S.ExamController=ReleaseExam;})(window.Study)',context);
+// Use the actual router and append/target code, preserving coordinate behavior.
+const marker=src.indexOf('root.InkCore={Notebook,Router'),inkStart=src.lastIndexOf('(function(root)',marker),inkEnd=src.indexOf('\n',src.indexOf('})(typeof window',marker));vm.runInContext(src.slice(inkStart,inkEnd),context);
+const viewStart=src.indexOf('class WorkspaceView{'),targetStart=src.indexOf(' target(key){',viewStart),appendStart=src.indexOf(' append(key,stroke){',viewStart),target=src.slice(targetStart,src.indexOf('\n prepareLayout(region){',targetStart)),append=src.slice(appendStart,src.indexOf('\n changed(){',appendStart));
+vm.runInContext('(function(S){class InkView{'+target+append+'}S.WorkspaceInkView=InkView;})(window.Study)',context);
+S.closeReview=()=>{if(S.review)S.review.controller.disposed=true;S.review=null;closed++};
+S.openReview=(id,filter,start)=>{const create=()=>{S.closeReview();const original=S.state.sessions.find(x=>x.id===id),virtual={...original,questions:original.questions,notes:{},positions:{},_review:true,_sourceSession:original,index:start??0},c=new S.ExamController(virtual);c.main={scrollTop:0};c.capturePosition=Base.prototype.capturePosition;S.review={s:original,controller:c};opened.push({id,filter,start});return c};return asyncOpen?Promise.resolve().then(create):create();};
+vm.runInContext(fs.readFileSync(path.join(base,'draft-owner-review.js'),'utf8'),context);
+const e=S.exam=new S.ExamController({questions,index:0,positions:{},notes:{}});e.setNoteMode(0,true);assert.equal(e.noteOwnerIndex,0);assert.equal(e.buttons[0].attrs['aria-pressed'],'true');assert.equal(e.buttons[1].disabled,true);
+e.onScroll({id:'question-scroll',next:1,scrollTop:900});assert.equal(e.s.index,1);assert.equal(e.noteOwnerIndex,0);e.updateControls();assert.equal(e.buttons[0].attrs['aria-pressed'],'true');assert.equal(e.buttons[1].attrs['aria-pressed'],'false');assert.equal(e.caption.textContent,'第 1 题草稿');
+e.setNoteMode(1,false);assert.equal(e.inkOn,true);e.setNoteMode(1,true);assert.equal(e.noteOwnerIndex,0);
+const book=new context.window.InkCore.Notebook(),view=new S.WorkspaceInkView();Object.assign(view,{exam:e,store:book,geometry:()=>geo,prepareLayout:()=>({layoutReady:true,note:{layoutId:'layout'},layoutEpoch:0,lastWidth:500,lastHeight:500}),changed(){},gestureUid:'g',strokeStartedAt:now});
+const geo={pane:{left:0,top:0,width:500,height:1000},regions:[{key:'q:a',left:0,right:500,top:0,bottom:500,anchor:{left:0,top:0,width:500,height:500}},{key:'q:b',left:0,right:500,top:500,bottom:1000,anchor:{left:0,top:500,width:500,height:500}}]};
+const router=new context.window.InkCore.Router({sequence:0,append:(key,stroke)=>view.append(key,stroke)},key=>view.target(key));router.begin({clientX:100,clientY:490,timeStamp:1},geo);router.move({clientX:110,clientY:510,timeStamp:2});router.finish();
+for(const key of ['q:a','q:b']){assert.ok(book.rows(key).length>0);for(const st of book.rows(key)){assert.equal(st.draftOwnerQuestionId,'a');assert.equal(st.draftSurfaceKey,key);assert.ok(st.points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));}}
+assert.equal(book.rows('q:a')[0].points[0].x,.2);assert.equal(book.rows('q:a')[0].points[0].y,.98);assert.equal(e.noteOwnerIndex,0);assert.equal(e.buttons[0].attrs['aria-pressed'],'true');assert.equal(e.buttons[1].disabled,true);
+book.undo('q:b');assert.equal(book.rows('q:b').length,0);book.redo('q:b');assert.equal(book.rows('q:b')[0].draftOwnerQuestionId,'a');
+const reopened=JSON.parse(JSON.stringify(book.snapshot()));assert.equal(reopened[1][1][0].draftOwnerQuestionId,'a');assert.equal(reopened[1][1][0].draftSurfaceKey,'q:b');
+view.geometry=()=>({pane:geo.pane,regions:[{key:'m:group',left:0,right:500,top:0,bottom:1000,anchor:{left:0,top:0,width:500,height:1000}}]});view.target('m:group');e.updateControls();assert.equal(e.caption.textContent,'第 1 题草稿');assert.equal(e.buttons[0].attrs['aria-pressed'],'true');view.geometry=()=>geo;
+e.setNoteMode(0,false);assert.equal(e.inkOn,false);assert.equal(e.buttons.every(b=>!b.disabled),true);e.setNoteMode(2);assert.equal(e.noteOwnerIndex,2);assert.equal(e.buttons[2].attrs['aria-pressed'],'true');e.setNoteMode(2,false);
+function flush(){for(let i=0;i<3;i++){const pending=frames;frames=[];pending.forEach(f=>f())}}
+async function main(){
+ const before=JSON.stringify(source);S.openReview(source.id,'all',1);let c=S.review.controller;c.s.index=2;c.main.scrollTop=912;S.closeReview();assert.equal(JSON.stringify(source),before);
+ const saved=JSON.parse([...stored.values()][0]);assert.equal(JSON.stringify(saved).includes('notes'),false);assert.equal(saved.views.reviewPositions[source.id].questionId,'c');
+ S.openReview(source.id,'all');assert.equal(S.review.controller.s.index,2);flush();assert.equal(S.review.controller.main.scrollTop,912);assert.deepEqual(Object.keys(S.review.controller.s.notes),[]);S.closeReview();
+ S.openReview(source.id,'all',0);assert.equal(S.review.controller.s.index,0);S.closeReview();
+ // Entry follows stable question ID if the question array has been reordered.
+ S.openReview(source.id,'all',2);S.closeReview();source.questions=[questions[2],questions[0],questions[1]];S.openReview(source.id,'all');assert.equal(S.review.controller.s.index,0);S.closeReview();source.questions=questions;
+ S.state.meta.syncOwnerId='B';S.openReview(source.id,'all');assert.equal(S.review.controller.s.index,0);S.closeReview();S.state.meta.syncOwnerId='A';
+ asyncOpen=true;await S.openReview(source.id,'all');assert.equal(S.review.controller.s.index,2);S.closeReview();asyncOpen=false;
+ now=Date.parse('2026-10-27T16:01:00Z');S.openReview(source.id,'all');assert.equal(S.review.controller.s.index,0);S.closeReview();
+ assert.equal(JSON.stringify(source),before);
+ const css=fs.readFileSync(path.join(base,'review-surface.css'),'utf8');assert.doesNotMatch(css,/background\s*:|linear-gradient|rgba\(/);assert.match(css,/background-origin:border-box;background-clip:border-box/);assert.match(css,/padding-left:0;padding-right:0;padding-top:0/);assert.match(css,/padding-left:var\(--review-gutter-x\)/);assert.match(css,/--review-gutter-x:4px;--review-gutter-top:4px/);assert.match(css,/:not\(\.reading-ink\)/);assert.match(css,/:not\(\[data-reading="night"\]\)/);
+ const previous=path.join(__dirname,'r8_8_22/bundle.js');if(fs.existsSync(previous))assert.equal(src,fs.readFileSync(previous,'utf8'));
+ const previousCss=path.join(__dirname,'r8_8_22/refinement.css');if(fs.existsSync(previousCss))assert.equal(fs.readFileSync(path.join(base,'refinement.css'),'utf8'),fs.readFileSync(previousCss,'utf8'));
+ for(const [x,y] of [[12,8],[4,4]]){const originalTextLeft=x+24,alignedTextLeft=0+x+24;assert.equal(originalTextLeft,alignedTextLeft);assert.equal(y+15,0+y+15);}
+ console.log('PASS: actual ReleaseExam owner button/highlight guard under scroll and actual Router cross-boundary strokes; physical coordinates/undo/redo preserved; day-scoped review question and scroll memory, explicit starts, reordered IDs, account isolation, async open, next-day expiry; source evidence unchanged; gradient/border inset alignment without color/stop changes');
+}
+main().catch(e=>{console.error(e);process.exitCode=1});

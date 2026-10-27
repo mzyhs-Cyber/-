@@ -14,3 +14,15 @@
 
 /r2-check.html
   Cache-Control: no-cache
+
+/continuity.js
+  Cache-Control: no-cache
+
+/appearance-a.css
+  Cache-Control: no-cache
+
+/dialog-choice.css
+  Cache-Control: no-cache
+
+/ink-controls.css
+  Cache-Control: no-cache

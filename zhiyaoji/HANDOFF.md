@@ -1,5 +1,7 @@
 # 下一步交接
 
+2026-10-27更新：当前为R8.8.17，已基于线上R8.8.16制作；先读ACTIVE_TASK最新工单和TEST_MATRIX新增条目。旧SOURCE_MANIFEST只记录r7原始来源。用户ZIP保留私人birthday.html，公开仓库排除。待验收iPad图标命中与连续书写、PWA更新，以及独立AI任务补跑回执。以下保留历史交接说明。
+
 当前工单是建立持续开发档案，没有修复业务或更新生产。原样快照：V2.9.18-r7 / 20261021-r7；正式基线、线上和题库发布版本未知。
 
 在分支 `zhiyaoji-handoff-20261026` 的 `zhiyaoji/` 目录中，先读 PROJECT_STATE.md、ACTIVE_TASK.md、AGENTS.md，再按 TEST_MATRIX 读取本次问题涉及的代码。代码位于 app；没有原模块工程。私人 birthday.html 和完整学习备份不在 Git，来源/字段摘要分别见 docs 两份 JSON。

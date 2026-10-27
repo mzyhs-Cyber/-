@@ -34,7 +34,12 @@ function validateSnapshot(data){
  const keys=new Set();for(const a of data.attempts){if(!a.attemptId||!a.questionId||!a.sessionId)fail(400,'作答记录结构无效');const k=a.sessionId+'\u0000'+a.questionId;if(keys.has(k))fail(400,'同一练习的作答重复');keys.add(k);}
  inspect(data);
 }
+const schemas=new WeakMap();
 async function ensureV2(db){
+ if(schemas.has(db))return schemas.get(db);
+ const job=initializeV2(db);schemas.set(db,job);try{await job;}catch(e){schemas.delete(db);throw e;}
+}
+async function initializeV2(db){
  await db.batch([
   db.prepare('CREATE TABLE IF NOT EXISTS study_sync2_r2_sizes (user_id TEXT NOT NULL,hash TEXT NOT NULL,bytes INTEGER NOT NULL,PRIMARY KEY(user_id,hash))'),
   db.prepare('CREATE TABLE IF NOT EXISTS study_sync2_heads (user_id TEXT PRIMARY KEY,rev INTEGER NOT NULL,hash TEXT NOT NULL,previous_hash TEXT,updated_at INTEGER NOT NULL)'),
@@ -63,14 +68,26 @@ async function apiV2(request,db,user,url,ctx,bucket){
   if(!Array.isArray(input.items)||input.items.length>12)fail(400,'读取列表无效');const items=[];for(const p of input.items){hex(p.hash,64);if(!Number.isSafeInteger(p.index)||p.index<0)fail(400,'分片无效');let row=await db.prepare('SELECT p.data,o.total FROM study_sync2_parts p JOIN study_sync2_objects o ON p.user_id=o.user_id AND p.hash=o.hash WHERE p.user_id=? AND p.hash=? AND p.idx=? AND o.ready=1').bind(uid,p.hash,p.index).first();if(!row&&bucket){const o=await db.prepare('SELECT total,ready FROM study_sync2_objects WHERE user_id=? AND hash=?').bind(uid,p.hash).first();if(o?.ready&&p.index<o.total){const part=await bucket.get(uid+'/'+p.hash+'/'+p.index);if(part)row={total:o.total,data:await part.text()};}}if(!row)fail(404,'同步分片不存在');items.push({...p,...row});}return json({items});
  }
  if(path==='/api/sync/v2/put'&&bucket){
-  if(!Array.isArray(input.parts)||!input.parts.length||input.parts.length>16)fail(400,'上传列表无效');const touched=new Set();
+  if(!Array.isArray(input.parts)||!input.parts.length||input.parts.length>16)fail(400,'上传列表无效');const groups=new Map();
   for(const p of input.parts){hex(p.hash,64);if(!Number.isSafeInteger(p.total)||p.total<1||p.total>360||!Number.isSafeInteger(p.index)||p.index<0||p.index>=p.total||typeof p.data!=='string'||p.data.length>24000)fail(400,'对象分片无效');
-   const old=await db.prepare('SELECT total,ready FROM study_sync2_objects WHERE user_id=? AND hash=?').bind(uid,p.hash).first();if(old&&old.total!==p.total)fail(409,'笔记分片总数不一致');if(old?.ready)continue;
-   const key=uid+'/'+p.hash+'/'+p.index,part=await bucket.get(key);if(part&&await part.text()!==p.data)fail(409,'已保存笔记不能改写');
-   if(!part)await bucket.put(key,p.data,{httpMetadata:{contentType:'application/json; charset=utf-8'}});
-   if(!old)await db.prepare('INSERT OR IGNORE INTO study_sync2_objects(user_id,hash,total,created_at) VALUES(?,?,?,?)').bind(uid,p.hash,p.total,Date.now()).run();touched.add(p.hash);
+   let g=groups.get(p.hash);if(!g){g={hash:p.hash,total:p.total,parts:new Map()};groups.set(p.hash,g);}if(g.total!==p.total||g.parts.has(p.index)&&g.parts.get(p.index)!==p.data)fail(409,'笔记分片不一致');g.parts.set(p.index,p.data);
   }
-  for(const h of touched){const o=await db.prepare('SELECT total,ready FROM study_sync2_objects WHERE user_id=? AND hash=?').bind(uid,h).first();if(o.ready)continue;const parts=[];for(let i=0;i<o.total;i++){const r=await bucket.get(uid+'/'+h+'/'+i);if(!r)break;parts.push(await r.text());}if(parts.length===o.total){if(await digest(parts.join(''))!==h)fail(400,'R2笔记内容校验失败');await db.batch([db.prepare('UPDATE study_sync2_objects SET ready=1 WHERE user_id=? AND hash=?').bind(uid,h),db.prepare('INSERT OR IGNORE INTO study_sync2_r2_sizes(user_id,hash,bytes) VALUES(?,?,?)').bind(uid,h,encoder.encode(parts.join('')).length)]);}}
+  const rows=[...groups.values()],{results}=await db.prepare('SELECT hash,total,ready FROM study_sync2_objects WHERE user_id=? AND hash IN ('+rows.map(()=>'?').join(',')+')').bind(uid,...groups.keys()).all(),existing=new Map(results.map(x=>[x.hash,x]));
+  // Validate complete objects before writing. Their request bytes are already
+  // the SHA-256 evidence: no write-then-read of every small ink object.
+  for(const g of rows){const old=existing.get(g.hash);if(old&&old.total!==g.total)fail(409,'笔记分片总数不一致');if(g.parts.size===g.total){g.text=Array.from({length:g.total},(_,i)=>g.parts.get(i)).join('');if(await digest(g.text)!==g.hash)fail(400,'R2笔记内容校验失败');}}
+  let cursor=0,problem;const updates=[];
+  async function upload(){while(!problem&&cursor<rows.length){const g=rows[cursor++],old=existing.get(g.hash);if(old?.ready)continue;try{
+   for(const [index,data] of g.parts){const key=uid+'/'+g.hash+'/'+index;
+    if(g.text===undefined){const part=await bucket.get(key);if(part){if(await part.text()!==data)fail(409,'已保存笔记不能改写');continue;}}
+    await bucket.put(key,data,{httpMetadata:{contentType:'application/json; charset=utf-8'}});
+   }
+   if(!old)updates.push(db.prepare('INSERT OR IGNORE INTO study_sync2_objects(user_id,hash,total,created_at) VALUES(?,?,?,?)').bind(uid,g.hash,g.total,Date.now()));
+   let text=g.text;
+   if(text===undefined){const parts=[];for(let i=0;i<g.total;i++){if(g.parts.has(i)){parts.push(g.parts.get(i));continue;}const part=await bucket.get(uid+'/'+g.hash+'/'+i);if(!part)break;parts.push(await part.text());}if(parts.length===g.total)text=parts.join('');}
+   if(text!==undefined){if(await digest(text)!==g.hash)fail(400,'R2笔记内容校验失败');updates.push(db.prepare('UPDATE study_sync2_objects SET ready=1 WHERE user_id=? AND hash=?').bind(uid,g.hash),db.prepare('INSERT OR IGNORE INTO study_sync2_r2_sizes(user_id,hash,bytes) VALUES(?,?,?)').bind(uid,g.hash,encoder.encode(text).length));}
+  }catch(e){problem=e;}}}
+  await Promise.all([upload(),upload()]);if(problem)throw problem;if(updates.length)await db.batch(updates);
   return json({ok:true,storage:'r2'});
  }
  if(path==='/api/sync/v2/put'){
@@ -118,12 +135,72 @@ async function apiV2(request,db,user,url,ctx,bucket){
  }
  fail(404,'增量同步接口不存在');
 }
+function dailyProvenance(r){
+ const section=r.trainingSection?String(r.trainingSection):null,p=r.provenance;
+ if(section!=='jiangsu-specific'&&!p)return {};
+ if(!p||typeof p!=='object'||Array.isArray(p))throw Error('江苏特色补充题必须提供来源核验信息');
+ const url=String(p.sourceUrl||'');if(!/^https?:\/\//.test(url))throw Error('补充题缺少可追溯来源链接');
+ if(!['真题','机构原创','轻微措辞调整'].includes(p.questionNature))throw Error('补充题必须标明题源性质');
+ if(!String(p.jiangsuRelevance||'').trim()||!String(p.selectionReason||'').trim())throw Error('补充题需说明江苏针对性与本次入选理由');
+ if(p.questionNature==='轻微措辞调整'&&(!String(p.wordingChanges||'').trim()||!p.originalStemHtml||!Array.isArray(p.originalOptionsHtml)))throw Error('轻微修改题须保留原题与修改说明');
+ const v=p.verification||{};if(v.independentSolved!==true||v.answerChecked!==true||v.complete!==true||v.meaningPreserved!==true||v.disputed!==false)throw Error('补充题未完成独立作答、答案及完整性核验，或仍有争议');
+ return {trainingSection:section||'jiangsu-specific',provenance:JSON.parse(JSON.stringify(p))};
+}
+function validateDailyPack(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('题包必须是JSON对象');const date=raw.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)throw Error('题包必须有有效date日期，例如2026-10-23');if(!Array.isArray(raw.questions)||!raw.questions.length||raw.questions.length>200)throw Error('题包需包含1～200道题');const ids=new Set(),materials=new Map((raw.materials||[]).map(m=>[String(m.id),String(m.html||m.content||'')]));const questions=raw.questions.map((r,i)=>{const id=String(r.id||r.sourceQuestionId||'');if(!id||ids.has(id))throw Error('第'+(i+1)+'题ID缺失或重复');ids.add(id);const stemHtml=String(r.stemHtml||r.stem||''),optionsHtml=r.optionsHtml||r.options,answer=String(r.answer||'').toUpperCase();if(!stemHtml.trim()||!Array.isArray(optionsHtml)||optionsHtml.length<2||optionsHtml.length>8||optionsHtml.some(x=>typeof x!=='string'||!x.trim())||!new RegExp('^[A-'+String.fromCharCode(64+optionsHtml.length)+']$').test(answer))throw Error('第'+(i+1)+'题题干、选项或答案不完整');if(!['政治理论','常识判断','言语理解','数量关系','判断推理','资料分析'].includes(r.subject))throw Error('第'+(i+1)+'题subject专项无效');const materialKey=r.materialKey?String(r.materialKey):null,materialHtml=String(r.materialHtml||materials.get(materialKey)||'');if(materialKey&&!materialHtml.trim())throw Error('第'+(i+1)+'题公共材料缺失');return {...dailyProvenance(r),id,sourceQuestionId:r.sourceQuestionId||id,subject:r.subject,path:Array.isArray(r.path)?r.path.map(String):[],type:String(r.type||''),stemHtml,optionsHtml,answer,explanationHtml:String(r.explanationHtml||r.explanation||''),materialKey,materialHtml,source:String(r.source||''),year:r.year||null,mostWrong:r.mostWrong||null,rate:r.rate??null};});const groups=new Map();for(const q of questions)if(q.materialKey){if(groups.has(q.materialKey)&&groups.get(q.materialKey)!==q.materialHtml)throw Error('同一材料组内容不一致');groups.set(q.materialKey,q.materialHtml);}return {format:'zhiyaoji-daily-v1',date,title:String(raw.title||raw.name||'每日定向训练').slice(0,120),focus:Array.isArray(raw.focus)?raw.focus.map(String).slice(0,12):[],questions};}
+async function dailySchema(db){await db.batch([db.prepare('CREATE TABLE IF NOT EXISTS study_daily_packs (user_id TEXT NOT NULL,date TEXT NOT NULL,hash TEXT NOT NULL,title TEXT NOT NULL,count INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(user_id,date))'),db.prepare('CREATE TABLE IF NOT EXISTS study_daily_tokens (user_id TEXT PRIMARY KEY,token_hash TEXT NOT NULL,expires_at INTEGER NOT NULL)')]);}
+async function dailyApi(request,db,user,url,bucket){
+ if(!bucket)fail(503,'每日训练需要现有STUDY_NOTES存储桶绑定');await dailySchema(db);const path=url.pathname;
+ if(path==='/api/daily/token'&&request.method==='POST'){const input=await body(request);if(input.revoke){await db.prepare('DELETE FROM study_daily_tokens WHERE user_id=?').bind(user.id).run();return json({ok:true});}const token=random(32),expires=Date.now()+90*86400000;await db.prepare('INSERT INTO study_daily_tokens(user_id,token_hash,expires_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at').bind(user.id,await digest(token),expires).run();return json({token,expiresAt:expires,scope:'daily:publish',endpoint:url.origin+'/api/daily/publish'});}
+ if(path==='/api/daily/list'&&request.method==='GET'){const {results}=await db.prepare('SELECT date,hash,title,count,updated_at AS updatedAt FROM study_daily_packs WHERE user_id=? ORDER BY date DESC LIMIT 120').bind(user.id).all();return json({packs:results});}
+ if(path==='/api/daily/get'&&request.method==='GET'){const date=url.searchParams.get('date');const row=await db.prepare('SELECT hash FROM study_daily_packs WHERE user_id=? AND date=?').bind(user.id,date).first();if(!row)fail(404,'当天题包尚未发布');const object=await bucket.get(user.id+'/_daily/'+row.hash);if(!object)fail(503,'题包暂时无法读取');return json({pack:JSON.parse(await object.text()),hash:row.hash});}
+ if(path==='/api/daily/publish'&&request.method==='POST'){const text=await request.text();if(encoder.encode(text).length>2000000)fail(413,'每日题包超过2MB，请使用外部图片地址');let pack;try{const raw=JSON.parse(text);inspect(raw);pack=validateDailyPack(raw);}catch(e){fail(400,e.message||'题包无效');}const payload=JSON.stringify(pack),hash=await digest(payload);await bucket.put(user.id+'/_daily/'+hash,payload,{httpMetadata:{contentType:'application/json; charset=utf-8'}});await db.prepare('INSERT INTO study_daily_packs(user_id,date,hash,title,count,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,date) DO UPDATE SET hash=excluded.hash,title=excluded.title,count=excluded.count,updated_at=excluded.updated_at').bind(user.id,pack.date,hash,pack.title,pack.questions.length,Date.now()).run();return json({ok:true,date:pack.date,hash,count:pack.questions.length});}
+ fail(404,'每日训练接口不存在');
+}
+
+// AI access is separately authorized. It cannot mutate learning records.
+async function aiSchema(db){await db.prepare('CREATE TABLE IF NOT EXISTS study_ai_tokens (user_id TEXT PRIMARY KEY,token_hash TEXT NOT NULL,expires_at INTEGER NOT NULL)').run();}
+async function aiContext(db,user,bucket){
+ await ensureV2(db);const head=await db.prepare('SELECT rev,hash,updated_at AS updatedAt FROM study_sync2_heads WHERE user_id=?').bind(user.id).first();
+ if(!head)return {head:{rev:0,hash:null},manifest:null};
+ const root=await objectV2(db,user.id,head.hash,bucket);if(root.kind!=='root'||root.value?.protocol!==2)fail(409,'学习同步格式不支持，请先在网站完成同步');return {head,manifest:root.value};
+}
+async function aiRead(db,user,bucket,ref,kind){hex(ref,64);const object=await objectV2(db,user.id,ref,bucket);if(object.kind!==kind)fail(409,'学习对象类型不匹配');return object.value;}
+async function aiApi(request,db,user,url,bucket){
+ const context=await aiContext(db,user,bucket),m=context.manifest,path=url.pathname;
+ if(path==='/api/ai/status')return json({ok:true,username:user.username||null,scopes:['learning:read','daily:publish'],sync:context.head,sessionCount:m?.sessions?.length||0,notesIncluded:false,bankAvailable:false});
+ if(!m)fail(409,'该账号尚无已同步的学习记录，请先在网站同步');
+ const offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||5);
+ if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>10)fail(400,'分页参数无效，limit须为1～10');
+ const deleted=await aiRead(db,user,bucket,m.deletedSessions,'deleted'),rows=(m.sessions||[]).filter(r=>!deleted?.[r.id]);
+ if(path==='/api/ai/sessions'){
+  const ordered=rows.slice().reverse(),items=[];
+  for(const r of ordered.slice(offset,offset+limit)){const s=await aiRead(db,user,bucket,r.ref,'session'),d=s.data;items.push({id:r.id,title:d.title,startedAt:d.startedAt,finishedAt:d.finishedAt,finished:d.finished,questionCount:s.questions.length,mode:d.mode,reviewCompletion:d.reviewCompletion?{status:d.reviewCompletion.status,confirmedAt:d.reviewCompletion.confirmedAt,revision:d.reviewCompletion.revision}:null,reviewRevision:d.reviewRevision||0});}
+  return json({items,total:rows.length,nextOffset:offset+items.length<rows.length?offset+items.length:null,snapshotHash:context.head.hash,order:'reverse_sync_manifest'});
+ }
+ if(path==='/api/ai/session'){
+  const id=url.searchParams.get('id'),row=rows.find(r=>r.id===id);if(!row)fail(404,'当前账号没有这次练习');
+  const s=await aiRead(db,user,bucket,row.ref,'session'),questions=[];for(const ref of s.questions.slice(offset,offset+limit))questions.push(await aiRead(db,user,bucket,ref,'question'));
+  const learning=await aiRead(db,user,bucket,m.learning,'learning'),d=s.data,keys=new Set(questions.map(q=>q.id)),favorites=Object.fromEntries(questions.map(q=>[q.id,!!learning.favorites?.[q.id]])),answers=Object.fromEntries(Object.entries(d.answers||{}).filter(([key])=>keys.has(key))),events=(d.events||[]).filter(e=>keys.has(e.questionId)||keys.has(e.qid)||Number.isInteger(e.index)&&e.index>=offset&&e.index<offset+limit),allEvents=d.events||[];
+  const reviewFeedback=Object.fromEntries(questions.map(q=>[q.id,d.reviewFeedback?.[q.id]||null])),reviewCompletion=d.reviewCompletion?{status:d.reviewCompletion.status,confirmedAt:d.reviewCompletion.confirmedAt,revision:d.reviewCompletion.revision}:null,reviewConfirmed=d.reviewCompletion?.status==='confirmed'&&d.reviewCompletion.revision===(d.reviewRevision||0)&&d.reviewCompletion.feedbackSignature===JSON.stringify(d.reviewFeedback||{},(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
+  return json({session:{reviewFeedback,reviewCompletion,reviewConfirmed,reviewRevision:d.reviewRevision||0,learningEligibility:Object.fromEntries(questions.map(q=>[q.id,{excluded:d.reviewFeedback?.[q.id]?.excludeFromLearning===true,feedbackStatus:reviewConfirmed?'confirmed':d.reviewFeedback?'draft':'legacy-unreviewed'}])),id:row.id,title:d.title,startedAt:d.startedAt,finishedAt:d.finishedAt,finished:d.finished,mode:d.mode,elapsed:d.elapsed,answers,favorites,timingSnapshot:d.timingSnapshot||null,questions,events:allEvents.slice(0,500),eventsTotal:allEvents.length,eventsTruncated:allEvents.length>500},total:s.questions.length,nextOffset:offset+questions.length<s.questions.length?offset+questions.length:null,notesIncluded:false,notesAvailable:!!Object.keys(s.evidence?.notes||s.notes||{}).length,snapshotHash:context.head.hash,diagnosticCaution:'排除或未排除只记录行为，不能单独证明词义或选项已掌握。原始用时和排除数据以answers与events为准；reviewFeedback.userCause是本人自述，不是AI已确认诊断。excludeFromLearning为true的本次作答不得用于安排补练或降低掌握状态，未确认反馈待复盘完成后归档。本接口暂不提供笔迹。'});
+ }
+ fail(404,'AI只读接口不存在');
+}
+
 async function api(request,env,ctx){
  const url=new URL(request.url),path=url.pathname,db=env.STUDY_SYNC_DB;
- if(path==='/api/account/health'&&request.method==='GET')return json({version:'2.9.18-r6',syncProtocol:2,noteStorage:env.STUDY_NOTES?'r2':'d1',depotVersion:1,configured:!!db,registrationEnabled:!!env.STUDY_INVITE_CODE});
+ if(path==='/api/account/health'&&request.method==='GET')return json({version:'2.9.18-r8-6',syncProtocol:2,noteStorage:env.STUDY_NOTES?'r2':'d1',depotVersion:1,configured:!!db,registrationEnabled:!!env.STUDY_INVITE_CODE});
  if(!db)fail(503,'账号同步服务尚未配置；本机练习与备份仍可使用');
  const origin=request.headers.get('Origin');
  if((origin&&origin!==url.origin)||request.headers.get('Sec-Fetch-Site')==='cross-site')fail(403,'不接受其他网站发起的账号请求');
+ if((path.startsWith('/api/ai/')||path==='/api/daily/publish')&&request.headers.get('Authorization')?.startsWith('StudyAI ')){
+  const allowed=(request.method==='GET'&&['/api/ai/status','/api/ai/sessions','/api/ai/session'].includes(path))||(request.method==='POST'&&path==='/api/daily/publish');if(!allowed)fail(403,'此授权只允许读取学习记录和发布题包');
+  if(request.method==='POST'&&!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))fail(415,'请求必须使用JSON');
+  await aiSchema(db);const token=request.headers.get('Authorization').slice(8);hex(token,64);
+  const owner=await db.prepare('SELECT t.user_id AS id,u.username FROM study_ai_tokens t JOIN study_users u ON u.id=t.user_id WHERE t.token_hash=? AND t.expires_at>?').bind(await digest(token),Date.now()).first();if(!owner)fail(401,'AI连接授权已过期或撤销');await limited(db,request,'ai-connect',100);
+  return path==='/api/daily/publish'?dailyApi(request,db,owner,url,env.STUDY_NOTES):aiApi(request,db,owner,url,env.STUDY_NOTES);
+ }
+ if(path==='/api/daily/publish'&&request.headers.has('Authorization')){if(request.method!=='POST')fail(405,'只允许POST');if(!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))fail(415,'请求必须使用JSON');await dailySchema(db);const token=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!/^[a-f0-9]{64}$/.test(token))fail(401,'上传授权无效');const user=await db.prepare('SELECT user_id AS id FROM study_daily_tokens WHERE token_hash=? AND expires_at>?').bind(await digest(token),Date.now()).first();if(!user)fail(401,'上传授权已失效');await limited(db,request,'daily-publish',20);return dailyApi(request,db,user,url,env.STUDY_NOTES);}
  if(request.method==='POST'&&origin!==url.origin)fail(403,'缺少同源请求标识');
  if(request.method==='POST'&&!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))fail(415,'请求必须使用JSON');
  if(path==='/api/account/start'&&request.method==='POST'){
@@ -156,6 +233,12 @@ async function api(request,env,ctx){
   return json({recoveryCode:recovery,message:'密码已更新，旧设备登录已退出，请重新登录'});
  }
  const user=await userFor(db,request);
+ if(path==='/api/ai/token'&&request.method==='POST'){
+  await aiSchema(db);const input=await body(request);if(input.revoke){await db.prepare('DELETE FROM study_ai_tokens WHERE user_id=?').bind(user.id).run();return json({ok:true});}
+  const token=random(32),expiresAt=Date.now()+90*86400000;await db.prepare('INSERT INTO study_ai_tokens(user_id,token_hash,expires_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at').bind(user.id,await digest(token),expiresAt).run();return json({token,expiresAt,scopes:['learning:read','daily:publish']});
+ }
+
+ if(path.startsWith('/api/daily/'))return dailyApi(request,db,user,url,env.STUDY_NOTES);
  if(path==='/api/account/me'&&request.method==='GET')return json({user:{id:user.id,username:user.username}});
  if(path==='/api/account/logout'&&request.method==='POST'){await db.prepare('DELETE FROM study_logins WHERE token_hash=?').bind(user.tokenHash).run();return json({ok:true},200,{'Set-Cookie':cookie('',0)});}
  if(path.startsWith('/api/sync/v2/'))return apiV2(request,db,user,url,ctx,env.STUDY_NOTES);
@@ -199,12 +282,54 @@ async function api(request,env,ctx){
   // The active snapshot contains ALL history. Retain one previous snapshot without
   // storing a full duplicate of the entire notebook on every background sync.
   const cleanup=async()=>{await db.prepare("DELETE FROM study_sync_chunks WHERE user_id=? AND hash IN (SELECT hash FROM study_sync_uploads WHERE user_id=? AND (state='committed' OR updated_at<?)) AND hash NOT IN (SELECT hash FROM study_sync_heads WHERE user_id=? UNION SELECT previous_hash FROM study_sync_heads WHERE user_id=? AND previous_hash IS NOT NULL)").bind(user.id,user.id,now-86400000,user.id,user.id).run();await db.prepare('DELETE FROM study_sync_uploads WHERE user_id=? AND hash NOT IN (SELECT hash FROM study_sync_chunks WHERE user_id=?)').bind(user.id,user.id).run();};
-  if(!bucket)ctx?.waitUntil?.(cleanup().catch(()=>{}));
+  if(!env.STUDY_NOTES)ctx?.waitUntil?.(cleanup().catch(()=>{}));
   return json({rev:rev+1,hash,chunks:total,updatedAt:now});
  }
  fail(404,'接口不存在');
 }
+// Public raster images only; isolated from account, D1, R2 and learning routes.
+function allowedStudyImage(value){
+ try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||u.port)return null;
+  const raster=/\.(?:png|jpe?g|gif|webp|avif)$/i;
+  const ok=(['fb.fbstatic.cn','fb.fenbike.cn'].includes(u.hostname)&&(u.pathname==='/api/planet/accessories/formulas'||raster.test(u.pathname)))||(u.hostname==='jiangsu-study-bank-mzy.pages.dev'&&/^\/bank\/assets\/[a-f0-9]{64}\.(?:png|jpe?g|gif|webp|avif)$/i.test(u.pathname));
+  if(!ok)return null;u.hash='';return u;
+ }catch{return null;}
+}
+function studyRasterBytes(b,mime){
+ if(mime==='image/png')return b.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>b[i]===v);
+ if(mime==='image/jpeg')return b.length>=3&&b[0]===255&&b[1]===216&&b[2]===255;
+ const text=(a,z)=>String.fromCharCode(...b.subarray(a,z));
+ if(mime==='image/gif')return b.length>=6&&['GIF87a','GIF89a'].includes(text(0,6));
+ if(mime==='image/webp')return b.length>=12&&text(0,4)==='RIFF'&&text(8,12)==='WEBP';
+ if(mime==='image/avif')return b.length>=12&&text(4,8)==='ftyp'&&/avif|avis/.test(text(8,Math.min(b.length,40)));
+ return false;
+}
+async function studyImageRoute(request,ctx){
+ const fail=(message,status)=>new Response(message,{status,headers:{'Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8','X-Content-Type-Options':'nosniff'}});
+ if(request.method!=='GET')return fail('Method not allowed',405);
+ const raw=new URL(request.url).searchParams.get('url');if(!raw||raw.length>4096)return fail('Unsupported image source',400);
+ const source=allowedStudyImage(raw);if(!source)return fail('Unsupported image source',400);
+ const key=new URL(request.url);key.search='';key.searchParams.set('url',source.href);const cacheKey=new Request(key.href);let cache;
+ try{cache=globalThis.caches?.default;const hit=await cache?.match(cacheKey);if(hit)return hit;}catch{}
+ const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),6000);
+ try{
+  const r=await fetch(source.href,{signal:abort.signal,redirect:'manual',credentials:'omit',headers:{Accept:'image/png,image/jpeg,image/webp,image/gif,image/avif'}});
+  const mime=(r.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+  if(!r.ok||!['image/png','image/jpeg','image/webp','image/gif','image/avif'].includes(mime))throw Error('Invalid raster response');
+  const max=12*1024*1024;if(Number(r.headers.get('content-length'))>max)throw Error('Image too large');
+  const reader=r.body?.getReader();if(!reader)throw Error('Missing image');const chunks=[];let size=0;
+  try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>max){await reader.cancel();throw Error('Image too large');}chunks.push(value);}}finally{reader.releaseLock();}
+  const bytes=new Uint8Array(size);let p=0;for(const c of chunks){bytes.set(c,p);p+=c.length;}
+  if(!studyRasterBytes(bytes,mime))throw Error('Invalid raster bytes');
+  const response=new Response(bytes,{headers:{'Content-Type':mime,'Content-Length':String(size),'Cache-Control':'public, max-age=2592000','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'X-Study-Image-Bytes':String(size)}});
+  if(cache){const job=cache.put(cacheKey,response.clone()).catch(()=>{});if(ctx?.waitUntil)ctx.waitUntil(job);else await job;}
+  return response;
+ }catch{return fail('Image temporarily unavailable',502);}finally{clearTimeout(timer);}
+}
+
+
 export default {async fetch(request,env,ctx){
+ if(new URL(request.url).pathname==='/api/media/image')return studyImageRoute(request,ctx);
  if(!new URL(request.url).pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
  try{return await api(request,env,ctx);}catch(e){const quota=/quota|daily|rows written|limit exceeded/i.test(String(e.message));return json({error:e.status?e.message:quota?'云端额度暂时不足；本机数据已保留，额度恢复后重试':'同步服务暂时不可用；本机数据仍保留'},e.status||503);}
 }};

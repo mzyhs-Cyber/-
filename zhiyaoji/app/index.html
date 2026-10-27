@@ -3,13 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#f5f7fb">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>知遥集 · V2.9.18 修正版7</title>
+<title>知遥集 · R8.8.17</title>
 <link rel="icon" href="icon.svg"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><meta name="apple-mobile-web-app-title" content="知遥集">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=2.9.18-r7"><link rel="stylesheet" href="home.css?v=2.9.18-r7"><link rel="stylesheet" href="report.css?v=2.9.18-r7">
-<link rel="stylesheet" href="reading.css?v=2.9.18-r7">
+<link rel="stylesheet" href="styles.css?v=2.9.18-r8-8-11"><link rel="stylesheet" href="home.css?v=2.9.18-r8-8-11"><link rel="stylesheet" href="report.css?v=2.9.18-r8-8-11">
+<link rel="stylesheet" href="reading.css?v=2.9.18-r8-8-11">
+<link rel="stylesheet" href="ux-polish.css?v=2.9.18-r8-8-11">
+<link rel="stylesheet" href="refinement.css?v=2.9.18-r8-8-11">
+<link rel="stylesheet" href="appearance-a.css?v=2.9.18-r8-8-12">
+<link rel="stylesheet" href="dialog-choice.css?v=2.9.18-r8-8-13">
+<link rel="stylesheet" href="ink-controls.css?v=2.9.18-r8-8-14">
+<link rel="stylesheet" href="source-filters.css?v=2.9.18-r8-8-16">
+<link rel="stylesheet" href="modal-scroll.css?v=2.9.18-r8-8-16">
+<link rel="stylesheet" href="training-controls.css?v=r8-8-17">
 </head>
 <body>
 <div id="app-shell" class="app-shell">
@@ -19,10 +28,15 @@
 <section id="workspace" hidden></section>
 <div id="dialog-host" class="dialog-host" hidden></div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="bank-config.js?v=2.9.18-r7"></script>
-<script src="storage-check.js?v=2.9.18-r7"></script>
-<script src="bundle.js?v=2.9.18-r7"></script>
-<script src="performance-diagnostics.js?v=2.9.18-r7"></script>
+<script src="bank-config.js?v=2.9.18-r8-8-11"></script>
+<script src="storage-check.js?v=2.9.18-r8-8-11"></script>
+<script src="continuity.js?v=2.9.18-r8-8-11"></script>
+<script src="source-filters.js?v=2.9.18-r8-8-16"></script>
+<script src="modal-scroll.js?v=2.9.18-r8-8-16"></script>
+<script src="training-memory.js?v=r8-8-17"></script>
+<script src="bundle.js?v=r8-8-17"></script>
+<script src="training-review.js?v=r8-8-17"></script>
+<script src="performance-diagnostics.js?v=2.9.18-r8-8-11"></script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).catch(()=>{});

@@ -1,5 +1,9 @@
 # PROJECT_STATE
 
+## 最新状态｜2026-10-27
+
+已核实正式站前端R8.8.16并据此制作R8.8.17；本分支app目录为新代码，未部署。新增training-memory.js、training-review.js、training-controls.css并修改bundle/index/sw；其余沿用线上R8.8.16。视图记忆使用独立localStorage，不改主数据库。下方r7及SOURCE_MANIFEST为保留的历史来源档案，不能要求新app保持旧哈希。
+
 更新日期：2026-10-26（北京时间）。证据仅来自本次附件、实际读取的仓库元数据和代码；未重整历史聊天或旧 ZIP。
 
 ## 身份与盘点

@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r7';
+  const VERSION = 'D2-r8-2';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;
@@ -81,7 +81,7 @@
   },true);
   DIAG.report=()=>({schema:1,diagnosticVersion:VERSION,createdAt:new Date().toISOString(),
     description:'本地诊断信息。手写延迟为JS事件至画布绘制指令完成的估计，非真实屏幕呈现延迟；异常刷新和CPU/内存原因不可直接推定。',
-    applicationBase:'V2.9.18 修正版7（存储错误与重定向诊断）',
+    applicationBase:'V2.9.18 修正版8.6（存储错误与重定向诊断）',
     metrics:{eventCount:events.length,longTaskSupported:DIAG.longTaskSupported,memorySupported:DIAG.memorySupported,
       currentRoute:DIAG.currentRoute,viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
     accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,events:events.slice()});
@@ -361,7 +361,7 @@
       const host=document.querySelector('#view');
       if(host&&!host.querySelector('#diag-panel')){
         const panel=document.createElement('section');panel.id='diag-panel';panel.className='panel settings-section';
-        panel.innerHTML='<h2>性能诊断（D2-r7 · 含手写延迟）</h2>'+
+        panel.innerHTML='<h2>性能诊断（D2-r8-2 · 含手写延迟）</h2>'+
           '<p>记录页面卡顿、手写事件处理和画布绘制耗时；不记录笔迹位置、形状或内容。异常重载后仍可导出。手写延迟是估计值，不等于实际屏幕显示延迟；iPad可能不提供内存和长任务指标。</p>'+
           '<div class="setting-actions">'+
           '<button class="button primary" type="button" id="diag-export">导出性能诊断</button>'+

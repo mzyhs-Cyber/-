@@ -30,4 +30,27 @@
 .report-answer-group{padding:18px 0;border-top:1px solid #edf0f2}
 .report-answer-group:first-child{border-top:0}
 .report-answer-group h3{font-size:14px;font-weight:550;margin:0 0 14px}
-@media(max-width:560px){.report-design .report-sections{padding:18px 16px}.performance-branch summary{flex-wrap:wrap;gap:10px;padding:15px 0}.performance-values{width:100%;padding-left:18px;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.report-section-leaf{flex-wrap:wrap}.performance-name{font-size:13px}}
+@media(max-width:800px){.report-design .report-sections{padding:18px 16px}.performance-branch summary{flex-wrap:wrap;gap:10px;padding:15px 0}.performance-values{width:100%;padding-left:18px;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.report-section-leaf{flex-wrap:wrap}.performance-name{font-size:13px}}
+
+.answer-cell{position:relative;overflow:visible}.answer-cell .time-badge{position:absolute;right:-5px;top:-7px;display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#fff0d9;color:#ad641a;box-shadow:0 0 0 2px var(--reading-paper,#fff)}.time-badge svg{width:14px;height:14px}.time-insight{margin:12px 0;padding:12px;border-radius:10px;background:#f3f5f7;color:#5b6773;font-size:13px}.exam-shell[data-reading=night] .time-insight{background:#303b4d;color:#d5dee8}
+.answer-cell .star-mark{top:auto;right:auto;bottom:1px;left:3px}
+
+.time-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:#8d642d;flex-wrap:wrap}.time-legend svg{width:14px;height:14px;color:#c17a20;flex:none}.answer-cell .star-mark{position:absolute;bottom:1px;left:3px;color:#ac7a24;font-size:11px;line-height:1}.time-insight{overflow-wrap:anywhere}.report-design .section-title{flex-wrap:wrap}.report-design .legend{flex-wrap:wrap}
+
+/* R8.7.1: report-only horizontal containment; inactive during ink/review workspaces. */
+html:has(#app-shell:not([hidden]) > #view > .report-main.report-design),
+body:has(#app-shell:not([hidden]) > #view > .report-main.report-design){
+  overflow-x:hidden;
+  overscroll-behavior-x:none;
+}
+.report-main.report-design{
+  width:100%;min-width:0;overflow-x:clip;
+  overscroll-behavior-x:none;touch-action:pan-y pinch-zoom;
+}
+.report-design > *,
+.report-design .performance-name,
+.report-design .performance-values,
+.report-design .performance-values > span,
+.report-design .summary-grid > .metric{min-width:0;max-width:100%}
+.report-design .performance-name,
+.report-design .performance-values b{overflow-wrap:anywhere}

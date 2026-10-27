@@ -1,0 +1,15 @@
+/* R8.8.13: dialog-owned selectors stay within their original dialog. */
+#dialog-host .export-scope-label{display:grid;gap:8px}
+#dialog-host .choice-inline-panel{
+ margin-top:8px;padding:6px;border:1px solid var(--ref-line,#dde4df);
+ border-radius:10px;background:#fff;max-height:min(44vh,360px);overflow-y:auto;
+ overscroll-behavior:contain;box-shadow:none;
+}
+#dialog-host .choice-inline-panel .choice-list{max-height:none;overflow:visible}
+#dialog-host .choice-inline-panel .choice-list button{background:#fff}
+#dialog-host .choice-inline-panel .choice-list [aria-selected="true"]{
+ background:var(--choice-blue);color:var(--choice-text);
+}
+#dialog-host .choice-inline-panel .choice-list button:focus-visible{
+ outline:2px solid var(--ref-accent);outline-offset:-2px;
+}

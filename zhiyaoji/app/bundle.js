@@ -3,7 +3,7 @@ window.Study = window.Study || {};
 (function(S) {
 'use strict';
 S.VERSION='2.9.18';
-S.BUILD='20261027-r8-8-18';
+S.BUILD='20261027-r8-8-19';
 S.DB_NAME='mzy-study-clean-v2';
 S.SUBJECTS=['政治理论','常识判断','言语理解','数量关系','判断推理','资料分析'];
 S.LETTERS=['A','B','C','D'];
@@ -1461,6 +1461,7 @@ S.bindIdleActivity=function(exam){
  exam.idleLastInput=exam.lastPulse;
  if(exam.s._review)return;
  const input=e=>{
+  if(S.resumeIdlePen?.(exam,e))return;
   if(exam.disposed||exam.s.finished||exam.s.paused||document.hidden||!S.idleInputIsMeaningful(e))return;
   const now=performance.now();
   // Settle the expired interval before accepting a late answer/pen event.

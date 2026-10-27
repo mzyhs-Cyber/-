@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const base=fs.existsSync(path.join(__dirname,'r8_8_18'))?path.join(__dirname,'r8_8_18'):path.join(__dirname,'../app');
+const base=process.env.ZHIYAOJI_TEST_APP|| (fs.existsSync(path.join(__dirname,'r8_8_18'))?path.join(__dirname,'r8_8_18'):path.join(__dirname,'../app'));
 const M=require(path.join(base,'training-memory.js'));
 const title=(year,half,issue)=>`${year}${half}省考第${issue}季行测模考大赛（江苏B卷）`;
 // Exact names observed in the user's screenshot, including the current upper-half selection.
@@ -22,5 +22,5 @@ vm.runInContext("let v28PaperRegion='江苏',v28PaperYear='全部',v28PaperId=''
 const fullOrder=[...node('#view').innerHTML.matchAll(/<option value="(p\d+)"[^>]*>/g)].map(m=>m[1]);assert.deepEqual(fullOrder,expected.map(p=>p.id));
 vm.runInContext(definition('S.PaperFilters={','\n};'),ctx);assert.deepEqual(Array.from(S.PaperFilters.choose(papers,{}),p=>p.id),expected.map(p=>p.id));
 vm.runInContext(definition('S.renderTimed=function(){','\n};'),ctx);S.renderTimed();const timedOrder=[...node('#release-paper').innerHTML.matchAll(/<option value="(p\d+)"[^>]*>/g)].map(m=>m[1]);assert.deepEqual(timedOrder,expected.map(p=>p.id));
-const sw=fs.readFileSync(path.join(base,'sw.js'),'utf8'),html=fs.readFileSync(path.join(base,'index.html'),'utf8');assert.match(sw,/r8-8-18/);assert.match(html,/training-memory\.js\?v=r8-8-18/);
+const sw=fs.readFileSync(path.join(base,'sw.js'),'utf8'),html=fs.readFileSync(path.join(base,'index.html'),'utf8'),build=bundle.match(/S.BUILD='[^']*(r8-8-\d+)'/)[1];assert.ok(sw.includes(build));assert.match(html,/training-memory\.js\?v=r8-8-\d+/);
 console.log('PASS: screenshot Chinese seasons; mixed Arabic/fullwidth/Chinese; half-year chronology; comparator transitivity; actual paper/timed/bank ordering; cache version');

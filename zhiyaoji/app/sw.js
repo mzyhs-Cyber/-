@@ -1,7 +1,8 @@
 /* Public image bytes have a separate bounded cache. Account APIs never enter caches. */
 'use strict';
-const CACHE='jiangsu-study-shell-v2-9-18-r8-8-18';
+const CACHE='jiangsu-study-shell-v2-9-18-r8-8-19';
 const MEDIA_CACHE='zhiyaoji-public-images-v1';
+const READING_FILES=['./reading-continuity.js','./reading-continuity.css'];
 async function imageResponse(req){
  const cache=await caches.open(MEDIA_CACHE),cached=await cache.match(req);if(cached)return cached;
  const response=await fetch(req);if(response.ok||response.type==='opaque'){
@@ -16,7 +17,7 @@ function cleanShellResponse(response){
  const headers=new Headers(response.headers);headers.delete('content-encoding');headers.delete('content-length');
  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll([...FILES,...READING_FILES])).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(names=>Promise.all(names.filter(n=>n.startsWith('jiangsu-study-shell-')&&n!==CACHE).map(n=>caches.delete(n)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
  const req=event.request,u=new URL(req.url);

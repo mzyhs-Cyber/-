@@ -1,0 +1,114 @@
+{
+  "version": "PC-DIST-20261027-v1",
+  "requested_window": [
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "available_window": [
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "supplemental_year": 2021,
+  "missing_year": 2026,
+  "classification": "one mutually exclusive primary group per question; extra local-context and format tags are non-additive",
+  "raw_total": 95,
+  "years": {
+    "2021": {
+      "politics_section": 0,
+      "common_sense": 15,
+      "primary_common_sense_counts": {
+        "理论时政与治理": 7,
+        "科技地理环保": 1,
+        "行政法": 6,
+        "民法典": 1
+      },
+      "law": 7,
+      "official_separate_politics": false
+    },
+    "2022": {
+      "politics_section": 0,
+      "common_sense": 20,
+      "primary_common_sense_counts": {
+        "理论时政与治理": 4,
+        "法理学": 2,
+        "其他法律": 1,
+        "科技地理环保": 2,
+        "行政法": 7,
+        "民法典": 4
+      },
+      "law": 14,
+      "official_separate_politics": false
+    },
+    "2023": {
+      "politics_section": 0,
+      "common_sense": 20,
+      "primary_common_sense_counts": {
+        "理论时政与治理": 3,
+        "历史文化": 2,
+        "科技地理环保": 3,
+        "经济基础": 1,
+        "民法典": 3,
+        "行政法": 5,
+        "其他法律": 3
+      },
+      "law": 11,
+      "official_separate_politics": false
+    },
+    "2024": {
+      "politics_section": 0,
+      "common_sense": 20,
+      "primary_common_sense_counts": {
+        "理论时政与治理": 6,
+        "历史文化": 1,
+        "经济基础": 1,
+        "行政法": 5,
+        "法理学": 1,
+        "民法典": 5,
+        "其他法律": 1
+      },
+      "law": 12,
+      "official_separate_politics": false
+    },
+    "2025": {
+      "politics_section": 10,
+      "common_sense": 10,
+      "primary_common_sense_counts": {
+        "理论时政与治理": 3,
+        "历史文化": 1,
+        "科技地理环保": 1,
+        "法理学": 1,
+        "民法典": 1,
+        "行政法": 3
+      },
+      "law": 5,
+      "official_separate_politics": true
+    }
+  },
+  "politics_2025": {
+    "topic_counts": {
+      "新思想总论": 1,
+      "党建与自我革命": 1,
+      "中国式现代化江苏任务综合": 1,
+      "文化思想与文明特征": 1,
+      "法治思想与执法改革": 2,
+      "经济体制改革": 1,
+      "民生与社会建设": 2,
+      "生态文明建设": 1
+    },
+    "formats": {
+      "陈述组合单选": 8,
+      "多陈述计数单选": 1,
+      "普通四选一": 1
+    },
+    "jiangsu_context_question_numbers": [
+      3,
+      9
+    ]
+  },
+  "eligible_added": 0
+}

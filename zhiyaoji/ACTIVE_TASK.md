@@ -1,5 +1,9 @@
 # ACTIVE_TASK
 
+## 2026-10-27｜规则、连续性与反馈治理
+
+用户要求规则和反馈在GitHub记录并遵守。新增docs/OPERATING_RULES.md（RULES-20261027-v1）、CONTINUITY.md、FEEDBACK_LOG.md；AGENTS/README/HANDOFF指向同一入口，纠正旧r7“仅归档”说明与当前R27冲突。反馈区分实现测试、部署、实机和待证据；旧禁用其他题笔记按钮规则标为被接管规则替代。研究分支增加入口，Issue #5不再把Day3作为永久下一步；现有主任务与回执复查只更新规则引用、保留日程且不补跑。提交及提示词需回读后才报告完成。网站代码/部署包不改，无新部署。
+
 R8.8.27｜排查Day3答题卡模块交错与笔迹不可见。基线R26/eab9b03f49e3950c8548d7b8308e81b12461c14e。实际云端Day3的题序为资料1—3、判断4—5、资料6—7、言语8—10、判断11—13、言语14、判断15、数量16—17、判断18；题包按训练用途交错，answerGroups按连续片段拆组，reportSections却按模块汇总，造成两处观感不同。新training-order-ink.js将答题卡/报告题号表统一为标准模块顺序，每模块一次，题号仍引用原session.questions索引。只在新建daily会话前按模块和完整材料单元稳定排序，其他模式不排序，已有练习/题号/作答/材料/笔迹/attempt/冻结证据不重排、不迁移。
 
 笔迹：复现旧材料键m:materialKey在现代复盘中只按m:[paperId,materialKey]查找而不可见。只在evidenceNotes读取视图补无歧义别名，不改原对象、原始点、清除/撤销/历史或冻结证据；已有明确新键优先，多卷共用旧键时不猜归属。实际WorkspaceView.paint旧代码绘制0条、兼容后1条；真实NoteVault+SyncCodec+最小IndexedDB适配器验证打包/重开/再保存，原始笔迹不变、可写笔记与交卷证据互不共享可变对象。

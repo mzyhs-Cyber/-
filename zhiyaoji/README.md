@@ -1,27 +1,28 @@
-# 知遥集 · 江苏省考刷题网站
+# 知遥集 · 开发与训练接续入口
 
-跨对话开发入口。先读 [PROJECT_STATE.md](PROJECT_STATE.md)、[ACTIVE_TASK.md](ACTIVE_TASK.md)，再读 [AGENTS.md](AGENTS.md) 和本工单涉及的代码。测试按 [TEST_MATRIX.md](TEST_MATRIX.md) 执行。
+先读[现行执行规则](docs/OPERATING_RULES.md)、[连续性入口](docs/CONTINUITY.md)、[反馈台账](docs/FEEDBACK_LOG.md)，再读[开发约束](AGENTS.md)、[当前状态](PROJECT_STATE.md)、[当前工单](ACTIVE_TASK.md)。本工单代码与测试按需读取。
 
 ## 当前身份
 
-- 本仓库存放用户提供的 **V2.9.18 修正版7，build 20261021-r7** 代码快照。
-- **当前线上正式基线、实际部署版本、题库发布版本均未知。** 附件身份不等于线上验收结果，也不能与 R8 系列自行合并。
-- 本次只建立开发档案与资产归档，没有修复业务、改变存储结构或部署线上。
-- `app/` 的 22 个文件与附件逐字节一致。私人 `birthday.html`（照片、信件）和完整学习备份未提交；当前树不是包含所有私人素材的完整部署包。
+- 当前开发分支fix/zhiyaoji-r8-8-17，业务代码R8.8.27，PR #7。网站代码位于app/；本次规则文档更新不升级业务版本。
+- 本会话R17—R27未部署。线上具体版本、用户自行部署情况与iPad验收须另核实，不能由Git提交推定。
+- r7来源清单与zhiyaoji-handoff-20261026是历史归档，保留用于追溯；app/已非原r7逐字节快照。
+- 公开代码不含真实题库、个人备份、笔迹正文或私人birthday.html。完整部署包由本地补齐原私人素材后打包，禁止占位素材。
+- 江苏模型研究在feature/jiangsu-specialty-system-v1分支的jiangsu-specialty-system/及Issue #5。个人学习明细在既有私密Notion，不在公开Git。
 
 ## 目录
 
 | 路径 | 用途 |
 | --- | --- |
-| `app/` | 原样保留的部署代码、样式、图标、配置、Worker |
-| `docs/SOURCE_MANIFEST.json` | 附件来源、逐文件 SHA-256、排除项 |
-| `docs/DATA_CONTRACT.json` | 备份字段结构与数量，不含题目、记录或身份值 |
-| `scripts/verify_project.py` | 代码快照、入口资源、语法、敏感内容检查 |
-| `scripts/package_deploy.py` | 在本地补齐原私人素材后组装 ZIP，不上传或部署 |
-| `verification/RESULTS.json` | 本次实际执行的检查结果 |
-| `DECISIONS.md` / `CHANGELOG.md` | 决策与有证据的版本记录 |
-| `HANDOFF.md` / `BACKLOG.md` | 下一步与未处理发现 |
+| docs/OPERATING_RULES.md | 当前规则及每轮执行/回读要求 |
+| docs/CONTINUITY.md | 分支、版本、部署边界、任务连续性与新窗口提示 |
+| docs/FEEDBACK_LOG.md | 反馈状态、替代关系、测试及未解决项 |
+| app/ | 当前脱敏网站前端、Worker与静态资源 |
+| R8_8_*_CHANGELOG.md / TEST_MATRIX.md | 各版本实际改动、测试及局限 |
+| PROJECT_STATE.md / ACTIVE_TASK.md | 最新状态与当前工单；较旧段落仅作历史 |
+| HANDOFF.md / BACKLOG.md | 接续顺序与待处理缺口 |
+| verification/test-r8-8-*.cjs | 已归档的指定回归脚本；按工单选用 |
+| docs/SOURCE_MANIFEST.json / DATA_CONTRACT.json | 原r7附件来源清单与脱敏结构；不要求当前业务代码等于r7 |
+| scripts/verify_project.py / package_deploy.py | 历史归档校验及打包工具，使用前核对其适用基线 |
 
-本地检查：`python3 scripts/verify_project.py`。需要 Node.js；不安装应用依赖，不写浏览器数据库，不请求线上账号接口。
-
-本地静态预览可用 `python3 -m http.server 8080 --directory app`。它不提供 Cloudflare Worker/D1/R2，不能据此验收账号同步。不要在生产账号或真实学习数据上做恢复测试。
+静态预览不运行Cloudflare Worker/D1/R2，不能替代账号同步验收；合成测试不冒充实机。

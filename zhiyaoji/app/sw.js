@@ -1,6 +1,6 @@
 /* Public image bytes have a separate bounded cache. Account APIs never enter caches. */
 'use strict';
-const CACHE='jiangsu-study-shell-v2-9-18-r8-8-27';
+const CACHE='jiangsu-study-shell-v2-9-18-r8-8-28';
 const MEDIA_CACHE='zhiyaoji-public-images-v1';
 const READING_FILES=['./reading-continuity.js','./reading-continuity.css','./sync-cooperate.js'];
 async function imageResponse(req){
@@ -9,7 +9,7 @@ async function imageResponse(req){
   try{await cache.put(req,response.clone());const keys=await cache.keys();for(const key of keys.slice(0,Math.max(0,keys.length-80)))await cache.delete(key);}catch{}
  }return response;
 }
-const FILES=['./','./index.html','./styles.css','./home.css','./report.css','./reading.css','./ux-polish.css','./refinement.css','./appearance-a.css','./dialog-choice.css','./ink-controls.css','./source-filters.css','./source-filters.js','./modal-scroll.js','./modal-scroll.css','./training-memory.js','./training-review.js','./training-controls.css','./timing-repair.js','./export-scopes.js','./draft-owner-review.js','./draft-boundaries.js','./review-only-upload.js','./training-order-ink.js','./review-surface.css','./icon-180.png','./icon-192.png','./icon-512.png','./bundle.js','./continuity.js','./performance-diagnostics.js','./storage-check.js','./bank-config.js','./icon.svg','./manifest.webmanifest'];
+const FILES=['./','./index.html','./styles.css','./home.css','./report.css','./reading.css','./ux-polish.css','./refinement.css','./appearance-a.css','./dialog-choice.css','./ink-controls.css','./source-filters.css','./source-filters.js','./modal-scroll.js','./modal-scroll.css','./training-memory.js','./training-review.js','./training-controls.css','./timing-repair.js','./export-scopes.js','./draft-owner-review.js','./draft-boundaries.js','./review-only-upload.js','./training-order-ink.js','./daily-pairs.js','./daily-pairs.css','./review-surface.css','./icon-180.png','./icon-192.png','./icon-512.png','./bundle.js','./continuity.js','./performance-diagnostics.js','./storage-check.js','./bank-config.js','./icon.svg','./manifest.webmanifest'];
 function cleanShellResponse(response){
  if(!response?.redirected)return response;
  // Shell documents are same-origin; never convert opaque/external redirects.
@@ -65,3 +65,4 @@ async function studyPublicImage(request,event){
  try{return (await job).clone();}finally{if(studyImagePending.get(key)===job)studyImagePending.delete(key);}
 }
 self.addEventListener('fetch',event=>{const r=event.request;if(r.method==='GET'&&r.destination==='image'&&studyImageAllowed(new URL(r.url)))event.respondWith(studyPublicImage(r,event));});
+

@@ -1,0 +1,8 @@
+#daily-training .daily-pairs{display:grid;gap:14px;margin-top:14px;min-width:0}
+#daily-training .daily-pair,.daily-pair-history .daily-pair{border:1px solid var(--line,#e5e9e2);border-radius:16px;padding:16px;min-width:0;background:var(--surface,#fff)}
+.daily-pair-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.daily-pair-heading h3{margin:0;flex:1;font-size:18px}
+.daily-pair-number{font-size:12px;color:var(--muted,#778277);font-variant-numeric:tabular-nums}
+.daily-pair .daily-caption{margin:12px 0;overflow-wrap:anywhere}
+.daily-pair .daily-start{width:100%;box-sizing:border-box}
+.daily-pair-history{margin-bottom:20px;min-width:0}.daily-pair-history .daily-pairs{display:grid;gap:10px;margin-top:10px}

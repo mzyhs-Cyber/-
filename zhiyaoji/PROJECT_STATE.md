@@ -1,5 +1,7 @@
 # PROJECT_STATE
 
+2026-10-27排序补丁：app现为R8.8.18，在R8.8.17基础上增加中文期数、全角数字和上下半年排序；实际34个模拟卷名称通过核验。旧r7来源清单仍保留。
+
 ## 最新状态｜2026-10-27
 
 已核实正式站前端R8.8.16并据此制作R8.8.17；本分支app目录为新代码，未部署。新增training-memory.js、training-review.js、training-controls.css并修改bundle/index/sw；其余沿用线上R8.8.16。视图记忆使用独立localStorage，不改主数据库。下方r7及SOURCE_MANIFEST为保留的历史来源档案，不能要求新app保持旧哈希。

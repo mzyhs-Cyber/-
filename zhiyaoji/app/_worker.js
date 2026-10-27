@@ -187,9 +187,76 @@ async function aiApi(request,db,user,url,bucket){
  fail(404,'AI只读接口不存在');
 }
 
+// A review update publishes metadata in the existing graph, never ink objects.
+const reviewStable=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
+function reviewKeys(value,allowed,label){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k)))fail(400,label+'包含不允许的字段');}
+function reviewFeedback(input,answers){
+ reviewKeys(input,Object.keys(answers||{}),'复盘');const out={};
+ for(const [id,row]of Object.entries(input)){
+  reviewKeys(row,['userCause','excludeFromLearning','exclusionReason','inclusionOverride','updatedAt','causeOrigin'],'复盘反馈');
+  if(typeof row.userCause!=='string'||row.userCause.length>5000||typeof row.exclusionReason!=='string'||row.exclusionReason.length>1000||typeof row.excludeFromLearning!=='boolean'||typeof row.inclusionOverride!=='boolean'||row.updatedAt!==undefined&&(!Number.isFinite(row.updatedAt)||row.updatedAt<0)||row.causeOrigin!==undefined&&row.causeOrigin!=='user')fail(400,'复盘反馈格式无效');
+  out[id]={...row};
+ }return out;
+}
+function reviewRecord(seed,id){
+ reviewKeys(seed,['data','questions','attempts'],'作答补充');
+ const fields=['id','title','startedAt','finishedAt','finished','mode','elapsed','answers','events','timeAssessment','typeHistorySnapshot','dailyDate','dailyPackHash','dailyOwner'];
+ reviewKeys(seed.data,fields,'练习');
+ if(seed.data.id!==id||seed.data.finished!==true||typeof seed.data.title!=='string'||seed.data.title.length>500||!Number.isFinite(seed.data.startedAt)||!Number.isFinite(seed.data.finishedAt)||!Array.isArray(seed.questions)||!seed.questions.length||seed.questions.length>300||!Array.isArray(seed.attempts)||seed.attempts.length>300)fail(400,'作答补充格式无效');
+ const qfields=['id','recordId','canonicalId','globalId','externalId','sourceQuestionId','paperId','paperOrder','order','paperTitle','paperType','region','year','paperYear','subject','path','sourcePath','type','tags','stemHtml','optionsHtml','answer','answerConflict','explanationHtml','materialKey','materialHtml','materialExpectedCount','rate','rateSource','source','trainingSection','provenance','classification'];
+ const ids=new Set();for(const q of seed.questions){reviewKeys(q,qfields,'题目');if(typeof q.id!=='string'||!q.id||ids.has(q.id)||typeof q.stemHtml!=='string'||!Array.isArray(q.optionsHtml)||q.optionsHtml.length<2||q.optionsHtml.length>8||q.optionsHtml.some(v=>typeof v!=='string'))fail(400,'题目身份或内容无效');ids.add(q.id);}
+ reviewKeys(seed.data.answers,[...ids],'作答');for(const a of Object.values(seed.data.answers)){reviewKeys(a,['selected','excluded','marked','favoriteAtAttempt','seconds'],'作答');if(a.seconds!==undefined&&(!Number.isFinite(a.seconds)||a.seconds<0)||a.excluded!==undefined&&!Array.isArray(a.excluded))fail(400,'作答用时或排除无效');}
+ const afields=['attemptId','sessionId','sessionIndex','questionId','recordId','canonicalId','paperId','paperOrder','paperTitle','paperType','region','subject','path','tags','year','type','source','stemHtml','optionsHtml','materialHtml','answer','answerConflict','explanationHtml','rate','rateSource','selected','excluded','correct','result','gradingStatus','seconds','finishedAt','favoriteAtAttempt','slowFlag','baselineSeconds','baselineSource','baselineSample','timeAssessment'];
+ const seen=new Set();for(const a of seed.attempts){reviewKeys(a,afields,'历史作答');if(a.sessionId!==id||!ids.has(a.questionId)||seen.has(a.questionId)||typeof a.attemptId!=='string'||!a.attemptId)fail(400,'历史作答身份无效');seen.add(a.questionId);}
+ // Reject hidden ink structures even inside otherwise valid optional metadata.
+ function inkFree(v){if(!v||typeof v!=='object')return;for(const [k,x]of Object.entries(v)){if(['notes','reviewNotes','strokes','layouts','points','$ink','removedStrokes'].includes(k))fail(400,'复盘接口不接受笔迹');inkFree(x);}}inkFree(seed);
+ return seed;
+}
+async function reviewObject(db,uid,kind,value,pending=null){
+ const text=reviewStable({kind,value}),hash=await digest(text),parts=[];
+ for(let i=0;i<text.length;){let end=Math.min(text.length,i+24000);if(end<text.length&&text.charCodeAt(end-1)>=0xd800&&text.charCodeAt(end-1)<=0xdbff)end--;parts.push(text.slice(i,end));i=end;}
+ if(parts.length>360)fail(413,'本条作答记录过大，请缩小练习范围');
+ const statements=[db.prepare('INSERT OR IGNORE INTO study_sync2_objects(user_id,hash,total,ready,created_at,last_used) VALUES(?,?,?,0,?,?)').bind(uid,hash,parts.length,Date.now(),Date.now()),...parts.map((data,i)=>db.prepare('INSERT OR IGNORE INTO study_sync2_parts(user_id,hash,idx,data) VALUES(?,?,?,?)').bind(uid,hash,i,data)),db.prepare('UPDATE study_sync2_objects SET ready=1 WHERE user_id=? AND hash=? AND total=? AND (SELECT COUNT(*) FROM study_sync2_parts WHERE user_id=? AND hash=?)=?').bind(uid,hash,parts.length,uid,hash,parts.length)];
+ if(pending)pending.push(...statements);else await db.batch(statements);return hash;
+}
+async function reviewUpload(request,db,user,url,ctx,bucket){
+ if(request.method!=='POST')fail(405,'复盘更新只允许POST');
+ const text=await request.text();if(encoder.encode(text).length>6000000)fail(413,'无笔迹作答补充超过6MB，请缩小练习范围');
+ let input;try{input=JSON.parse(text);inspect(input);}catch(e){if(e.status)throw e;fail(400,'复盘请求格式无效');}
+ reviewKeys(input,['ownerId','sessionId','deviceId','reviewFeedback','reviewRevision','record'],'复盘请求');
+ if(input.ownerId!==user.id)fail(403,'当前账号已变化，请重新打开复盘');
+ const id=input.sessionId;if(typeof id!=='string'||!id||id.length>200||!Number.isSafeInteger(input.reviewRevision)||input.reviewRevision<0||input.reviewRevision>1000000000||typeof input.deviceId!=='string'||input.deviceId.length>200)fail(400,'复盘身份或版本无效');
+ if(input.record)reviewRecord(input.record,id);
+ await limited(db,request,'review-update',20);await ensureV2(db);
+ for(let retry=0;retry<3;retry++){
+  const head=await db.prepare('SELECT rev,hash FROM study_sync2_heads WHERE user_id=?').bind(user.id).first()||{rev:0,hash:null};
+  let m,oldRow=null;
+  if(head.hash){const root=await objectV2(db,user.id,head.hash,bucket);if(root.kind!=='root'||root.value?.protocol!==2||root.value.depotVersion!==1)fail(409,'请先在设置中接续当前账号的旧版作答记录');m=root.value;}
+  else{
+   const legacy=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='study_sync_heads'").first();if(legacy&&(await db.prepare('SELECT rev FROM study_sync_heads WHERE user_id=?').bind(user.id).first())?.rev)fail(409,'请先在设置中接续当前账号的旧版作答记录');
+   m={protocol:2,schema:3,sessions:[],attempts:[],depotVersion:1,noteFormat:0,hasDeletedSessions:true,objects:[]};
+  }
+  if(m.deletedSessions){const deleted=await objectV2(db,user.id,m.deletedSessions,bucket);if(deleted.value?.[id])fail(409,'这份练习已删除，不能通过复盘恢复');}
+  const slot=m.sessions.find(s=>s.id===id);if(slot){const object=await objectV2(db,user.id,slot.ref,bucket);if(object.kind!=='session')fail(409,'练习记录类型无效');oldRow=object.value;if(oldRow.data?.finished!==true)fail(409,'只能上传已交卷练习的复盘');}
+  if(!oldRow&&!input.record)fail(409,'作答记录尚未同步，请补充无笔迹作答记录');
+  const now=Date.now(),created=[],pending=[],put=async(kind,value)=>{const hash=await reviewObject(db,user.id,kind,value,pending);created.push(hash);return hash;};
+  const seed=!oldRow?input.record:null,feedback=reviewFeedback(input.reviewFeedback,oldRow?.data?.answers||seed.data.answers),revision=Math.max(Number(oldRow?.data?.reviewRevision)||0,input.reviewRevision)+1,completion={version:1,status:'confirmed',confirmedAt:now,revision,feedbackSignature:reviewStable(feedback)};
+  const row=oldRow?{...oldRow,data:{...oldRow.data}}:{data:{...seed.data},questions:[],notes:{},reviewNotes:null,evidence:null};
+  if(seed){for(const q of seed.questions)row.questions.push(await put('question',q));if(seed.attempts.length){const ref=await put('attempts',seed.attempts.map((data,i)=>({data,question:null,inherited:[],hasSnapshot:false,order:2000000000+i})));m.attempts=[...m.attempts.filter(a=>a.id!==id),{id,ref}];}}
+  Object.assign(row.data,{reviewFeedback:feedback,reviewRevision:revision,reviewCompletion:completion,updatedAt:now});
+  const sessionRef=await put('session',row);m.sessions=slot?m.sessions.map(s=>s.id===id?{...s,ref:sessionRef,unfinished:false}:s):[...m.sessions,{id,ref:sessionRef,unfinished:false}];
+  if(!m.learning)m.learning=await put('learning',{favorites:{}});if(!m.aiReviews)m.aiReviews=await put('ai',[]);if(!m.conflicts)m.conflicts=await put('conflicts',[]);if(!m.deletedSessions)m.deletedSessions=await put('deleted',{});
+  m.objects=[...new Set([...(m.objects||[]).filter(h=>h!==slot?.ref),...created])].sort();const root=await put('root',m);await db.batch(pending);
+  const commitUrl=new URL('/api/sync/v2/commit',url.origin),commitRequest=new Request(commitUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hash:root,baseRev:head.rev,deviceId:input.deviceId})});
+  try{const result=await apiV2(commitRequest,db,user,commitUrl,ctx,bucket);if(!result.ok)fail(result.status,'复盘提交未成功');const saved=await result.json();return json({ok:true,ownerId:user.id,sessionId:id,reviewFeedback:feedback,reviewRevision:revision,reviewCompletion:completion,hash:saved.hash,rev:saved.rev,notesUploaded:false});}
+  catch(e){if(e.status===409&&/版本|引用/.test(e.message)&&retry<2)continue;throw e;}
+ }
+ fail(409,'其他设备正在更新，请稍后重新上传复盘');
+}
+
 async function api(request,env,ctx){
  const url=new URL(request.url),path=url.pathname,db=env.STUDY_SYNC_DB;
- if(path==='/api/account/health'&&request.method==='GET')return json({version:'2.9.18-r8-6',syncProtocol:2,noteStorage:env.STUDY_NOTES?'r2':'d1',depotVersion:1,configured:!!db,registrationEnabled:!!env.STUDY_INVITE_CODE});
+ if(path==='/api/account/health'&&request.method==='GET')return json({version:'2.9.18-r8-8-25',reviewUpload:'text-only-v1',syncProtocol:2,noteStorage:env.STUDY_NOTES?'r2':'d1',depotVersion:1,configured:!!db,registrationEnabled:!!env.STUDY_INVITE_CODE});
  if(!db)fail(503,'账号同步服务尚未配置；本机练习与备份仍可使用');
  const origin=request.headers.get('Origin');
  if((origin&&origin!==url.origin)||request.headers.get('Sec-Fetch-Site')==='cross-site')fail(403,'不接受其他网站发起的账号请求');
@@ -238,6 +305,7 @@ async function api(request,env,ctx){
   const token=random(32),expiresAt=Date.now()+90*86400000;await db.prepare('INSERT INTO study_ai_tokens(user_id,token_hash,expires_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at').bind(user.id,await digest(token),expiresAt).run();return json({token,expiresAt,scopes:['learning:read','daily:publish']});
  }
 
+ if(path==='/api/review/update')return reviewUpload(request,db,user,url,ctx,env.STUDY_NOTES);
  if(path.startsWith('/api/daily/'))return dailyApi(request,db,user,url,env.STUDY_NOTES);
  if(path==='/api/account/me'&&request.method==='GET')return json({user:{id:user.id,username:user.username}});
  if(path==='/api/account/logout'&&request.method==='POST'){await db.prepare('DELETE FROM study_logins WHERE token_hash=?').bind(user.tokenHash).run();return json({ok:true},200,{'Set-Cookie':cookie('',0)});}

@@ -1,6 +1,6 @@
 /* Public image bytes have a separate bounded cache. Account APIs never enter caches. */
 'use strict';
-const CACHE='jiangsu-study-shell-v2-9-18-r8-8-28';
+const CACHE='jiangsu-study-shell-v2-9-18-r8-8-29';
 const MEDIA_CACHE='zhiyaoji-public-images-v1';
 const READING_FILES=['./reading-continuity.js','./reading-continuity.css','./sync-cooperate.js'];
 async function imageResponse(req){
@@ -65,4 +65,5 @@ async function studyPublicImage(request,event){
  try{return (await job).clone();}finally{if(studyImagePending.get(key)===job)studyImagePending.delete(key);}
 }
 self.addEventListener('fetch',event=>{const r=event.request;if(r.method==='GET'&&r.destination==='image'&&studyImageAllowed(new URL(r.url)))event.respondWith(studyPublicImage(r,event));});
+
 

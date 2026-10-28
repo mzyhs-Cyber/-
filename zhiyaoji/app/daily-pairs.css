@@ -6,3 +6,5 @@
 .daily-pair .daily-caption{margin:12px 0;overflow-wrap:anywhere}
 .daily-pair .daily-start{width:100%;box-sizing:border-box}
 .daily-pair-history{margin-bottom:20px;min-width:0}.daily-pair-history .daily-pairs{display:grid;gap:10px;margin-top:10px}
+.daily-pair-label{margin:10px 0 0;color:var(--muted,#778277);font-size:14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+

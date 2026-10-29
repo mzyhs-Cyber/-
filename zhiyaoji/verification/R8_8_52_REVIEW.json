@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": 57,
+  "cases": [
+    "same needs-review set, original numbers, correct favorite and slow included; all/wrong entries retained",
+    "real scroll outside filter, next/prev, rapid taps, boundaries and pending scroll do not wrap to first",
+    "lazy per-question copies, native erase/undo/redo/clear model, saved empty stays empty, evidence remains exact",
+    "old additive review annotations preserved once; aliases and shared depot hashes never share mutable evidence",
+    "500-question lazy load and repeated changes keep original vectors and other surfaces intact",
+    "material initial frame respects a newer navigation target",
+    "slow reference hydration cannot reopen over a newer fast review, exit, or different owner",
+    "review renderer composes original and eraser in the same editable surface without a fixed ink overlay",
+    "failed depot save retains last durable version and retry saves the new edit",
+    "real lossless sync graph preserves edited review replacements and immutable evidence through encode/decode"
+  ]
+}

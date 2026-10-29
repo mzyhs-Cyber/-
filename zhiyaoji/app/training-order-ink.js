@@ -33,6 +33,6 @@
   return {questionCount:s.questions?.length||0,finished:!!s.finished,local:inspect(s.notes),submission:s.submissionEvidence?inspect(s.submissionEvidence.notes):null,legacyMaterialAliases,questions:rows};
  };
  const diagnostic=window.__ZhiyaojiPerfDiagnostics,report=diagnostic?.report;
- if(report)diagnostic.report=function(...args){return {...report.apply(this,args),inkAudit:{version:1,notesUploaded:false,reviewOverlayTransient:true,recent:(S.state.sessions||[]).slice().sort((a,b)=>(b.startedAt||0)-(a.startedAt||0)).slice(0,5).map(S.auditSessionInk)}};};
+ if(report)diagnostic.report=function(...args){return {...report.apply(this,args),inkAudit:{version:2,notesUploaded:false,reviewOverlayTransient:false,reviewInkEditable:true,recent:(S.state.sessions||[]).slice().sort((a,b)=>(b.startedAt||0)-(a.startedAt||0)).slice(0,5).map(S.auditSessionInk)}};};
  S.BUILD='20261027-r8-8-27';
 })(window.Study);

@@ -3041,8 +3041,10 @@ S.answerGroups=function(questions){
  });
  return groups;
 };
-S.reportCard=function(s,attr,current=-1){
-  return S.answerGroups(s.questions).map(({name:sub,rows:list})=>{
+S.reportCard=function(s,attr,current=-1,indices=null){
+  const allowed=indices?new Set(indices):null;
+  return S.answerGroups(s.questions).map(({name:sub,rows})=>{
+    const list=allowed?rows.filter(x=>allowed.has(x.i)):rows;if(!list.length)return '';
     return `<div class="answer-group"><h3>${sub}</h3><div class="answer-cells">${list.map(({q,i})=>{
       const at=S.getAttempt(s,q),a=s.answers[q.id]||{},o=at?.result||(a.selected==null?'unanswered':a.selected===q.answer?'correct':'incorrect');
       const mark=S.isFavorite(q);
@@ -3180,7 +3182,7 @@ S.restoreReadingAnchor=function(view){const a=view.readingAnchor;if(!a?.node.isC
 const {Notebook,Router}=window.InkCore;
 class BoundNotebook extends Notebook{
  constructor(exam){super();this.exam=exam;}
- note(key){const n=S.noteFor(this.exam.s,key);if(this.exam.s._review)n.phase='review';return n;}
+ note(key){const n=this.exam.s._review?S.reviewNoteFor(this.exam,key):S.noteFor(this.exam.s,key);if(this.exam.s._review)n.phase='review';return n;}
  rows(key){return this.note(key).strokes;}
  historyFor(key){if(!this.history.has(key))this.history.set(key,{undo:this.rows(key).map(stroke=>({type:'append',stroke})),redo:[]});return this.history.get(key);}
  emit(event){if(this.notes.has(event.key)){const note=this.note(event.key),next=this.notes.get(event.key),ids=new Set(next.map(st=>st.id));if(event.type==='reset'){note.removedStrokes=note.removedStrokes||{};for(const st of note.strokes)if(st.id&&!ids.has(st.id))note.removedStrokes[st.id]=st;for(const st of next)delete note.removedStrokes[st.id];}note.strokes=next;}super.emit(event);}
@@ -3235,7 +3237,7 @@ class WorkspaceView{
  releaseBuffers(){for(const c of [this.canvas,this.base,this.live,this.original])if(c.width!==1||c.height!==1)c.width=c.height=1;this.dirty=true;}
  fitBuffer(c){const w=Math.max(1,Math.round(this.size.width*this.dpr)),h=Math.max(1,Math.round(this.size.height*this.dpr));if(c.width!==w)c.width=w;if(c.height!==h)c.height=h;}
  resize(){S.lockInkSurface?.(this);S.restoreReadingAnchor?.(this);const w=Math.max(1,this.root.clientWidth),h=Math.max(1,this.root.clientHeight);this.size={width:w,height:h};this.regionCache=null;this.dpr=Math.min(2,(globalThis.devicePixelRatio||1)*(globalThis.visualViewport?.scale||1),Math.sqrt(3400000/(Math.max(w,this.exam.root.clientWidth||w)*Math.max(h,(this.exam.root.clientHeight||h)-64))));S.captureReadingAnchor?.(this);
-  if(!this.visible){this.releaseBuffers();return;}this.fitBuffer(this.canvas);this.fitBuffer(this.base);if(this.exam.s._review)this.fitBuffer(this.original);this.invalidate();this.refreshLayout();}
+  if(!this.visible){this.releaseBuffers();return;}this.fitBuffer(this.canvas);this.fitBuffer(this.base);if(this.exam.originalNotes)this.fitBuffer(this.original);this.invalidate();this.refreshLayout();}
  refreshLayout(){if(!this.alive)return;if(this.pointer!==null){this.layoutPending=true;return;}this.regionCache=null;for(const r of this.geometry().regions){const current=this.store.note(r.key),original=this.exam.originalNotes?.[r.key];if(current.strokes.length||original?.strokes?.length)this.prepareLayout(r);}}
  geometry(){
   const pane=this.root.getBoundingClientRect(),scrollTop=this.scroll.scrollTop;
@@ -3508,7 +3510,7 @@ class ReleaseExam extends Base{
  updateClock(){super.updateClock();if(this.cardOpen)this.refreshAnswerCard();}
  closeAnswerCard(){S.$('.answer-drawer',this.root)?.remove();this.cardOpen=false;this.root.classList.remove('reading-card-open');this.root.style.setProperty('--reading-card-height','0px');const b=S.$('[data-exam="card"]',this.root);b?.setAttribute('aria-expanded','false');b?.setAttribute('aria-label','展开答题卡');}
  openAnswerCard(){if(this.cardOpen){this.closeAnswerCard();return;}this.cardOpen=true;this.cardJumped=false;this.cardSignature=null;this.root.classList.add('reading-card-open');this.root.style.setProperty('--reading-card-height',this.s.questions.length>20?'min(33vh,320px)':'clamp(108px,17vh,165px)');const node=document.createElement('section');node.className='answer-drawer';node.innerHTML=(this.s._review?'<div class="answer-legend"><span class="legend-current">当前</span><span class="legend-correct">答对</span><span class="legend-wrong">答错</span><span>未答</span><span>★ 收藏</span></div>':'<div class="answer-legend"><span class="legend-current">当前</span><span>✓ 已答</span><span>未答</span><span>★ 收藏</span></div>')+'<div class="answer-body"></div>';this.root.append(node);S.$('[data-exam="card"]',this.root)?.setAttribute('aria-expanded','true');S.$('[data-exam="card"]',this.root)?.setAttribute('aria-label','收起答题卡');this.refreshAnswerCard();}
- refreshAnswerCard(){const body=S.$('.answer-drawer .answer-body',this.root);if(!body)return;const s=this.s,signature=s.index+':'+s.questions.map(q=>{const a=s.answers[q.id]||{};return (a.selected?'1':'0')+(S.isFavorite(q)?'1':'0');}).join('');if(signature===this.cardSignature)return;this.cardSignature=signature;const top=body.scrollTop;if(s._review){body.innerHTML=S.reportCard(this.sourceSession,'exam-goto',s.index).replaceAll('data-exam-goto=','data-index=').replaceAll('class="answer-cell ','data-exam="goto" class="answer-cell ');body.scrollTop=top;return;}body.innerHTML=S.answerGroups(s.questions).map(({name:sub,rows:qs})=>{return `<section class="answer-group"><h3>${E(sub)}</h3><div class="answer-cells">${qs.map(({q,i})=>{const a=s.answers[q.id]||{};return `<button class="answer-cell ${a.selected?'answered':''} ${S.isFavorite(q)?'marked':''} ${s.index===i?'current':''}" data-exam="goto" data-index="${i}" aria-label="第${i+1}题${a.selected?' 已答':' 未答'}">${i+1}${a.selected?'<span class="answer-done-mark" aria-hidden="true">✓</span>':''}</button>`;}).join('')}</div></section>`;}).join('');body.scrollTop=top;}
+ refreshAnswerCard(){const body=S.$('.answer-drawer .answer-body',this.root);if(!body)return;const s=this.s,signature=s.index+':'+s.questions.map(q=>{const a=s.answers[q.id]||{};return (a.selected?'1':'0')+(S.isFavorite(q)?'1':'0');}).join('');if(signature===this.cardSignature)return;this.cardSignature=signature;const top=body.scrollTop;if(s._review){body.innerHTML=S.reportCard(this.sourceSession,'exam-goto',s.index,this.indices).replaceAll('data-exam-goto=','data-index=').replaceAll('class="answer-cell ','data-exam="goto" class="answer-cell ');body.scrollTop=top;return;}body.innerHTML=S.answerGroups(s.questions).map(({name:sub,rows:qs})=>{return `<section class="answer-group"><h3>${E(sub)}</h3><div class="answer-cells">${qs.map(({q,i})=>{const a=s.answers[q.id]||{};return `<button class="answer-cell ${a.selected?'answered':''} ${S.isFavorite(q)?'marked':''} ${s.index===i?'current':''}" data-exam="goto" data-index="${i}" aria-label="第${i+1}题${a.selected?' 已答':' 未答'}">${i+1}${a.selected?'<span class="answer-done-mark" aria-hidden="true">✓</span>':''}</button>`;}).join('')}</div></section>`;}).join('');body.scrollTop=top;}
  readingSettings(){S.modal({title:'阅读设置',body:`<div class="reading-setting-row"><span>字体大小</span><div>${[['small','小'],['standard','标准'],['large','大']].map(([v,t])=>`<button class="button ${((S.state.settings.readingSize||'standard')===v)?'soft':''}" data-reading-size="${v}">${t}</button>`).join('')}</div></div><div class="reading-setting-row"><label for="reading-auto">答完自动进入下一题</label><input id="reading-auto" type="checkbox" ${S.state.settings.autoAdvance?'checked':''}></div><div class="reading-setting-row"><span>显示模式</span><div><button class="button" data-reading-night="false">日间</button><button class="button" data-reading-night="true">夜间</button></div></div>`,onOpen:host=>{host.querySelectorAll('[data-reading-size]').forEach(b=>b.onclick=()=>{for(const l of this.layers.values())l.finish();S.state.settings.readingSize=b.dataset.readingSize;this.applyPreferences();for(const l of this.layers.values())l.refreshLayout();S.saveSoon();host.querySelectorAll('[data-reading-size]').forEach(x=>x.classList.toggle('soft',x===b));});S.$('#reading-auto',host).onchange=e=>{S.state.settings.autoAdvance=e.target.checked;S.saveSoon();};host.querySelectorAll('[data-reading-night]').forEach(b=>b.onclick=()=>{S.state.settings.readingNight=b.dataset.readingNight==='true';this.applyPreferences();S.saveSoon();});}});}
  updateControls(){
   if(this.disposed)return;
@@ -3594,7 +3596,7 @@ class ReleaseExam extends Base{
   node.innerHTML=`<div class="split-viewport"><div class="split-main"><section class="split-pane"><div class="reading-material-nav"><span>材料 ${groupIndex+1} / ${groups.length}</span><div><button type="button" data-exam="material-close" aria-label="收起材料"><span>收起材料</span>${S.icon('collapse')}</button><button type="button" data-exam="material-step" data-step="-1" ${groupIndex===0?'disabled':''} aria-label="上一篇材料">${S.icon('back')}<span>上一篇</span></button><button type="button" data-exam="material-step" data-step="1" ${groupIndex===groups.length-1?'disabled':''} aria-label="下一篇材料"><span>下一篇</span><span class="next-material-arrow">${S.icon('back')}</span></button></div></div><div class="split-scroll" id="split-material-scroll"><div class="split-material-content rich" data-note-key="${E(noteKey)}">${S.safeHTML(q.materialHtml)}</div></div></section><section class="split-pane"><div class="split-scroll" id="split-q-scroll"><div class="split-questions">${indices.map(n=>S.questionMarkup(this.s.questions[n],n,this.s,{split:true})).join('')}</div></div></section></div></div>`;
   this.root.append(node);this.decorateOptions(node);this.updateControls();
   this.bindMaterialSwipe(node);
-  requestAnimationFrame(()=>{if(this.disposed||!node.isConnected||this.split?.groupIdentity!==key)return;const pos=this.s.positions[key]||this.s.positions[q.materialKey];if(pos)S.$('#split-material-scroll',node).scrollTop=pos.left;this.updateInk();this.jump(i,false);});
+  requestAnimationFrame(()=>{if(this.disposed||!node.isConnected||this.split?.groupIdentity!==key)return;const pos=this.s.positions[key]||this.s.positions[q.materialKey];if(pos)S.$('#split-material-scroll',node).scrollTop=pos.left;this.updateInk();this.jump(this.s._review?this.s.index:i,false);});
  }
  closeMaterial(scrollToCurrent=true){
   clearTimeout(this.advanceTimer);
@@ -4124,7 +4126,7 @@ V.packSnapshot=async s=>{if(!s||!V.enabled())return s;const out={...s,sessions:[
 // Empty notes commonly have identical hashes across questions and materials.
 V.hydrateSession=async s=>{
  const loaded=new Map(),remaining=new Map(),seen=new WeakSet();
- const maps=[s.notes,s.submissionEvidence?.notes];
+ const maps=[s.notes,s.reviewNotes,s.submissionEvidence?.notes];
  const detached=n=>typeof globalThis.structuredClone==='function'?globalThis.structuredClone(n):JSON.parse(JSON.stringify(n));
  for(const ns of maps)for(const n of Object.values(ns||{}))if(V.isRef(n))remaining.set(n.hash,(remaining.get(n.hash)||0)+1);
  async function load(n){
@@ -5060,13 +5062,41 @@ for(const event of ['gesturestart','gesturechange','gestureend'])document.addEve
 document.addEventListener('touchmove',e=>{if(!textEditor(e.target)&&e.touches?.length>1&&(S.route==='practice'||S.review))e.preventDefault();},{passive:false});
 })(window.Study);
 
-/* Review reuses the practice workspace; submission notes are readonly evidence. */
+/* Review edits a lazy per-surface copy; submission evidence stays immutable. */
 (function(S){'use strict';
 S.reviewVerdict=function(q,a,at){const answer=at?at.answer:q.answer,graded=at?at.gradingStatus==='graded':!!answer&&!q.answerConflict;const type=!a.selected?'unanswered':!graded?'ungraded':a.selected===answer?'correct':'incorrect';return {answer:graded?answer:null,type,label:({correct:'正确',incorrect:'错误',unanswered:'未答',ungraded:'未判分'})[type]};};
+const copy=n=>typeof structuredClone==='function'?structuredClone(n):JSON.parse(JSON.stringify(n));
+S.reviewNoteFor=function(exam,key){
+ const s=exam.s,source=exam.sourceSession;
+ if(!Object.hasOwn(s.notes,key)){
+  const prior=source.reviewNotes||{},saved=prior[key]||(key.startsWith('m:')?S.evidenceNotes({questions:source.questions,notes:prior})[key]:null),original=S.evidenceNotes(source)[key];
+  if(S.NoteVault?.isRef(saved)||S.NoteVault?.isRef(original))throw Error('笔记尚未读取完成，请返回后重新打开');
+  let note;
+  if(saved?.reviewReplacement===1)note=copy(saved);
+  else{
+   note=copy(original||{version:2,strokes:[],redo:[]});
+   // Old reviewNotes were additive annotations. Preserve them on first edit.
+   if(saved){const extra=copy(saved),ids=new Set((note.strokes||[]).map(x=>x.id).filter(Boolean));note.strokes=[...(note.strokes||[]),...(extra.strokes||[]).filter(x=>!x.id||!ids.has(x.id))];note.layouts={...note.layouts,...extra.layouts};note.events=[...(note.events||[]),...(extra.events||[])];}
+  }
+  note.reviewReplacement=1;s.notes[key]=note;
+ }
+ return S.noteFor(s,key);
+};
 class ReviewExam extends S.ExamController{
  get sourceSession(){return this.s._sourceSession;}
- get originalNotes(){return S.evidenceNotes(this.sourceSession);}
- persistInk(){/* transient review overlay: no account save or submission mutation */}
+ get originalNotes(){return null;}
+ persistInk(){
+  const source=this.sourceSession;if(!source)return;
+  const entries=Object.entries(this.s.notes);if(!entries.length)return;
+  const notes=source.reviewNotes||(source.reviewNotes={});for(const [key,note]of entries)notes[key]=note;
+  this.reviewInkDirty=true;S.touchSession(source);S.saveSoon();
+ }
+ flushReviewInk(){
+  for(const layer of this.layers.values())layer.finish();
+  if(!this.reviewInkDirty)return;this.reviewInkDirty=false;
+  S.saveHot().catch(()=>{this.reviewInkDirty=true;});
+ }
+ dispose(){if(this.disposed)return;this.flushReviewInk();super.dispose();}
  render(){super.render();this.root.classList.add('review-workspace');const head=S.$('.exam-head-right',this.root);if(head)head.innerHTML=S.iconButton('back','上一题','data-exam="review-prev"')+'<span id="exam-progress"></span>'+S.iconButton('arrow','下一题','data-exam="review-next"')+S.iconButton('more','阅读设置','data-exam="reading-settings"');S.$('[data-exam="pause"]',this.root)?.remove();this.inkVisible=true;this.updateControls();this.updateInk();}
  jump(i,smooth=true){
   const fromCard=this._reviewCardMaterialTarget===i;this._reviewCardMaterialTarget=null;
@@ -5078,7 +5108,15 @@ class ReviewExam extends S.ExamController{
  }
  onClick(e){
   const b=e.target.closest?.('[data-exam]');
-  if(b&&['review-prev','review-next'].includes(b.dataset.exam)){const step=b.dataset.exam==='review-prev'?-1:1,at=this.indices?.indexOf(this.s.index)??0,next=this.indices?.[at+step];if(next!=null)this.jump(next,false);return;}
+  if(b&&['review-prev','review-next'].includes(b.dataset.exam)){
+   if(this.disposed||this.submitting||!this.root.contains(b)||Date.now()<(this.cardDismissUntil||0))return;
+   // Scrolling and material close can leave the current question outside the
+   // entry filter. Never treat indexOf(-1) as a request for the first item.
+   if(this.pendingScrollTarget){this.onScroll(this.pendingScrollTarget);this.pendingScrollTarget=null;}
+   const rows=this.indices||[],current=this.s.index,forward=b.dataset.exam==='review-next';
+   let next;if(forward)next=rows.find(i=>i>current);else for(let i=rows.length-1;i>=0;i--)if(rows[i]<current){next=rows[i];break;}
+   if(next!=null)this.jump(next,false);return;
+  }
   if(b?.dataset.exam==='goto'&&!this.split){
    const i=Number(b.dataset.index);if(this.s.questions[i]?.materialKey){this._reviewCardMaterialTarget=i;try{return super.onClick(e);}finally{this._reviewCardMaterialTarget=null;}}
   }
@@ -5094,6 +5132,7 @@ S.openReview=function(id,filter='wrong',start=null){
  const transientNotes={};const virtual={...source,_review:true,_sourceSession:source,notes:transientNotes,positions:{},answers:Object.fromEntries(source.questions.map(q=>[q.id,{...S.sessionAnswer(source,q),excluded:[...(S.sessionAnswer(source,q).excluded||[])]}])),paused:false,index:start!=null&&indices.includes(start)?start:indices[0]};
  const root=document.createElement('section');root.className='exam-shell review-shell';document.body.append(root);const previousOverflow=document.body.style.overflow,shell=S.$('#app-shell'),previousShellHidden=shell?.hidden,previousShellInert=shell?.inert;if(shell){shell.hidden=true;shell.inert=true;}document.body.style.overflow='hidden';
  const controller=new ReviewExam(virtual,root);controller.indices=indices;S.review={s:source,root,controller,layers:[],previousOverflow,previousShellHidden,previousShellInert};
+ const flush=()=>controller.flushReviewInk();window.addEventListener('pagehide',flush,{signal:controller.abort.signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();},{signal:controller.abort.signal});
  if(source.questions[virtual.index]?.materialKey)controller.openMaterial(virtual.index);else controller.jump(virtual.index,false);
 };
 })(window.Study);
@@ -5359,15 +5398,14 @@ S.boot=async function(){
 
 /* Integrate the depot at existing entry/exit boundaries, leaving InkCore intact. */
 (function(S){'use strict';const V=S.NoteVault;if(!V)return;
-const hasRefs=s=>[s.notes,s.submissionEvidence?.notes].some(ns=>Object.values(ns||{}).some(V.isRef));
+const hasRefs=s=>[s.notes,s.reviewNotes,s.submissionEvidence?.notes].some(ns=>Object.values(ns||{}).some(V.isRef));
 let opening=0;
-function prepare(s,fn){if(!V.enabled()||!hasRefs(s)&&!V.isReleasing(s))return fn();const ticket=++opening;S.toast('正在读取本次笔记');return V.ready(s).then(()=>V.hydrateSession(s)).then(()=>{if(ticket===opening)return fn();}).catch(e=>S.toast('笔记未打开：'+e.message));}
+function prepare(s,fn){const ticket=++opening,owner=S.state.meta.syncOwnerId;if(!V.enabled()||!hasRefs(s)&&!V.isReleasing(s))return fn();S.toast('正在读取本次笔记');return V.ready(s).then(()=>V.hydrateSession(s)).then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return fn();}).catch(e=>{if(ticket===opening)S.toast('笔记未打开：'+e.message);});}
 const openExam=S.openExam;S.openExam=s=>prepare(s,()=>openExam(s));
 const openReview=S.openReview;S.openReview=(id,...args)=>{const s=S.state.sessions.find(x=>x.id===id);if(!s)return;return prepare(s,()=>openReview(id,...args));};
 const build=S.buildReviewPackages;S.buildReviewPackages=async(s,options)=>{if(options?.mode!=='images'){await V.ready(s);await V.hydrateSession(s);}return build(s,options);};
-// Review notes are private to the open workspace, not new submission evidence.
-// Existing historical review annotations remain archived in the source session.
-const close=S.closeReview;S.closeReview=function(){const s=S.review?.s;const result=close();if(s)V.releaseSession(s).catch(e=>S.toast('笔记缓存整理未完成：'+e.message));return result;};
+// Persist editable review notes separately from immutable submission evidence.
+const close=S.closeReview;S.closeReview=function(){++opening;const s=S.review?.s;const result=close();if(s)V.releaseSession(s).catch(e=>S.toast('笔记缓存整理未完成：'+e.message));return result;};
 const go=S.go;S.go=function(...args){++opening;const s=S.exam?.s;const result=go(...args);if(s)V.releaseSession(s).catch(e=>S.toast('笔记缓存整理未完成：'+e.message));return result;};
 // Streaming JSON construction avoids one detached all-history clone. This is
 // compatible with the established v3 backup importer and includes actual ink.

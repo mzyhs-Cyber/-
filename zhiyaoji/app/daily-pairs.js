@@ -2,7 +2,7 @@
 (function(S){
  'use strict';
  if(!S?.DailyModel||!S.dailyCardHTML||!S.bindDailyCard)return;
- S.BUILD='2.9.18-r8-8-30';
+ S.BUILD='2.9.18-r8-8-33';
  const D=S.DailyModel,E=S.escape,PREFIX='知遥集双轨｜',names={quant:'数量稳分',core:'三科进阶'};
  const legacyHTML=S.dailyCardHTML,legacyBind=S.bindDailyCard,inflight=new Map(),attempted=new Set(),opening=new Set();
  const owner=()=>{const id=S.accountSync?.user?.id;return id&&id===S.state.meta.syncOwnerId?id:null;};
@@ -95,18 +95,18 @@
   if(old)return `<p class="daily-caption">本日已在旧版开始整包作答，继续保留原进度。</p><button class="button daily-start" data-pair-date="${E(row.date)}" data-pair-track="quant">${buttonText(old)}</button>`;
   return `<div class="daily-pairs" tabindex="0" role="region" aria-label="上下滑动查看三科与数量题包">${['core','quant'].map((key,i)=>{
    const item=meta?.[key],s=item&&prior(item.hash),detail=item?(key==='quant'?`数推5题${item.extraCount?'＋强化'+item.extraCount+'题':''} · 运算6题`:`言语 · 判断 · 资料，共${item.count}题`):(key==='quant'?'数推5题＋可选强化2—3题 · 运算6题':'言语 · 判断 · 资料，14—17题');
-   return `<article class="daily-pair"><div class="daily-pair-heading"><h3>${names[key]}</h3><span class="daily-state">${item?statusText(s):'待接收'}</span></div><p class="daily-pair-label">${E(row.date)}</p><p class="daily-caption">${E(detail)}</p><button type="button" class="button daily-start" data-pair-date="${E(row.date)}" data-pair-track="${key}">${item?buttonText(s):'接收题包'} ${S.icon('arrow')}</button></article>`;
+   return `<details class="daily-pair"${key==='core'?' open':''}><summary><div class="daily-pair-heading"><h3>${names[key]}</h3><span class="daily-state">${item?statusText(s):'待接收'}</span><span class="daily-pair-chevron" aria-hidden="true"></span></div><p class="daily-pair-label">${E(row.date)}</p></summary><p class="daily-caption">${E(detail)}</p><button type="button" class="button daily-start" data-pair-date="${E(row.date)}" data-pair-track="${key}">${item?buttonText(s):'接收题包'} ${S.icon('arrow')}</button></details>`;
   }).join('')}</div>`;
  }
  S.dailyCardHTML=function(){
   const date=D.today(),row=rowFor(date);
   if(!marked(row)){
    const html=legacyHTML.apply(this,arguments);if(!row||!/^三科进阶(?:[｜| ·]|$)/.test(row.title||''))return html;
-   const s=prior(row.hash),pending=`<article class="daily-pair"><div class="daily-pair-heading"><h3>数量稳分</h3><span class="daily-state">未发布</span></div><p class="daily-pair-label">${E(row.date)}</p><p class="daily-caption">数量题包尚未发布</p></article>`;
-   const core=`<article class="daily-pair"><div class="daily-pair-heading"><h3>三科进阶</h3><span class="daily-state">${statusText(s)}</span></div><p class="daily-pair-label">${E(row.date)}</p><p class="daily-caption">言语 · 判断 · 资料，共${E(row.count)}题</p><button class="button daily-start" data-daily-start="${E(row.date)}">${buttonText(s)} ${S.icon('arrow')}</button></article>`;
-   return html.replace(/(<div class="daily-card-body">)[\s\S]*?(<footer class="daily-card-foot">)/,'$1<div class="daily-pairs" tabindex="0" role="region" aria-label="上下滑动查看三科与数量题包">'+core+pending+'</div><p class="daily-scroll-hint">上下滑动查看题包</p></div>$2');
+   const s=prior(row.hash),pending=`<details class="daily-pair"><summary><div class="daily-pair-heading"><h3>数量稳分</h3><span class="daily-state">未发布</span><span class="daily-pair-chevron" aria-hidden="true"></span></div><p class="daily-pair-label">${E(row.date)}</p></summary><p class="daily-caption">数量题包尚未发布</p></details>`;
+   const core=`<details class="daily-pair" open><summary><div class="daily-pair-heading"><h3>三科进阶</h3><span class="daily-state">${statusText(s)}</span><span class="daily-pair-chevron" aria-hidden="true"></span></div><p class="daily-pair-label">${E(row.date)}</p></summary><p class="daily-caption">言语 · 判断 · 资料，共${E(row.count)}题</p><button class="button daily-start" data-daily-start="${E(row.date)}">${buttonText(s)} ${S.icon('arrow')}</button></details>`;
+   return html.replace(/(<div class="daily-card-body">)[\s\S]*?(<footer class="daily-card-foot">)/,'$1<div class="daily-pairs" tabindex="0" role="region" aria-label="展开或收起三科与数量题包">'+core+pending+'</div></div>$2');
   }
-  return `<section class="panel daily-card" id="daily-training"><header class="daily-card-head"><h2>每日AI训练</h2><button type="button" class="daily-link" data-daily="history">历史训练 ${S.icon('arrow')}</button></header><div class="daily-card-body">${cards(row)}<p class="daily-scroll-hint">上下滑动查看题包</p></div><footer class="daily-card-foot"><button class="daily-link" data-daily="import">导入题包</button><button class="daily-link" data-daily="refresh">刷新</button></footer><p class="daily-status" role="status"></p></section>`;
+  return `<section class="panel daily-card" id="daily-training"><header class="daily-card-head"><h2>每日AI训练</h2><button type="button" class="daily-link" data-daily="history">历史训练 ${S.icon('arrow')}</button></header><div class="daily-card-body">${cards(row)}</div><footer class="daily-card-foot"><button class="daily-link" data-daily="import">导入题包</button><button class="daily-link" data-daily="refresh">刷新</button></footer><p class="daily-status" role="status"></p></section>`;
  };
  function bindStarts(root){S.$$('[data-pair-date]',root).forEach(b=>b.onclick=()=>{if(b.closest?.('#dialog-host'))S.closeModal();return open(b.dataset.pairDate,b.dataset.pairTrack);});}
  function history(){
@@ -119,12 +119,6 @@
   bindStarts(root);const p=rowFor(D.today());if(marked(p)&&!cache()?.pairs?.[p.hash])receive(p);
  };
  function receive(p){const key=owner()+':'+p.hash;if(!owner()||!S.accountSync?.verified||attempted.has(key))return;attempted.add(key);say('正在接收两包训练');load(p.date).then(repaint).catch(e=>say('接收未完成：'+e.message+'；可点刷新重试'));}
- const renderHome=S.renderHome;
- if(typeof renderHome==='function')S.renderHome=function(...args){
-  const result=renderHome.apply(this,args),daily=S.$('#daily-training'),side=S.$('.home-side-v28'),holder=S.$('.home-daily-primary'),primary=S.$('.home-primary-grid');
-  if(daily&&side){side.prepend(daily);holder?.remove();primary?.classList.add('daily-sidebar-layout');}
-  return result;
- };
  S.DailyPairs={derive,isPaired:marked,names,prefix:PREFIX,dayFor};S.openDailyTrack=open;
 })(window.Study);
 

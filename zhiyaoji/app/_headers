@@ -12,6 +12,9 @@
   Cache-Control: no-cache
   Service-Worker-Allowed: /
 
+/answer-rescue.html
+  Cache-Control: no-cache
+
 /r2-check.html
   Cache-Control: no-cache
 

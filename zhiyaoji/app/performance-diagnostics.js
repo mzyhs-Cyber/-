@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r8-20';
+  const VERSION = 'D2-r8-51';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;
@@ -89,7 +89,7 @@
     applicationBase:S.BUILD||S.VERSION||'unknown',
     metrics:{eventCount:events.length,longTaskSupported:DIAG.longTaskSupported,memorySupported:DIAG.memorySupported,
       currentRoute:DIAG.currentRoute,viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
-    accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,criticalEvents:criticalEvents.slice(),events:events.slice()});
+    activity:activity(),accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,criticalEvents:criticalEvents.slice(),events:events.slice()});
   S.accountSync.traceDiagnostic=(name,data)=>{accountDetails.push({at:Date.now(),run:ownSession,build:S.BUILD||'unknown',name,...data});if(accountDetails.length>DETAIL_LIMIT)accountDetails.splice(0,accountDetails.length-DETAIL_LIMIT);if(data.ok===false){accountFailures.push(accountDetails.at(-1));if(accountFailures.length>12)accountFailures.shift();}dirty=true;};
   navigator.serviceWorker?.addEventListener?.('message',e=>{if(e.data?.type==='shell-redirect-normalized')add('shell_redirect_normalized');});
   DIAG.export=function(){
@@ -143,9 +143,18 @@
     }
   }catch{}
 
+  function activity(){
+    const practice=!!(S.exam&&!S.exam.disposed&&!S.exam.s?.finished),review=!!(S.review&&!S.review.disposed);
+    return {studyMode:practice?'practice':review?'review':'page',writing:!!S.activeInkPointer,
+      syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,
+      syncWork:S.SyncTransport?.workMetrics?{...S.SyncTransport.workMetrics}:null,
+      persistence:S.persistenceMetrics?{hotRequests:Number(S.persistenceMetrics.hotRequests)||0,hotWrites:Number(S.persistenceMetrics.hotWrites)||0,hotFailures:Number(S.persistenceMetrics.hotFailures)||0,lastHotMs:Number(S.persistenceMetrics.lastHotMs)||0}:null,
+      answerJournal:S.answerJournal?.metrics?{...S.answerJournal.metrics}:null,
+      readingControls:S.readingControlMetrics?{...S.readingControlMetrics}:null};
+  }
   // Periodic snapshot; no full-bank iteration or app-state serialization.
   function snapshot(kind){
-    const point={route:DIAG.currentRoute,visibility:document.visibilityState};
+    const point={route:DIAG.currentRoute,visibility:document.visibilityState,...activity()};
     if(performance.memory?.usedJSHeapSize){
       point.jsHeapMB=number(performance.memory.usedJSHeapSize/1048576);
       point.jsHeapLimitMB=number(performance.memory.jsHeapSizeLimit/1048576);
@@ -353,7 +362,7 @@
     if(!visible || lastVisibleState!=='visible' || now-lastVisible<2500){lastVisibleState=document.visibilityState;return;}
     lastVisibleState=document.visibilityState;
     if(lag>=140){
-      add('event_loop_stall',{delayMs:number(lag),writing:activeInk.size>0,route:DIAG.currentRoute,storage:S.accountSync?.storageDiagnosticInfo?.()||null},lag>=800);
+      add('event_loop_stall',{delayMs:number(lag),route:DIAG.currentRoute,...activity(),writing:activeInk.size>0,storage:S.accountSync?.storageDiagnosticInfo?.()||null},lag>=800);
     }
     writeInkSummary(false);
   },2000);
@@ -370,7 +379,7 @@
           '<p>记录页面卡顿、手写事件处理和画布绘制耗时；不记录笔迹位置、形状或内容。异常重载后仍可导出。手写延迟是估计值，不等于实际屏幕显示延迟；iPad可能不提供内存和长任务指标。</p>'+
           '<div class="setting-actions">'+
           '<button class="button primary" type="button" id="diag-export">导出性能诊断</button>'+
-          '<a class="button" href="storage-check.html">存储专项检测</a><button class="button" type="button" id="diag-clear">清空诊断记录</button></div>'+
+          '<a class="button" href="storage-check.html">存储专项检测</a><a class="button" href="answer-rescue.html?v=rescue3">只读抢救答题卡</a><button class="button" type="button" id="diag-clear">清空诊断记录</button></div>'+
           '<p id="diag-summary" style="font-size:.82rem;opacity:.75"></p>';
         host.appendChild(panel);
         const summary=panel.querySelector('#diag-summary');

@@ -1,15 +1,16 @@
 /* Public image bytes have a separate bounded cache. Account APIs never enter caches. */
 'use strict';
-const CACHE='jiangsu-study-shell-v2-9-18-r8-8-30';
+const CACHE='jiangsu-study-shell-v2-9-18-r8-8-51';
 const MEDIA_CACHE='zhiyaoji-public-images-v1';
-const READING_FILES=['./reading-continuity.js','./reading-continuity.css','./sync-cooperate.js'];
+const READING_FILES=['./reading-continuity.js','./sync-cooperate.js'];
 async function imageResponse(req){
  const cache=await caches.open(MEDIA_CACHE),cached=await cache.match(req);if(cached)return cached;
  const response=await fetch(req);if(response.ok||response.type==='opaque'){
   try{await cache.put(req,response.clone());const keys=await cache.keys();for(const key of keys.slice(0,Math.max(0,keys.length-80)))await cache.delete(key);}catch{}
  }return response;
 }
-const FILES=['./','./index.html','./styles.css','./home.css','./report.css','./reading.css','./ux-polish.css','./refinement.css','./appearance-a.css','./dialog-choice.css','./ink-controls.css','./source-filters.css','./source-filters.js','./modal-scroll.js','./modal-scroll.css','./training-memory.js','./training-review.js','./training-controls.css','./timing-repair.js','./export-scopes.js','./draft-owner-review.js','./draft-boundaries.js','./review-only-upload.js','./training-order-ink.js','./daily-pairs.js','./daily-pairs.css','./review-surface.css','./icon-180.png','./icon-192.png','./icon-512.png','./bundle.js','./continuity.js','./performance-diagnostics.js','./storage-check.js','./bank-config.js','./icon.svg','./manifest.webmanifest'];
+const FILES=['./','./index.html','./styles.css','./home.css','./report.css','./reading.css','./ux-polish.css','./refinement.css','./appearance-a.css','./dialog-choice.css','./ink-controls.css','./source-filters.css','./source-filters.js','./modal-scroll.js','./modal-scroll.css','./reading-continuity.css','./training-memory.js','./training-review.js','./training-controls.css','./timing-repair.js','./export-scopes.js','./draft-owner-review.js','./draft-boundaries.js','./review-only-upload.js','./training-order-ink.js','./ink-controls-repair.js','./review-layout.js','./review-layout.css','./immersive-mode.js','./immersive-mode.css','./answer-journal.js','./answer-journal.css','./answer-rescue.html','./complete-review-export.js','./complete-review-export.css','./ink-answer-card.css','./countdown-policy.js','./daily-pairs.js','./daily-pairs.css','./review-surface.css','./icon-180.png','./icon-192.png','./icon-512.png','./bundle.js','./continuity.js','./performance-diagnostics.js','./storage-check.js','./bank-config.js','./icon.svg','./manifest.webmanifest'];
+const SHELL_PATHS=new Set([...FILES,...READING_FILES].map(f=>new URL(f,self.registration.scope).pathname));
 function cleanShellResponse(response){
  if(!response?.redirected)return response;
  // Shell documents are same-origin; never convert opaque/external redirects.
@@ -22,16 +23,17 @@ self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(names
 self.addEventListener('fetch',event=>{
  const req=event.request,u=new URL(req.url);
  if(req.method==='GET'&&req.destination==='image'&&/^https?:$/.test(u.protocol)&&!u.pathname.startsWith('/api/')&&!u.searchParams.has('token')&&!u.searchParams.has('signature')&&!studyImageAllowed(u)){event.respondWith(imageResponse(req));return;}
- if(req.method!=='GET'||u.origin!==self.location.origin||u.pathname.startsWith('/api/')||!FILES.some(f=>new URL(f,self.registration.scope).pathname===u.pathname))return;
+ if(req.method!=='GET'||u.origin!==self.location.origin||u.pathname.startsWith('/api/')||!SHELL_PATHS.has(u.pathname))return;
  let backgroundDone;event.waitUntil(new Promise(resolve=>backgroundDone=resolve));
  event.respondWith((async()=>{
-  const cache=await caches.open(CACHE),cached=(!u.searchParams.get('v')||['2.9.18-r8-6','2.9.18-r8-7-1','2.9.18-r8-8-2','2.9.18-r8-8-3','2.9.18-r8-8-4','2.9.18-r8-8-5','2.9.18-r8-8-6','2.9.18-r8-8-7','2.9.18-r8-8-11','2.9.18-r8-8-12','2.9.18-r8-8-13','2.9.18-r8-8-14','2.9.18-r8-8-15','2.9.18-r8-8-16'].includes(u.searchParams.get('v')))?cleanShellResponse(await cache.match(req,{ignoreSearch:true})):null;
+  const cache=await caches.open(CACHE),exact=await cache.match(req),legacy=!u.searchParams.get('v')||['2.9.18-r8-6','2.9.18-r8-7-1','2.9.18-r8-8-2','2.9.18-r8-8-3','2.9.18-r8-8-4','2.9.18-r8-8-5','2.9.18-r8-8-6','2.9.18-r8-8-7','2.9.18-r8-8-11','2.9.18-r8-8-12','2.9.18-r8-8-13','2.9.18-r8-8-14','2.9.18-r8-8-15','2.9.18-r8-8-16'].includes(u.searchParams.get('v'));
+  const cached=cleanShellResponse(exact||(legacy?await cache.match(req,{ignoreSearch:true}):null));
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),8000);
   const network=fetch(req,{signal:abort.signal,redirect:'follow'}).then(async original=>{const response=cleanShellResponse(original);if(original.redirected&&self.clients.matchAll)event.waitUntil(self.clients.matchAll().then(cs=>cs.forEach(c=>c.postMessage({type:'shell-redirect-normalized'}))));if(response.ok)await cache.put(req,response.clone());return response;}).finally(()=>clearTimeout(timer));
   network.then(backgroundDone,backgroundDone);
   if(cached&&req.mode!=='navigate')return cached;
   if(cached){let timeout;try{return await Promise.race([network,new Promise(resolve=>timeout=setTimeout(()=>resolve(cached),2500))]);}catch{return cached;}finally{clearTimeout(timeout);}}
-  try{return await network;}catch{if(req.mode==='navigate')return cleanShellResponse(await cache.match(new URL('./index.html',self.registration.scope).href,{ignoreSearch:true}))||Response.error();return Response.error();}
+  try{return await network;}catch{if(req.mode==='navigate')return cleanShellResponse(await cache.match(new URL('./index.html',self.registration.scope).href,{ignoreSearch:true}))||Response.error();return cleanShellResponse(await cache.match(req,{ignoreSearch:true}))||Response.error();}
  })().catch(()=>{backgroundDone();return Response.error();}));
 });
 

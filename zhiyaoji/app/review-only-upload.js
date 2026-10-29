@@ -32,6 +32,7 @@
   let s=S.state.sessions.find(x=>x.id===id);if(!s?.finished||S.reviewUploading.has(id))return false;
   S.reviewUploading.add(id);let account=null;const expectedOwner=S.state.meta.syncOwnerId;
   try{
+   S.refreshReviewChips?.(s);
    S.refreshReviewDefaults(s,true);const values=feedback(s);
    s.reviewFeedback=values;s.reviewCompletion={version:1,status:'confirmed',confirmedAt:Date.now(),revision:s.reviewRevision||0,feedbackSignature:S.SyncModel.stable(values)};S.touchSession(s);await S.saveHot();
    S.closeReview?.();S.showReport(id);
@@ -46,7 +47,7 @@
    Object.assign(s,{reviewFeedback:values,reviewRevision:result.reviewRevision,reviewCompletion:result.reviewCompletion});S.touchSession(s);await S.saveHot();if(C.user?.id!==account||S.state.meta.syncOwnerId!==account)throw Error('账号已切换，原账号复盘已提交，请切回后查看');
    S.reviewUploadReceipts.set(id,{revision:result.reviewRevision,at:Date.now(),notesUploaded:false,hash:result.hash});S.toast('复盘已更新，仅上传文字与状态，不含笔迹');return true;
   }catch(e){S.toast(e.message);return false;}
-  finally{S.reviewUploading.delete(id);if(S.route==='report'&&(!account||S.state.meta.syncOwnerId===account))S.showReport(id);}
+  finally{S.reviewUploading.delete(id);S.refreshReviewChips?.(s);if(S.route==='report'&&(!account||S.state.meta.syncOwnerId===account))S.showReport(id);}
  };
  const finish=S.reviewFinishButton;
  S.reviewFinishButton=function(s,root){const result=finish(s,root);const p=root.querySelector('.review-finish-status'),r=S.reviewUploadReceipts.get(s.id);if(p)p.textContent=S.reviewUploading.has(s.id)?'正在上传复盘文字与状态，不含笔迹。':r&&r.revision===(s.reviewRevision||0)&&r.notesUploaded===false?'复盘已更新；再次上传会更新同一条记录，不含笔迹。':'上传错因、纳入状态及复盘确认，不含笔迹。';return result;};

@@ -20,10 +20,10 @@
   let result;try{result=controls.apply(this,args);}finally{this.toolIndex=physical;}
   if(this.disposed)return result;
   for(const b of S.$$('[data-exam="pen"]',this.root)){
-   b.disabled=false;b.setAttribute('aria-disabled','false');
+   if(b.disabled)b.disabled=false;if(b.getAttribute('aria-disabled')!=='false')b.setAttribute('aria-disabled','false');
   }
   const target=S.$('#reading-note-target',this.root);
-  if(owned&&target)target.textContent='第 '+(this.noteOwnerIndex+1)+' 题草稿';
+  const caption='第 '+(this.noteOwnerIndex+1)+' 题草稿';if(owned&&target&&target.textContent!==caption)target.textContent=caption;
   return result;
  };
  const v=S.WorkspaceInkView?.prototype,append=v?.append;

@@ -150,8 +150,17 @@ S.modal=function({title,subtitle='',body,footer='',onOpen,onClose,kind=''}){
 };
 S.closeModal=function(){if(modalClose){const fn=modalClose;modalClose=null;fn();}};
 S.confirm=(title,text,action,label='确定')=>{
+ let accepted=false;
  S.modal({title,body:`<p class="dialog-copy">${S.escape(text)}</p>`,footer:`<button class="button" id="confirm-cancel">取消</button><button class="button primary" id="confirm-ok">${S.escape(label)}</button>`,
- onOpen:host=>{S.$('#confirm-cancel',host).onclick=S.closeModal;S.$('#confirm-ok',host).onclick=()=>{S.closeModal();action();};}});
+ onOpen:host=>{
+  const cancel=S.$('#confirm-cancel',host),ok=S.$('#confirm-ok',host);
+  cancel.onclick=()=>{if(!accepted&&host.contains(cancel))S.closeModal();};
+  ok.onclick=async()=>{
+   if(accepted||!host.contains(ok))return;accepted=true;ok.disabled=true;
+   S.closeModal();
+   try{return await action();}catch(error){S.toast('操作未完成：'+(error?.message||'请重试'));return false;}
+  };
+ }});
 };
 document.addEventListener('keydown',e=>{
  const host=S.$('#dialog-host');if(!host||host.hidden||e.isComposing||e.keyCode===229)return;
@@ -199,7 +208,7 @@ class ExamController{
  constructor(s,root){
   this.s=s;this.root=root;this.inkOn=false;this.tool='pen';this.toolIndex=s.index||0;this.layers=new Map();this.split=null;
   this.lastPulse=performance.now();this.wasHidden=!!document.hidden;this.abort=new AbortController();this.scrollFrame=0;this.advanceTimer=0;
-  S.focusTracker?.begin(s,this.lastPulse);this.render();S.bindIdleActivity?.(this);this.timer=setInterval(()=>this.pulse(),250);
+  S.focusTracker?.begin(s,this.lastPulse);this.render();S.bindIdleActivity?.(this);this.timer=s._review?null:setInterval(()=>this.pulse(),250);
   document.addEventListener('visibilitychange',()=>{if(this.s._review)return;if(document.hidden)this.suspend('background');else{this.lastPulse=performance.now();this.wasHidden=false;if(this.s.paused)this.showPauseCover?.();}},{signal:this.abort.signal});
   window.addEventListener('pagehide',()=>{if(!this.s._review)this.suspend('exit');},{signal:this.abort.signal});
  }
@@ -241,9 +250,9 @@ class ExamController{
    if(action==='answer'){a.selected=a.selected===l?null:l;a.excluded=a.excluded.filter(x=>x!==l);}
    else{a.excluded.includes(l)?a.excluded=a.excluded.filter(x=>x!==l):a.excluded.push(l);if(a.selected===l)a.selected=null;}
    S.recordAction?.(this.s,action,{questionId:q.id,selected:a.selected,excluded:a.excluded.slice()});
-   this.s.updatedAt=Date.now();this.refreshAnswer(i);S.saveSoon();
+   this.s.updatedAt=Date.now();S.saveSoon();this.refreshAnswer(i);
    if(action==='answer'&&a.selected&&S.state.settings.autoAdvance){
-    this.advanceTimer=setTimeout(()=>{if(!this.inkOn&&!this.s.paused&&i<this.s.questions.length-1){const next=this.s.questions[i+1];if(q.materialKey&&S.materialIdentity(q)!==S.materialIdentity(next))return;this.jump(i+1,true);}},338);
+     this.advanceTimer=setTimeout(()=>{if(!this.inkOn&&!this.s.paused&&i<this.s.questions.length-1){const next=this.s.questions[i+1];if(q.materialKey&&S.materialIdentity(q)!==S.materialIdentity(next))return;this.jump(i+1,true);}},203);
    }
    return;
   }
@@ -276,7 +285,7 @@ class ExamController{
    S.$$('.option-row',card).forEach(row=>{
     const l=row.dataset.letter;row.classList.toggle('selected',a.selected===l);row.classList.toggle('excluded',a.excluded.includes(l));
     S.$('.option-button',row).setAttribute('aria-pressed',String(a.selected===l));
-    const ex=S.$('[data-exam="exclude"]',row);if(ex)ex.innerHTML=S.icon(a.excluded.includes(l)?'undo':'minus');
+    const ex=S.$('[data-exam="exclude"]',row),icon=a.excluded.includes(l)?'undo':'minus';if(ex&&(ex.dataset.currentIcon!==icon||!ex.firstElementChild)){ex.innerHTML=S.icon(icon);ex.dataset.currentIcon=icon;}
    });
    const label=S.$('[data-qstatus]',card);if(label)label.textContent=a.selected?'已选 '+a.selected+' · 再点取消':'未作答';
   });this.updateClock();
@@ -300,7 +309,7 @@ class ExamController{
    const left=S.$('#split-material-scroll',this.root),right=S.$('#split-q-scroll',this.root);
    this.s.positions[this.split.groupIdentity||this.split.key]={left:left?.scrollTop||0,right:right?.scrollTop||0};
   }
-  if(this.inkOn)this.updateInk();S.saveSoon();
+  if(this.inkOn)this.updateInk();if(!this.s._review)S.saveSoon();
  }
  visibleLayer(parent,scroll){const p=parent.getBoundingClientRect(),r=scroll.getBoundingClientRect();return p.bottom>=r.top-100&&p.top<=r.bottom+100&&p.width>0;}
  updateInk(){
@@ -342,14 +351,14 @@ class ExamController{
    }
    scroll.scrollTo({top:Math.max(0,top),left:0,behavior:smooth&&!matchMedia('(prefers-reduced-motion: reduce)').matches?'smooth':'instant'});
   }
-  this.updateClock();requestAnimationFrame(()=>this.updateInk());S.saveSoon();
+  this.updateClock();requestAnimationFrame(()=>this.updateInk());if(!this.s._review)S.saveSoon();
  }
  closeMaterial(scrollToCurrent=true){
   if(!this.split)return;const key=this.split.groupIdentity||this.split.key;
   this.s.positions[key]={left:S.$('#split-material-scroll',this.root)?.scrollTop||0,right:S.$('#split-q-scroll',this.root)?.scrollTop||0};
   this.clearLayers();S.$('.split-shell',this.root)?.remove();this.split=null;
   S.$('#question-scroll',this.root).style.visibility='';
-  this.updateControls();if(scrollToCurrent)this.jump(this.s.index,false);this.updateInk();S.saveSoon();
+  this.updateControls();if(scrollToCurrent)this.jump(this.s.index,false);this.updateInk();if(!this.s._review)S.saveSoon();
  }
  clearLayers(){for(const layer of this.layers.values())layer.destroy();this.layers.clear();this.lastInk=null;}
  togglePause(){
@@ -1076,14 +1085,17 @@ S.openStore=async function(){
     sessionTokens=new Map();
     if(hot){
       if(hot.sessionStorage==='records-v1'){
-        const restored=[],recovery=await idbRead('hot','exit-recovery');
-        for(const id of hot.sessionIds||[]){let row=await idbRead('hot','session:'+id);if(!row&&recovery?.session?.id===id&&recovery.owner===(meta?.syncOwnerId||'guest')&&!meta?.deletedSessions?.[id]){row=recovery.session;S.storageRecoveryNotice='已从本机退出备份恢复一份练习';}if(!row||row.id!==id)throw Error('练习记录分段读取不完整，已停止启动：'+id);if(S.NoteVault?.enabled()){
+        const restored=[],recoveredIds=new Set(),recovery=await idbRead('hot','exit-recovery');
+        for(const id of hot.sessionIds||[]){let row=await idbRead('hot','session:'+id);const backup=recovery?.session;
+ const samePaper=row&&Array.isArray(row.questions)&&Array.isArray(backup?.questions)&&row.questions.length===backup.questions.length&&row.questions.every((q,i)=>q.id===backup.questions[i].id);
+ const newerBackup=row&&!row.finished&&!backup?.finished&&samePaper&&Number.isFinite(Number(backup.updatedAt))&&Number(backup.updatedAt)>Number(row.updatedAt||0);
+ if(backup?.id===id&&recovery.owner===(meta?.syncOwnerId||'guest')&&!meta?.deletedSessions?.[id]&&(!row||newerBackup)){row=backup;recoveredIds.add(id);S.storageRecoveryNotice='已从本机退出备份恢复一份练习';}if(!row||row.id!==id)throw Error('练习记录分段读取不完整，已停止启动：'+id);if(S.NoteVault?.enabled()){
  const hadInline=[row.notes,row.reviewNotes,row.submissionEvidence?.notes].some(ns=>Object.values(ns||{}).some(n=>!S.NoteVault.isRef(n)));
  const packed=await S.NoteVault.packSession(row);
  if(hadInline){const migration=await storeTransaction('hot','readwrite');migration.objectStore('hot').put(packed,'session:'+id);await S.awaitStoreTransaction(migration,'分离笔记迁移');S.NoteVault.migrationProgress(restored.length+1,hot.sessionIds.length);}
  row=packed;
 }restored.push(row);}
-        hot.sessions=restored;const attempts=await idbRead('hot','attempts');if(!Array.isArray(attempts))throw Error('历史作答读取不完整，已停止启动');hot.attempts=attempts;for(const row of restored)if(Object.values(row.notes||{}).every(n=>S.NoteVault?.isRef(n)))sessionTokens.set(row.id,sessionToken(row));attemptToken=[attempts,attempts.length];
+        hot.sessions=restored;const attempts=await idbRead('hot','attempts');if(!Array.isArray(attempts))throw Error('历史作答读取不完整，已停止启动');hot.attempts=attempts;for(const row of restored)if(!recoveredIds.has(row.id)&&Object.values(row.notes||{}).every(n=>S.NoteVault?.isRef(n)))sessionTokens.set(row.id,sessionToken(row));attemptToken=[attempts,attempts.length];
       }
       if(S.NoteVault?.enabled()){if(hot.sessionStorage!=='records-v1')hot.sessions=(await S.NoteVault.packSnapshot({sessions:hot.sessions||[]})).sessions;if(meta?.syncConflicts)meta.syncConflicts=(await S.NoteVault.packSnapshot({conflicts:meta.syncConflicts})).conflicts;}
       const combined=combineState(cold,hot,meta,audit);const media=await idbRead('meta','media-audit');if(media)combined.mediaAudit=media;return combined;
@@ -1153,7 +1165,7 @@ S.checkpointSession=async function(session){
   try{const tx=await storeTransaction('hot','readwrite');tx.objectStore('hot').put({version:1,at:Date.now(),owner:S.state.meta.syncOwnerId||'guest',session},'exit-recovery');await S.awaitStoreTransaction(tx,'退出备份');resolve();}catch(e){reject(e);}
  });});
 };
-let hotCycle=null,hotRequested=0,hotWritten=0,hotWaiters=[],hotLatestChange=0,hotNotified=0;
+let hotCycle=null,hotRequested=0,hotWritten=0,hotWaiters=[],hotLatestChange=0,hotNotified=0,hotFailureActive=false;
 S.persistenceMetrics={hotWrites:0,hotRequests:0,fullWrites:0,lastHotMs:0,recentHotMs:[],hotFailures:0};
 function drainHot(){
  if(hotCycle)return;
@@ -1161,17 +1173,18 @@ function drainHot(){
   while(hotWritten<hotRequested){
    const target=hotRequested,changeAtStart=hotLatestChange;
    writeChain=writeChain.catch(()=>{}).then(async()=>{
-    while(S.activeInkPointer&&!document.hidden)await new Promise(resolve=>setTimeout(resolve,120));
+    // Yield briefly for pen input, but never let a lost pointer-up block local durability.
+    for(let waits=0;S.activeInkPointer&&!document.hidden&&waits<2;waits++)await new Promise(resolve=>setTimeout(resolve,120));
     const begin=performance.now(),state=S.state;
     await writeHotRecords(state);
     S.persistenceMetrics.hotWrites++;S.persistenceMetrics.lastHotMs=performance.now()-begin;
     const samples=S.persistenceMetrics.recentHotMs;samples.push(S.persistenceMetrics.lastHotMs);if(samples.length>32)samples.shift();
    });
-   await writeChain;hotWritten=target;S.saveError=null;
+   await writeChain;hotWritten=target;S.saveError=null;hotFailureActive=false;
    const done=hotWaiters.filter(w=>w.target<=target);hotWaiters=hotWaiters.filter(w=>w.target>target);for(const w of done)w.resolve();
    if(changeAtStart>hotNotified){hotNotified=changeAtStart;S.accountSync?.onLocalSaved?.();}
   }
- }).catch(e=>{S.persistenceMetrics.hotFailures++;S.saveError=e.message;hotWritten=hotRequested;const pending=hotWaiters;hotWaiters=[];for(const w of pending)w.reject(e);}).finally(()=>{hotCycle=null;if(hotWaiters.length)drainHot();});
+ }).catch(e=>{S.persistenceMetrics.hotFailures++;S.saveError=e.message;hotWritten=hotRequested;const pending=hotWaiters;hotWaiters=[];for(const w of pending)w.reject(e);if(!hotFailureActive){hotFailureActive=true;S.toast('本机自动保存未完成，请保留页面并导出备份：'+e.message);}}).finally(()=>{hotCycle=null;if(hotWaiters.length)drainHot();});
 }
 S.saveHot=function({learningChange=true}={}){
  S.learningRevision++;
@@ -1773,11 +1786,25 @@ S.rebuildLearningStats=function(state=S.state){
 };
 S.finalize=async function(s,reason='manual'){
   if(!s||s.finished)return;
-  if(S.exam?.s===s&&!S.exam.finishing){S.exam.finishing=true;S.exam.pulse();}
-  if(S.exam?.s===s){S.exam.submitting=true;S.pauseSession(s,'submitting',{touch:false});}
-  if(S.exam?.s===s)for(const layer of S.exam.layers?.values?.()||[]){layer.finish();if(layer.capturePending)await layer.capturePending();else if(!layer.layoutReady)await S.captureInkLayout?.(layer);}
-  S.recordAction?.(s,'submit',{reason});
-  try{if(S.NoteVault?.enabled())await S.NoteVault.freezeEvidence(s);else S.freezeEvidence?.(s);}catch(e){if(S.exam?.s===s){S.exam.submitting=false;S.exam.finishing=false;S.exam.showPauseCover?.();}S.toast('笔记归档未完成，尚未交卷：'+e.message);return;}
+  let status=null;
+  try{
+   if(S.exam?.s===s&&!S.exam.finishing){S.exam.finishing=true;S.exam.pulse();}
+   if(S.exam?.s===s){
+    const exam=S.exam;exam.submitting=true;S.pauseSession(s,'submitting',{touch:false});
+    status=document.createElement('p');status.className='exam-submit-status';status.setAttribute('role','status');status.textContent='正在交卷…';exam.root.append(status);
+    const layers=[...exam.layers?.values?.()||[]];
+    // Finish BOTH panes before awaiting layout: capture waits for active ink.
+    for(const layer of layers)layer.finish();
+    const captured=await Promise.allSettled(layers.map(layer=>Promise.resolve().then(()=>layer.capturePending?layer.capturePending():!layer.layoutReady?S.captureInkLayout?.(layer):true)));
+    const failed=captured.find(row=>row.status==='rejected'||row.value===false||Array.isArray(row.value)&&row.value.some(ok=>ok===false));
+    if(failed)throw failed.reason||Error('笔迹布局尚未记录完整，请恢复后重试');
+   }
+   S.recordAction?.(s,'submit',{reason});
+   if(S.NoteVault?.enabled())await S.NoteVault.freezeEvidence(s);else await S.freezeEvidence?.(s);
+  }catch(e){
+   if(S.exam?.s===s){S.exam.submitting=false;S.exam.finishing=false;S.exam.showPauseCover?.();}
+   S.toast('尚未交卷，作答与笔迹已保留：'+(e?.message||'请重试'));return false;
+  }finally{status?.remove();}
   S.focusTracker?.end(s);s.finished=true;s.finishedAt=Date.now();s.updatedAt=s.finishedAt;s.finishReason=reason;s.paused=false;
   if(s.timed){s.elapsed=Math.min(s.duration,Number(s.elapsed)||0);s.remaining=S.clockRemaining(s);s.deadline=null;}
   for(const q of s.questions){const a=s.answers[q.id]||{};a.favoriteAtAttempt=!!S.isFavorite(q);}
@@ -3130,10 +3157,19 @@ S.unlockInkSurface=function(view){
 };
 // Compatibility cleanup only. Never size or zoom the question to a saved note.
 S.lockInkSurface=function(view){S.unlockInkSurface(view);};
+// Cards follow normal vertical flow, as in the existing onScroll binary search.
+S.firstReadingCardIndex=function(cards,top){
+ let lo=0,hi=cards.length;
+ while(lo<hi){const mid=(lo+hi)>>1;if(cards[mid].getBoundingClientRect().bottom<=top)lo=mid+1;else hi=mid;}
+ return lo;
+};
 S.captureReadingAnchor=function(view){
- const scroll=view.scroll,top=scroll.getBoundingClientRect().top;
- const candidates=[...scroll.querySelectorAll('.qstem,.option-row,.review-explanation p,.review-explanation img,.review-explanation h3,.split-material-content p,.split-material-content img')];
- const node=candidates.find(n=>n.getBoundingClientRect().bottom>top+12)||scroll.querySelector('[data-question],[data-note-key]');
+ const scroll=view.scroll,top=scroll.getBoundingClientRect().top,selector='.qstem,.option-row,.review-explanation p,.review-explanation img,.review-explanation h3,.split-material-content p,.split-material-content img';
+ const cards=[...scroll.querySelectorAll('[data-question]')];let node=null;
+ if(cards.length){
+  for(let i=S.firstReadingCardIndex(cards,top+12);i<cards.length&&!node;i++)node=[...cards[i].querySelectorAll(selector)].find(n=>n.getBoundingClientRect().bottom>top+12);
+ }else node=[...scroll.querySelectorAll(selector)].find(n=>n.getBoundingClientRect().bottom>top+12);
+ node=node||scroll.querySelector('[data-question],[data-note-key]');
  if(!node)return;const r=node.getBoundingClientRect();view.readingAnchor={node,fraction:r.height?Math.max(0,(top-r.top)/r.height):0,offset:Math.max(0,r.top-top)};
 };
 S.restoreReadingAnchor=function(view){const a=view.readingAnchor;if(!a?.node.isConnected)return;const r=a.node.getBoundingClientRect(),top=view.scroll.getBoundingClientRect().top;view.scroll.scrollTop+=r.top+r.height*a.fraction-top-a.offset;};
@@ -3321,6 +3357,7 @@ S.attachWorkspaceInk=function(exam){
 
 /* Same-position controls outside Safari's momentum-scrolling stacking context. */
 (function(S){'use strict';
+const controlMetrics=S.readingControlMetrics={binds:0,controls:0,bindingIconWrites:0,restores:0,lastBindMs:0,maxBindMs:0,lastRestoreMs:0,maxRestoreMs:0};
 class ReadingControls{
  constructor(exam){this.exam=exam;this.items=[];this.frame=0;this.scope=null;
   this.resizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>this.schedule()):null;
@@ -3329,26 +3366,40 @@ class ReadingControls{
   window.visualViewport?.addEventListener('resize',()=>this.schedule(),{signal:exam.abort.signal});
   window.visualViewport?.addEventListener('scroll',()=>this.schedule(),{signal:exam.abort.signal});
  }
- restore(){cancelAnimationFrame(this.frame);this.frame=0;this.resizeObserver?.disconnect();for(const item of this.items){const {node,parent,next,placeholder}=item;
+ restore(){const started=performance.now(),hadItems=this.items.length;cancelAnimationFrame(this.frame);this.frame=0;this.resizeObserver?.disconnect();for(const item of this.items){const {node,parent,next,placeholder}=item;
   if(parent.isConnected)parent.insertBefore(node,placeholder?.parentNode===parent?placeholder:next?.parentNode===parent?next:null);
   placeholder?.remove();
   node.classList.remove('reading-control-overlay');for(const key of ['display','left','top','width','height'])node.style.removeProperty?.(key);
- }this.items=[];this.scope=null;}
+ }this.items=[];this.scope=null;if(hadItems){controlMetrics.restores++;controlMetrics.lastRestoreMs=performance.now()-started;controlMetrics.maxRestoreMs=Math.max(controlMetrics.maxRestoreMs,controlMetrics.lastRestoreMs);}}
  sync(){const e=this.exam;if(!e.inkOn||e.disposed){this.restore();return;}const scope=e.split?S.$('.split-shell',e.root):S.$('#question-scroll',e.root);
   if(!scope){this.restore();return;}if(this.scope===scope&&this.items.length&&this.items.every(x=>x.anchor.isConnected&&x.host.isConnected)){this.schedule();return;}
-  this.restore();this.scope=scope;
+  this.restore();this.scope=scope;const started=performance.now(),planned=[],labels=[],observed=new Set();
   for(const card of S.$$('[data-question]',scope)){const scroll=card.closest('.split-scroll,.exam-scroll');
    // Header actions stay in their original flex slot, above the ink canvas.
    // Only exclusion controls need the scrolling overlay.
+   const index=Number(card.dataset.question),q=e.s.questions[index],a=q&&e.s.answers[q.id],label=S.$('[data-qstatus]',card);if(a&&label)labels.push({label,text:a.selected?'已选 '+a.selected+' · 再点取消':'未作答'});
    for(const node of S.$$('[data-exam="exclude"]',card)){
     const anchor=node.closest('.option-row');if(!anchor||!scroll)continue;
     const host=scroll.closest('.ink-pane-view')||e.root,box=node.getBoundingClientRect(),inset=anchor.getBoundingClientRect().right-box.right;
     // The CSS hit target is 44px. A zero/stale button rect must not turn an
     // entire row width into an inset and move all four controls off screen.
-    const item={node,parent:node.parentNode,next:node.nextSibling,anchor,scroll,host,index:Number(card.dataset.question),rightInset:Number.isFinite(inset)&&inset>=0&&inset<=16?inset:8,kind:'exclude',width:20,height:20};
-    this.items.push(item);host.append(node);this.resizeObserver?.observe(host);this.resizeObserver?.observe(scroll);node.classList.add('reading-control-overlay');node.style.width=item.width+'px';node.style.height=item.height+'px';
+    const item={node,parent:node.parentNode,next:node.nextSibling,anchor,scroll,host,index,rightInset:Number.isFinite(inset)&&inset>=0&&inset<=16?inset:8,kind:'exclude',width:20,height:20};
+    planned.push(item);observed.add(host);observed.add(scroll);
    }
-  }for(const i of new Set(this.items.map(x=>x.index)))e.refreshAnswer(i);this.position();this.schedule();
+  }
+  // Measure every original slot before moving any control. Repainting each
+  // question here used to rescan the whole exam and replace unchanged SVGs.
+  this.items=planned;
+  for(const item of planned){const {node,anchor,host,index}=item;host.append(node);node.classList.add('reading-control-overlay');node.style.width=item.width+'px';node.style.height=item.height+'px';
+   const q=e.s.questions[index],a=q&&e.s.answers[q.id];if(!a)continue;const letter=node.dataset.letter,selected=a.selected===letter,excluded=a.excluded.includes(letter);
+   if(anchor.classList.contains('selected')!==selected)anchor.classList.toggle('selected',selected);if(anchor.classList.contains('excluded')!==excluded)anchor.classList.toggle('excluded',excluded);
+   const option=S.$('.option-button',anchor);if(option&&option.getAttribute('aria-pressed')!==String(selected))option.setAttribute('aria-pressed',String(selected));
+   if(node.classList.contains('reading-excluded')!==excluded)node.classList.toggle('reading-excluded',excluded);if(node.getAttribute('aria-pressed')!==String(excluded))node.setAttribute('aria-pressed',String(excluded));
+   const title=(excluded?'恢复':'排除')+'选项 '+letter;if(node.title!==title)node.title=title;if(node.getAttribute('aria-label')!==title)node.setAttribute('aria-label',title);
+   const icon=excluded?'undo':'minus';if(node.dataset.currentIcon!==icon||!node.firstElementChild){node.innerHTML=S.icon(icon);node.dataset.currentIcon=icon;controlMetrics.bindingIconWrites++;}
+  }
+  for(const {label,text}of labels)if(label.textContent!==text)label.textContent=text;for(const node of observed)this.resizeObserver?.observe(node);
+  e.updateClock?.();this.position();this.schedule();controlMetrics.binds++;controlMetrics.controls+=planned.length;controlMetrics.lastBindMs=performance.now()-started;controlMetrics.maxBindMs=Math.max(controlMetrics.maxBindMs,controlMetrics.lastBindMs);
  }
  schedule(){if(this.frame||this.exam.disposed)return;this.frame=requestAnimationFrame(()=>{this.frame=0;this.position();});}
  position(){const panes=new Map(),hosts=new Map(),toolbar=S.$('.reading-note-toolbar',this.exam.root),bar=toolbar&&!toolbar.hidden?toolbar.getBoundingClientRect():null;
@@ -3444,12 +3495,12 @@ class ReleaseExam extends Base{
   a.excluded.includes(letter)?a.excluded=a.excluded.filter(x=>x!==letter):a.excluded.push(letter);
   if(a.selected===letter)a.selected=null;
   S.recordAction?.(this.s,'exclude',{questionId:q.id,selected:a.selected,excluded:a.excluded.slice()});
-  S.touchSession(this.s);this.refreshAnswer(i);S.saveSoon();
+  S.touchSession(this.s);S.saveSoon();this.refreshAnswer(i);
  }
  refreshAnswer(i){super.refreshAnswer(i);const q=this.s.questions[i],a=q&&this.s.answers[q.id];if(!a)return;
   for(const b of S.$$('[data-exam="exclude"][data-index="'+i+'"]',this.root)){const excluded=a.excluded.includes(b.dataset.letter);
    b.classList.toggle('reading-excluded',excluded);b.setAttribute('aria-pressed',String(excluded));b.title=(excluded?'恢复':'排除')+'选项 '+b.dataset.letter;b.setAttribute('aria-label',b.title);
-   const icon=excluded?'undo':'minus';b.innerHTML=S.icon(icon);b.dataset.currentIcon=icon;
+   const icon=excluded?'undo':'minus';if(b.dataset.currentIcon!==icon||!b.firstElementChild){b.innerHTML=S.icon(icon);b.dataset.currentIcon=icon;}
   }
  }
  applyPreferences(){this.root.dataset.reading=S.state.settings.readingNight?'night':'day';this.root.style.setProperty('--reading-font',(({small:16,standard:18,large:20})[S.state.settings.readingSize]||18)+'px');}
@@ -3459,7 +3510,19 @@ class ReleaseExam extends Base{
  openAnswerCard(){if(this.cardOpen){this.closeAnswerCard();return;}this.cardOpen=true;this.cardJumped=false;this.cardSignature=null;this.root.classList.add('reading-card-open');this.root.style.setProperty('--reading-card-height',this.s.questions.length>20?'min(33vh,320px)':'clamp(108px,17vh,165px)');const node=document.createElement('section');node.className='answer-drawer';node.innerHTML=(this.s._review?'<div class="answer-legend"><span class="legend-current">当前</span><span class="legend-correct">答对</span><span class="legend-wrong">答错</span><span>未答</span><span>★ 收藏</span></div>':'<div class="answer-legend"><span class="legend-current">当前</span><span>✓ 已答</span><span>未答</span><span>★ 收藏</span></div>')+'<div class="answer-body"></div>';this.root.append(node);S.$('[data-exam="card"]',this.root)?.setAttribute('aria-expanded','true');S.$('[data-exam="card"]',this.root)?.setAttribute('aria-label','收起答题卡');this.refreshAnswerCard();}
  refreshAnswerCard(){const body=S.$('.answer-drawer .answer-body',this.root);if(!body)return;const s=this.s,signature=s.index+':'+s.questions.map(q=>{const a=s.answers[q.id]||{};return (a.selected?'1':'0')+(S.isFavorite(q)?'1':'0');}).join('');if(signature===this.cardSignature)return;this.cardSignature=signature;const top=body.scrollTop;if(s._review){body.innerHTML=S.reportCard(this.sourceSession,'exam-goto',s.index).replaceAll('data-exam-goto=','data-index=').replaceAll('class="answer-cell ','data-exam="goto" class="answer-cell ');body.scrollTop=top;return;}body.innerHTML=S.answerGroups(s.questions).map(({name:sub,rows:qs})=>{return `<section class="answer-group"><h3>${E(sub)}</h3><div class="answer-cells">${qs.map(({q,i})=>{const a=s.answers[q.id]||{};return `<button class="answer-cell ${a.selected?'answered':''} ${S.isFavorite(q)?'marked':''} ${s.index===i?'current':''}" data-exam="goto" data-index="${i}" aria-label="第${i+1}题${a.selected?' 已答':' 未答'}">${i+1}${a.selected?'<span class="answer-done-mark" aria-hidden="true">✓</span>':''}</button>`;}).join('')}</div></section>`;}).join('');body.scrollTop=top;}
  readingSettings(){S.modal({title:'阅读设置',body:`<div class="reading-setting-row"><span>字体大小</span><div>${[['small','小'],['standard','标准'],['large','大']].map(([v,t])=>`<button class="button ${((S.state.settings.readingSize||'standard')===v)?'soft':''}" data-reading-size="${v}">${t}</button>`).join('')}</div></div><div class="reading-setting-row"><label for="reading-auto">答完自动进入下一题</label><input id="reading-auto" type="checkbox" ${S.state.settings.autoAdvance?'checked':''}></div><div class="reading-setting-row"><span>显示模式</span><div><button class="button" data-reading-night="false">日间</button><button class="button" data-reading-night="true">夜间</button></div></div>`,onOpen:host=>{host.querySelectorAll('[data-reading-size]').forEach(b=>b.onclick=()=>{for(const l of this.layers.values())l.finish();S.state.settings.readingSize=b.dataset.readingSize;this.applyPreferences();for(const l of this.layers.values())l.refreshLayout();S.saveSoon();host.querySelectorAll('[data-reading-size]').forEach(x=>x.classList.toggle('soft',x===b));});S.$('#reading-auto',host).onchange=e=>{S.state.settings.autoAdvance=e.target.checked;S.saveSoon();};host.querySelectorAll('[data-reading-night]').forEach(b=>b.onclick=()=>{S.state.settings.readingNight=b.dataset.readingNight==='true';this.applyPreferences();S.saveSoon();});}});}
- updateControls(){if(this.disposed)return;S.$$('[data-tools]',this.root).forEach(x=>x.innerHTML='');this.root.classList.toggle('reading-ink',!!this.inkOn);const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta){if(this.savedThemeColor===undefined)this.savedThemeColor=themeMeta.content;themeMeta.content=this.inkOn?(this.root.dataset.reading==='night'?'#303b4d':'#dedfe0'):this.savedThemeColor;}this.root.classList.toggle('reading-erasing',this.tool==='erase');const tools=S.$('.reading-note-toolbar',this.root);if(tools)tools.hidden=!this.inkOn;const target=S.$('#reading-note-target',this.root);if(target)target.textContent=this.lastInk?.parent.dataset.noteKey?.startsWith('m:')?'材料草稿':'第 '+(this.toolIndex+1)+' 题草稿';S.$$('[data-tool]',this.root).forEach(b=>{const on=b.dataset.tool===this.tool;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});const label=S.$('#reading-exit-label',this.root);if(label)label.textContent=this.s._review?'返回报告':'返回训练';const exit=S.$('[data-exam="exit"]',this.root);if(exit){exit.setAttribute('aria-label',this.s._review?'返回报告':'返回训练');exit.title=this.s._review?'返回报告':'返回训练';}S.$$('[data-exam="pen"]',this.root).forEach(b=>{b.hidden=false;const active=!!this.inkOn&&this.toolIndex===Number(b.dataset.index),icon=active?'note-close':'note-open';if(b.dataset.currentIcon!==icon){b.innerHTML=S.icon(icon);b.dataset.currentIcon=icon;}b.classList.toggle('pen-active',active);b.setAttribute('aria-pressed',String(active));b.title=active?'关闭笔记':'打开笔记';b.setAttribute('aria-label',b.title);});this.readingControls?.sync();this.updateClock();}
+ updateControls(){
+  if(this.disposed)return;
+  const attr=(node,name,value)=>{if(node.getAttribute(name)!==value)node.setAttribute(name,value);},toggle=(node,name,on)=>{if(node.classList.contains(name)!==on)node.classList.toggle(name,on);};
+  S.$$('[data-tools]',this.root).forEach(x=>{if(x.firstChild)x.replaceChildren();});toggle(this.root,'reading-ink',!!this.inkOn);
+  const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta){if(this.savedThemeColor===undefined)this.savedThemeColor=themeMeta.content;const color=this.inkOn?(this.root.dataset.reading==='night'?'#303b4d':'#dedfe0'):this.savedThemeColor;if(themeMeta.content!==color)themeMeta.content=color;}
+  toggle(this.root,'reading-erasing',this.tool==='erase');const tools=S.$('.reading-note-toolbar',this.root);if(tools&&tools.hidden!==!this.inkOn)tools.hidden=!this.inkOn;
+  const target=S.$('#reading-note-target',this.root),caption=this.lastInk?.parent.dataset.noteKey?.startsWith('m:')?'材料草稿':'第 '+(this.toolIndex+1)+' 题草稿';if(target&&target.textContent!==caption)target.textContent=caption;
+  S.$$('[data-tool]',this.root).forEach(b=>{const on=b.dataset.tool===this.tool;toggle(b,'active',on);attr(b,'aria-pressed',String(on));});
+  const label=S.$('#reading-exit-label',this.root),exitTitle=this.s._review?'返回报告':'返回训练';if(label&&label.textContent!==exitTitle)label.textContent=exitTitle;
+  const exit=S.$('[data-exam="exit"]',this.root);if(exit){attr(exit,'aria-label',exitTitle);if(exit.title!==exitTitle)exit.title=exitTitle;}
+  S.$$('[data-exam="pen"]',this.root).forEach(b=>{if(b.hidden)b.hidden=false;const active=!!this.inkOn&&this.toolIndex===Number(b.dataset.index),icon=active?'note-close':'note-open';if(b.dataset.currentIcon!==icon||!b.firstElementChild){b.innerHTML=S.icon(icon);b.dataset.currentIcon=icon;}toggle(b,'pen-active',active);attr(b,'aria-pressed',String(active));const title=active?'关闭笔记':'打开笔记';if(b.title!==title)b.title=title;attr(b,'aria-label',title);});
+  this.readingControls?.sync();this.updateClock();
+ }
  persistInk(){const owner=this.s._review?this.sourceSession:this.s;if(owner){S.touchSession(owner);S.saveSoon();}}
  updateInk(){
   if(this.disposed)return;if(this.inkOn)this.inkVisible=true;S.attachWorkspaceInk(this);S.preparePracticeImages?.(this);this.readingControls?.schedule();
@@ -3539,14 +3602,14 @@ class ReleaseExam extends Base{
   const split=this.split,target=scrollToCurrent?S.materialCloseTarget(this.s,split):this.s.index;
   if(split){this.pulse();const key=split.groupIdentity;this.s.positions[key]={left:S.$('#split-material-scroll',this.root)?.scrollTop||0,right:S.$('#split-q-scroll',this.root)?.scrollTop||0};}
   super.closeMaterial(false);
-  if(split&&scrollToCurrent){this.jump(target,false);this.capturePosition();S.touchSession(this.s);S.saveSoon();}
+  if(split&&scrollToCurrent){this.jump(target,false);this.capturePosition();if(!this.s._review){S.touchSession(this.s);S.saveSoon();}}
  }
  jump(i,smooth=true){const q=this.s.questions[i];if(!q)return;for(const l of this.layers.values())l.finish();this.lastInk=null;this.toolIndex=i;if(this.split&&S.materialIdentity(q)!==this.split.groupIdentity){this.closeMaterial(false);if(q.materialKey){this.openMaterial(i);return;}}const result=super.jump(i,smooth);this.selectInkTarget('q:'+q.id);this.updateControls();return result;}
  selectInkTarget(key){for(const v of this.layers.values())if(v.geometry().regions.some(r=>r.key===key)){v.target(key);return v;}return null;}
  onScroll(target){super.onScroll(target);this.readingControls?.schedule();if(target.id==='question-scroll'||target.id==='split-q-scroll'){this.toolIndex=this.s.index;if(!S.activeInkPointer)this.selectInkTarget('q:'+this.s.questions[this.toolIndex]?.id);}}
 
  materialGroups(){if(this._materialGroups)return this._materialGroups;const seen=new Set();return this._materialGroups=this.s.questions.map((q,index)=>({key:S.materialIdentity(q),index})).filter(g=>g.key&&!seen.has(g.key)&&seen.add(g.key));}
- switchMaterial(step){if(!this.split||this.materialBusy)return;const groups=this.materialGroups(),current=groups.findIndex(g=>g.key===this.split.groupIdentity),next=groups[current+step];if(!next)return;this.pulse();for(const l of this.layers.values())l.finish();S.animateMaterialChange(this,next.index,step);S.saveSoon();}
+ switchMaterial(step){if(!this.split||this.materialBusy)return;const groups=this.materialGroups(),current=groups.findIndex(g=>g.key===this.split.groupIdentity),next=groups[current+step];if(!next)return;this.pulse();for(const l of this.layers.values())l.finish();S.animateMaterialChange(this,next.index,step);if(!this.s._review)S.saveSoon();}
  bindMaterialSwipe(node){/* Button-driven transition is the confirmed material switch. */}
 }
 S.ExamController=ReleaseExam;
@@ -3870,10 +3933,12 @@ return {empty,clone,stable,same,view,capture,merge,mergeAsync,captureAsync,yield
 'use strict';const stable=x=>JSON.stringify(x,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v),clone=x=>JSON.parse(JSON.stringify(x));
 async function hash(text){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 function splitText(text,size=24000){const parts=[];for(let i=0;i<text.length;){let end=Math.min(text.length,i+size);const code=text.charCodeAt(end-1);if(end<text.length&&code>=0xd800&&code<=0xdbff)end--;parts.push(text.slice(i,end));i=end;}return parts;}
-async function encode(snapshot){
+async function encode(snapshot,{checkpoint}={}){
  const objects=new Map(),memo=new Map(),external=new Set();
- async function put(kind,value){const text=stable({kind,value});if(memo.has(text))return memo.get(text);const id=await hash(text);objects.set(id,text);memo.set(text,id);return id;}
- async function notes(values){const out={};for(const [k,v]of Object.entries(values||{})){if(v?.$ink===1){out[k]={ink:v};for(const h of v.objects||[v.hash])external.add(h);}else out[k]=await put('note',v);}return out;}
+ let work=0,started=Date.now();
+ async function cooperate(){if(checkpoint&&(++work>=32||Date.now()-started>=6)){await checkpoint({objects:objects.size});work=0;started=Date.now();}}
+ async function put(kind,value){await cooperate();const text=stable({kind,value});if(memo.has(text))return memo.get(text);const id=await hash(text);objects.set(id,text);memo.set(text,id);return id;}
+ async function notes(values){const out={};for(const [k,v]of Object.entries(values||{})){await cooperate();if(v?.$ink===1){out[k]={ink:v};for(const h of v.objects||[v.hash])external.add(h);}else out[k]=await put('note',v);}return out;}
  function gather(v){if(!v||typeof v!=='object')return;if(v.$ink===1){for(const h of v.objects||[v.hash])external.add(h);return;}for(const x of Object.values(v))gather(x);}
  gather(snapshot.conflicts);
  const sessions=[],bySession=new Map();
@@ -3953,9 +4018,13 @@ S.SyncTransport={
   const snapshot=await K.decode(head.hash,reader.get,S.NoteVault?.enabled()?{mapNote:note=>S.NoteVault.packNote(note)}:{});return {head,snapshot:S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(snapshot):snapshot};
  },
  async commit(api,profile,snapshot,head,status,deviceId){
-  await S.waitForSyncSlot?.();
-  const graph=await K.encode(snapshot);
-  if(graph.root===head.hash){verifiedUploadGraphs.set(profile,{root:head.hash,hashes:new Set([...graph.objects.keys(),...graph.external||[]])});return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size,knownRequests:0,reusedVerifiedObjects:graph.objects.size}};}
+  const work=S.SyncTransport.workMetrics={stage:'waiting',startedAt:Date.now(),objects:0,checkpoints:0,yields:0,waitingForStudy:false,finishedAt:null};
+  async function slot(){work.waitingForStudy=typeof S.syncCanTransfer==='function'&&!S.syncCanTransfer();await S.waitForSyncSlot?.();work.waitingForStudy=false;}
+  try{
+  await slot();work.stage='encode';
+  const graph=await K.encode(snapshot,{checkpoint:async info=>{work.objects=info.objects;work.checkpoints++;await slot();if(S.SyncModel?.yieldMain)await S.SyncModel.yieldMain();else await new Promise(resolve=>setTimeout(resolve,0));work.yields++;}});
+  work.objects=graph.objects.size;work.stage='transfer';
+  if(graph.root===head.hash){verifiedUploadGraphs.set(profile,{root:head.hash,hashes:new Set([...graph.objects.keys(),...graph.external||[]])});work.stage='complete';return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size,knownRequests:0,reusedVerifiedObjects:graph.objects.size}};}
   const hashes=[...new Set([...graph.objects.keys(),...graph.external||[]])],known=new Set([head.hash].filter(Boolean)),verified=verifiedUploadGraphs.get(profile);let reusedVerifiedObjects=0,knownRequests=0;
   if(verified?.root===head.hash)for(const hash of hashes)if(verified.hashes.has(hash)){known.add(hash);reusedVerifiedObjects++;}
   const unknown=hashes.filter(h=>!known.has(h));
@@ -3976,7 +4045,9 @@ S.SyncTransport={
   // Keep only the current content graph in this account's cache. Original
   // snapshot and server's previous root remain available for recovery.
   verifiedUploadGraphs.set(profile,{root:graph.root,hashes:new Set(hashes)});
-  delete profile.objectCache;return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size,knownRequests,reusedVerifiedObjects}};
+  delete profile.objectCache;work.stage='complete';return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size,knownRequests,reusedVerifiedObjects}};
+  }catch(e){work.stage='failed';work.error=String(e?.name||'Error');throw e;}
+  finally{work.finishedAt=Date.now();}
  }
 };
 })(window.Study);
@@ -3986,8 +4057,38 @@ S.SyncTransport={
 let opening,db;const known=new Set(),refs=new WeakMap();
 const V=S.NoteVault={enabled:()=>!!globalThis.indexedDB,metrics:{reads:0,writes:0,packed:0},isRef:n=>n?.$ink===1&&/^[a-f0-9]{64}$/.test(n.hash||'')};
 const yieldMain=()=>new Promise(r=>setTimeout(r,0));
-async function open(){if(db)return db;if(opening)return opening;opening=new Promise((resolve,reject)=>{const r=indexedDB.open('zhiyaoji-note-depot-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('objects');r.onerror=()=>reject(r.error);r.onblocked=()=>reject(Error('笔记仓库被旧页面占用，请关闭其他标签页'));r.onsuccess=()=>{db=r.result;db.onversionchange=()=>{db.close();db=null;};resolve(db);};}).finally(()=>opening=null);return opening;}
-async function operation(mode,key,value){const d=await open();return new Promise((resolve,reject)=>{const tx=d.transaction('objects',mode),r=mode==='readonly'?tx.objectStore('objects').get(key):tx.objectStore('objects').put(value,key);let out;r.onsuccess=()=>{out=r.result;if(mode==='readonly')resolve(out);};tx.oncomplete=()=>resolve(out);tx.onerror=tx.onabort=()=>reject(tx.error||r.error||Error('独立笔记保存失败'));});}
+function resetNoteStore(current){if(db===current)db=null;try{current?.close();}catch{}}
+async function open(){
+ if(db)return db;if(opening)return opening;
+ opening=new Promise((resolve,reject)=>{
+  let settled=false;const r=indexedDB.open('zhiyaoji-note-depot-v1',1);
+  const fail=error=>{if(settled)return;settled=true;clearTimeout(timer);reject(error);};
+  const timer=setTimeout(()=>{const e=Error('本地数据库笔记连接超时');e.name='TimeoutError';fail(e);},10000);
+  r.onupgradeneeded=()=>r.result.createObjectStore('objects');
+  r.onerror=()=>fail(r.error||Error('本地数据库笔记连接失败'));
+  r.onblocked=()=>fail(Error('笔记仓库被旧页面占用，请关闭其他标签页'));
+  r.onsuccess=()=>{const current=r.result;if(settled){current.close();return;}settled=true;clearTimeout(timer);db=current;
+   current.onclose=()=>{if(db===current)db=null;};current.onversionchange=()=>resetNoteStore(current);resolve(current);
+  };
+ }).finally(()=>opening=null);return opening;
+}
+async function operation(mode,key,value,retry=true){
+ let d;
+ try{
+  d=await open();return await new Promise((resolve,reject)=>{
+   let tx,r,out,settled=false;
+   const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);if(error){resetNoteStore(d);reject(error);}else resolve(out);};
+   const timer=setTimeout(()=>{const e=Error('本地数据库笔记保存或读取超时');e.name='TimeoutError';try{tx?.abort();}catch{}finish(e);},10000);
+   try{tx=d.transaction('objects',mode);tx.oncomplete=()=>finish();tx.onerror=tx.onabort=()=>finish(tx.error||r?.error||Error('独立笔记保存失败'));
+    r=mode==='readonly'?tx.objectStore('objects').get(key):tx.objectStore('objects').put(value,key);r.onsuccess=()=>out=r.result;
+   }catch(e){finish(e);}
+  });
+ }catch(e){
+  if(d)resetNoteStore(d);
+  if(retry&&['InvalidStateError','UnknownError','AbortError','TimeoutError'].includes(e?.name))return operation(mode,key,value,false);
+  throw e;
+ }
+}
 V.getText=async hash=>{V.metrics.reads++;const text=await operation('readonly',hash);if(text!==undefined)return text;if(!V.remoteGet)throw Error('该笔记尚未缓存，请联网登录原账号后重试');const result=await V.remoteGet(hash);if(await S.SyncCodec.hash(result)!==hash)throw Error('笔记下载校验失败');await V.putText(hash,result);return result;};
 V.putText=async(hash,text)=>{if(await S.SyncCodec.hash(text)!==hash)throw Error('笔记保存校验失败');await operation('readwrite',hash,text);V.metrics.writes++;};
 async function put(kind,value,all){const text=S.SyncCodec.stable({kind,value}),hash=await S.SyncCodec.hash(text);if(!known.has(hash)){await operation('readwrite',hash,text);known.add(hash);V.metrics.writes++;}all.add(hash);return hash;}
@@ -4487,6 +4588,8 @@ S.showImportRecords=function(selected=null,filter='issues',limit=100){
 (function(S){
 'use strict';const M=S.ReportModel,E=S.escape;
 S.reportRows=function(s){return s.questions.map((q,index)=>{const at=S.getAttempt(s,q),a=S.sessionAnswer(s,q);return {q,index,answer:at?at.answer:q.answer,selected:a.selected,conflict:at?at.gradingStatus==='conflict':!!q.answerConflict,rate:q.rate,seconds:a.seconds,marked:S.isFavorite(q)};});};
+// A viewing filter only: learning inclusion and the original session stay independent.
+S.reportNeedsReview=row=>row.selected==null||row.selected===''||M.status(row)==='wrong'||!!row.marked||!!row.timeBadge;
 // Report-only hierarchy. A question occupies one primary branch; overlapping
 // auxiliary tags never inflate parent totals and no source tags are rewritten.
 S.reportSections=function(s){
@@ -4516,9 +4619,9 @@ S.showReport=function(id){
  <section class="surface overview"><button class="gauge-button" id="report-correct" aria-label="查看答对的题目"><svg class="gauge-svg" viewBox="0 0 240 180" aria-hidden="true"><defs><linearGradient id="report-arc"><stop stop-color="#96bda3"/><stop offset="1" stop-color="#c6e3cf"/></linearGradient></defs><path d="M28 142A92 92 0 0 1 212 142" pathLength="100" fill="none" stroke="#edf2ee" stroke-width="12" stroke-linecap="round"/><path d="M28 142A92 92 0 0 1 212 142" pathLength="100" fill="none" id="report-arc-progress" stroke="url(#report-arc)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${st.accuracy||0} 100"/><circle id="report-arc-point" cx="28" cy="142" r="6.7" fill="#b0d2ba" stroke="#fff" stroke-width="2.5"/></svg><span class="gauge-label">${headline.label}</span><strong class="gauge-number">${headline.value}</strong><span class="gauge-total">${headline.unit}</span></button><div class="hero-accuracy"><span>正确率</span><strong>${st.accuracy===null?'—':st.accuracy.toFixed(1)+'%'}</strong>${paper?`<small>答对 ${st.correct} / ${st.total} 题 · 百分制等权参考</small>`:''}</div><div class="overview-copy"><h2>${E(s.title)}</h2><p class="info">${S.date(s.finishedAt)} · ${s.finishReason==='timeout'?'到时自动交卷':'主动交卷'}</p></div><div class="difficulty" id="report-difficulty" aria-label="难度"><span class="dots" aria-hidden="true">${Array.from({length:5},(_,i)=>`<i style="--fill:${d.value===null?0:Math.max(0,Math.min(1,(Number(d.value.toFixed(1))-3)/3*5-i))*100}%"></i>`).join('')}</span>难度 <strong>${d.value===null?'数据不足':d.value.toFixed(1)}</strong></div></section>
  <section class="surface summary"><div class="section-title"><h2>本次表现</h2></div><div class="summary-grid">${[['一共',st.total,'题','all'],['答对',st.correct,'题','correct'],['答错',st.wrong,'题','wrong'],['未答',st.skip,'题','skip'],['总用时',M.time(elapsed),'','']].map(([name,n,unit,filter])=>`<button class="metric ${filter}" ${filter?`data-report-filter="${filter}"`:''}><small>${name}</small><strong>${n}<em>${unit}</em></strong></button>`).join('')}</div>${st.ungraded?`<div class="subject-line">${st.ungraded}题未判分，不计入正确率分母。</div>`:''}</section>
  ${S.reportSectionsHTML(s)}
- <section class="surface cards" id="report-answer-card"><div class="section-title"><h2>答题卡</h2><div class="legend"><span><i class="green"></i>答对</span><span><i class="red"></i>答错</span><span><i></i>未答</span><span><b class="star">★</b>收藏</span><span class="time-legend">${S.icon('clock')}用时偏长</span></div></div><div class="filters">${[['all','全部'],['correct','答对'],['wrong','答错'],['skip','未答'],['marked','收藏']].map(([key,label])=>`<button class="filter ${key==='all'?'active':''}" data-report-filter="${key}" aria-pressed="${key==='all'}">${label} ${key==='all'?st.total:key==='marked'?rows.filter(x=>x.marked).length:rows.filter(x=>M.status(x)===key).length}</button>`).join('')}</div><div class="report-answer-groups" id="report-grid"></div></section>
+ <section class="surface cards" id="report-answer-card"><div class="section-title"><h2>答题卡</h2><div class="legend"><span><i class="green"></i>答对</span><span><i class="red"></i>答错</span><span><i></i>未答</span><span><b class="star">★</b>收藏</span><span class="time-legend">${S.icon('clock')}用时偏长</span></div></div><div class="filters">${[['all','全部'],['needs-review','需复盘'],['correct','答对'],['wrong','答错'],['skip','未答'],['marked','收藏']].map(([key,label])=>`<button class="filter ${key==='all'?'active':''}" data-report-filter="${key}" aria-pressed="${key==='all'}">${label} ${key==='all'?st.total:key==='needs-review'?rows.filter(S.reportNeedsReview).length:key==='marked'?rows.filter(x=>x.marked).length:rows.filter(x=>M.status(x)===key).length}</button>`).join('')}</div><div class="report-answer-groups" id="report-grid"></div></section>
  <div class="report-extras"><button class="button" id="report-review-all">全部解析</button><button class="button" id="report-review-wrong">错题解析</button><button class="button" id="copy-analysis">导出文字复盘</button><button class="button" id="export-analysis">${S.icon('download')}导出AI复盘包</button></div></div>`;
- function filter(key){const shown=rows.filter(x=>M.matches(x,key));S.$('#report-grid').innerHTML=S.answerGroups(s.questions).map(({name,rows:group})=>{const indices=new Set(group.map(x=>x.i)),items=shown.filter(x=>indices.has(x.index));return items.length?`<section class="report-answer-group"><h3>${E(name)}</h3><div class="answer-grid">${items.map(S.reportCell).join('')}</div></section>`:'';}).join('')||'<p class="empty-grid">当前筛选没有题目</p>';S.$$('[data-report-question]').forEach(b=>b.onclick=()=>S.openReview(s.id,'all',Number(b.dataset.reportQuestion)));S.$$('.filters [data-report-filter]').forEach(b=>{b.classList.toggle('active',b.dataset.reportFilter===key);b.setAttribute('aria-pressed',String(b.dataset.reportFilter===key));});}
+ function filter(key){const shown=rows.filter(x=>key==='needs-review'?S.reportNeedsReview(x):M.matches(x,key));S.$('#report-grid').innerHTML=S.answerGroups(s.questions).map(({name,rows:group})=>{const indices=new Set(group.map(x=>x.i)),items=shown.filter(x=>indices.has(x.index));return items.length?`<section class="report-answer-group"><h3>${E(name)}</h3><div class="answer-grid">${items.map(S.reportCell).join('')}</div></section>`:'';}).join('')||'<p class="empty-grid">当前筛选没有题目</p>';S.$$('[data-report-question]').forEach(b=>b.onclick=()=>S.openReview(s.id,key==='needs-review'?'needs-review':'all',Number(b.dataset.reportQuestion)));S.$$('.filters [data-report-filter]').forEach(b=>{b.classList.toggle('active',b.dataset.reportFilter===key);b.setAttribute('aria-pressed',String(b.dataset.reportFilter===key));});}
  S.$$('[data-report-filter]').forEach(b=>b.onclick=()=>filter(b.dataset.reportFilter));S.$('#report-correct').onclick=()=>{filter('correct');S.$('#report-answer-card').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});};
  S.$('#report-home').onclick=()=>S.go('home');S.$('#report-review-all').onclick=()=>S.openReview(s.id,'all');S.$('#report-review-wrong').onclick=()=>S.openReview(s.id,'wrong');S.$('#copy-analysis').onclick=()=>S.exportTextReview(s);S.$('#export-analysis').onclick=()=>S.exportSession(s);
  filter('all');
@@ -4709,14 +4812,16 @@ S.captureInkLayout=function(layer){
  layer.cancelLayoutCapture?.();
  const layout={id:S.uid(),key,width:w,height:h,at:Date.now(),text:[],images:[],warnings:[]},walker=document.createTreeWalker(root,4);let node=null,index=0,style=null,range=null,done=false,exhausted=false,resolveJob;
  const promise=new Promise(resolve=>resolveJob=resolve),job={key,epoch,promise};layer.captureJob=job;
- const end=ok=>{if(done)return;done=true;clearTimeout(layer.layoutWorkTimer);if(layer.captureJob===job)layer.captureJob=null;resolveJob(ok);};
+ let deadline=0;
+ const end=ok=>{if(done)return;done=true;clearTimeout(deadline);clearTimeout(layer.layoutWorkTimer);if(layer.captureJob===job)layer.captureJob=null;resolveJob(ok);};
  layer.cancelLayoutCapture=()=>end(false);
+ deadline=setTimeout(()=>{note.layoutWarning='布局记录超时，请重试';end(false);},15000);
  const metrics=S.layoutCaptureMetrics||(S.layoutCaptureMetrics={slices:0,maxCharacters:0});
  function slice(){
   if(done)return;if(!layer.alive||layer.layoutEpoch!==epoch||layer.lastWidth!==w||layer.lastHeight!==h||root.isConnected===false){end(false);return;}
   if(document.hidden||S.activeInkPointer||Date.now()-(S.lastInteractionAt||0)<180){layer.layoutWorkTimer=setTimeout(slice,40);return;}
-  layer.refreshBasis?.();const origin=layer.originRect||root.getBoundingClientRect();let count=0;const start=performance.now();
   try{
+   layer.refreshBasis?.();const origin=layer.originRect||root.getBoundingClientRect();let count=0;const start=performance.now();
    while(count<48&&performance.now()-start<4){
     if(!node){node=walker.nextNode();index=0;if(!node){exhausted=true;break;}if(node.parentElement.closest('canvas,script,style,.pen-toolbar')){node=null;continue;}style=getComputedStyle(node.parentElement);if(style.display==='none'||style.visibility==='hidden'){node=null;continue;}range=document.createRange();}
     const str=node.nodeValue||'';if(index>=str.length){node=null;continue;}const len=str.codePointAt(index)>65535?2:1;range.setStart(node,index);range.setEnd(node,index+len);const b=range.getBoundingClientRect(),text=str.slice(index,index+len);index+=len;count++;
@@ -4963,12 +5068,28 @@ class ReviewExam extends S.ExamController{
  get originalNotes(){return S.evidenceNotes(this.sourceSession);}
  persistInk(){/* transient review overlay: no account save or submission mutation */}
  render(){super.render();this.root.classList.add('review-workspace');const head=S.$('.exam-head-right',this.root);if(head)head.innerHTML=S.iconButton('back','上一题','data-exam="review-prev"')+'<span id="exam-progress"></span>'+S.iconButton('arrow','下一题','data-exam="review-next"')+S.iconButton('more','阅读设置','data-exam="reading-settings"');S.$('[data-exam="pause"]',this.root)?.remove();this.inkVisible=true;this.updateControls();this.updateInk();}
- onClick(e){const b=e.target.closest?.('[data-exam]');if(b&&['review-prev','review-next'].includes(b.dataset.exam)){const step=b.dataset.exam==='review-prev'?-1:1,at=this.indices?.indexOf(this.s.index)??0,next=this.indices?.[at+step];if(next!=null)this.jump(next,false);return;}return super.onClick(e);}
+ jump(i,smooth=true){
+  const fromCard=this._reviewCardMaterialTarget===i;this._reviewCardMaterialTarget=null;
+  const result=super.jump(i,smooth);
+  // The normal jump finishes any active ink first. Only a card click requests
+  // opening a currently closed material, so manual closing stays respected.
+  if(fromCard&&!this.disposed&&!this.split&&this.s.questions[i]?.materialKey)this.openMaterial(i);
+  return result;
+ }
+ onClick(e){
+  const b=e.target.closest?.('[data-exam]');
+  if(b&&['review-prev','review-next'].includes(b.dataset.exam)){const step=b.dataset.exam==='review-prev'?-1:1,at=this.indices?.indexOf(this.s.index)??0,next=this.indices?.[at+step];if(next!=null)this.jump(next,false);return;}
+  if(b?.dataset.exam==='goto'&&!this.split){
+   const i=Number(b.dataset.index);if(this.s.questions[i]?.materialKey){this._reviewCardMaterialTarget=i;try{return super.onClick(e);}finally{this._reviewCardMaterialTarget=null;}}
+  }
+  return super.onClick(e);
+ }
 }
 S.closeReview=function(){if(!S.review)return;const state=S.review;S.review=null;state.controller?.dispose();state.root?.remove();document.body.style.overflow=state.previousOverflow||'';const shell=S.$('#app-shell');if(shell){shell.hidden=!!state.previousShellHidden;shell.inert=!!state.previousShellInert;}};
 S.openReview=function(id,filter='wrong',start=null){
  S.closeModal();S.closeReview();const source=S.state.sessions.find(x=>x.id===id);if(!source)return;
- S.ensureEvidence(source);const indices=source.questions.map((q,i)=>({q,i,a:S.sessionAnswer(source,q),at:S.getAttempt(source,q)})).filter(x=>filter==='all'||S.reviewVerdict(x.q,x.a,x.at).type!=='correct').map(x=>x.i);
+ S.ensureEvidence(source);const needs=filter==='needs-review'?new Set(S.reportRows(source).filter(S.reportNeedsReview).map(x=>x.index)):null;
+ const indices=source.questions.map((q,i)=>({q,i,a:S.sessionAnswer(source,q),at:S.getAttempt(source,q)})).filter(x=>filter==='all'||(needs?needs.has(x.i):S.reviewVerdict(x.q,x.a,x.at).type!=='correct')).map(x=>x.i);
  if(!indices.length)return S.toast('当前筛选没有需要查看的题');
  const transientNotes={};const virtual={...source,_review:true,_sourceSession:source,notes:transientNotes,positions:{},answers:Object.fromEntries(source.questions.map(q=>[q.id,{...S.sessionAnswer(source,q),excluded:[...(S.sessionAnswer(source,q).excluded||[])]}])),paused:false,index:start!=null&&indices.includes(start)?start:indices[0]};
  const root=document.createElement('section');root.className='exam-shell review-shell';document.body.append(root);const previousOverflow=document.body.style.overflow,shell=S.$('#app-shell'),previousShellHidden=shell?.hidden,previousShellInert=shell?.inert;if(shell){shell.hidden=true;shell.inert=true;}document.body.style.overflow='hidden';
@@ -5040,7 +5161,16 @@ S.setReviewFeedback=function(s,qid,patch){
 S.reviewFeedbackText=function(s,qid){const f=S.reviewFeedbackFor(s,qid);return '我的错误原因（本人填写）：'+(f.userCause||'未填写；AI推测不得当作本人自述')+'\n本次错误不纳入后续学习：'+(f.excludeFromLearning?'是':'否')+'\n排除原因：'+(f.exclusionReason||'未填写')+'\n复盘确认：'+(S.reviewReady(s)?'已确认':'未确认或修改后待重新确认')+'\n';};
 S.reviewFeedbackMarkup=function(s,qid){const f=S.reviewFeedbackFor(s,qid);return `<section class="review-feedback" data-review-feedback="${E(qid)}"><label>我的错误原因<textarea data-feedback-field="userCause" maxlength="5000" placeholder="例如：看漏了“不正确”，或两个选项分不清">${E(f.userCause||'')}</textarea></label><p data-feedback-status role="status">输入后自动保存到本机，复盘结束后确认上传。</p><button type="button" class="button primary" data-feedback-done>完成</button></section>`;};
 S.reviewChips=function(s,qid){const f=S.reviewFeedbackFor(s,qid);return `<button type="button" class="review-chip review-cause-chip${f.userCause?' has-cause':''}" data-review-action="cause" data-feedback-qid="${E(qid)}" aria-haspopup="dialog" aria-label="填写本题错误原因">错误原因</button><button type="button" class="review-chip review-learning-chip${f.excludeFromLearning?' is-excluded':''}" data-review-action="toggle" data-feedback-qid="${E(qid)}" aria-pressed="${!f.excludeFromLearning}" title="${f.excludeFromLearning?'点击恢复纳入后续学习':'点击将本次错误排除出后续学习'}">${f.excludeFromLearning?'不纳入':'纳入'}</button>`;};
-S.refreshReviewChips=function(s,root=S.review?.root){if(!root)return;for(const b of root.querySelectorAll('[data-review-action]')){const f=S.reviewFeedbackFor(s,b.dataset.feedbackQid);if(b.dataset.reviewAction==='toggle'){b.textContent=f.excludeFromLearning?'不纳入':'纳入';b.classList.toggle('is-excluded',!!f.excludeFromLearning);b.setAttribute('aria-pressed',String(!f.excludeFromLearning));b.title=f.excludeFromLearning?'点击恢复纳入后续学习':'点击将本次错误排除出后续学习';}else b.classList.toggle('has-cause',!!f.userCause);}for(const b of root.querySelectorAll('.review-finish'))b.textContent=S.reviewUploading.has(s.id)?'正在上传复盘…':S.reviewReady(s)?'再次上传并更新':'确认复盘结束并上传';};
+S.refreshReviewFinishButton=function(s,b){
+ const busy=S.reviewUploading.has(s.id),label=busy?'正在上传复盘…':S.reviewReady(s)?'再次上传并更新':'确认复盘结束并上传';
+ b.disabled=busy;b.title=label;b.setAttribute('aria-label',label);b.setAttribute('aria-busy',String(busy));
+ if(b.classList.contains('review-upload-button')){
+  if(!b.querySelector('svg'))b.innerHTML=S.icon('upload');
+  const dock=b.closest('.reading-answer-dock');dock?.classList.toggle('review-uploading',busy);
+  const status=dock?.querySelector('.review-upload-status');if(status&&busy)status.textContent='正在上传复盘…';
+ }else b.textContent=label;
+};
+S.refreshReviewChips=function(s,root=S.review?.root){if(!root)return;for(const b of root.querySelectorAll('[data-review-action]')){const f=S.reviewFeedbackFor(s,b.dataset.feedbackQid);if(b.dataset.reviewAction==='toggle'){b.textContent=f.excludeFromLearning?'不纳入':'纳入';b.classList.toggle('is-excluded',!!f.excludeFromLearning);b.setAttribute('aria-pressed',String(!f.excludeFromLearning));b.title=f.excludeFromLearning?'点击恢复纳入后续学习':'点击将本次错误排除出后续学习';}else b.classList.toggle('has-cause',!!f.userCause);}for(const b of root.querySelectorAll('.review-finish'))S.refreshReviewFinishButton(s,b);};
 S.openReviewCause=function(s,qid){
  let editor=null,status=null,composing=false;
  const record=()=>{

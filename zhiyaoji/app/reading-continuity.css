@@ -1,4 +1,5 @@
 /* Only the note/favorite controls grow. Exclusion remains at its R8.8.18 size. */
+/* Reading scrollbar policy is in index.html. */
 .exam-shell .qactions [data-exam="pen"],.exam-shell .qactions [data-exam="mark"]{width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;max-width:30px;max-height:30px;padding:5px!important;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:8px;}
 .exam-shell .qactions [data-exam="pen"] svg,.exam-shell .qactions [data-exam="mark"] svg{width:20px;height:20px;flex:none;pointer-events:none;}
 .exam-shell .qactions{gap:10px;}

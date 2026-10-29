@@ -1,6 +1,11 @@
 # 知遥集 · 开发与训练接续入口
 
-R52验证：`node scripts/test-r8-8-52-review.cjs`。打包：`python3 scripts/package-r8-8-52.py --baseline /path/to/zhiyaoji-R8.8.51-full.zip --output output/zhiyaoji-R8.8.52-full.zip`；打包需本地真实birthday原文件。历史复现的`--baseline`选项需先从提交b939df7ec34e65093bcdc358cc33b3ca3dd5349b取出zhiyaoji/app/bundle.js到verification/r51-source/bundle.js。历史来源清单缺失，原verify_project.py未通过；未伪造清单，当前按真实R51包及指定差异核验。
+## 2026-10-29｜R8.8.53 自动跳题等待缩短约23%
+
+用户明确“快23％”，将选中答案后的自动跳题定时等待从203ms调整到156ms（203×0.77=156.31ms，取整；约缩短23.15%）。只改变这一个功能常量，滚动动画、取消/改选、材料边界、暂停/笔迹与保存顺序保持。现行规则RULES-20261029-v19，基线R52提交b7bc87d8d06da99197ab618a7b64d85aa76a5fb0。验证为精确源码差异核对、已有57项隔离回归、静态语法/资源与ZIP校验；不将定时器配置等同实际设备总跳题耗时。未部署、未实机验收。
+
+
+R53验证：`node scripts/test-r8-8-52-review.cjs`。打包：`python3 scripts/package-r8-8-53.py --baseline /path/to/zhiyaoji-R8.8.52-full.zip --output output/zhiyaoji-R8.8.53-full.zip`；打包需本地真实birthday原文件。历史复现的`--baseline`选项需先从提交b939df7ec34e65093bcdc358cc33b3ca3dd5349b取出zhiyaoji/app/bundle.js到verification/r51-source/bundle.js。历史来源清单缺失，原verify_project.py未通过；未伪造清单，当前按真实R51包及指定差异核验。
 
 ## 2026-10-29｜R8.8.52 复盘三项实现
 

@@ -252,7 +252,7 @@ class ExamController{
    S.recordAction?.(this.s,action,{questionId:q.id,selected:a.selected,excluded:a.excluded.slice()});
    this.s.updatedAt=Date.now();S.saveSoon();this.refreshAnswer(i);
    if(action==='answer'&&a.selected&&S.state.settings.autoAdvance){
-     this.advanceTimer=setTimeout(()=>{if(!this.inkOn&&!this.s.paused&&i<this.s.questions.length-1){const next=this.s.questions[i+1];if(q.materialKey&&S.materialIdentity(q)!==S.materialIdentity(next))return;this.jump(i+1,true);}},203);
+     this.advanceTimer=setTimeout(()=>{if(!this.inkOn&&!this.s.paused&&i<this.s.questions.length-1){const next=this.s.questions[i+1];if(q.materialKey&&S.materialIdentity(q)!==S.materialIdentity(next))return;this.jump(i+1,true);}},156);
    }
    return;
   }

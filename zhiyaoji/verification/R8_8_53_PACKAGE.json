@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "file": "zhiyaoji-R8.8.53-full.zip",
+  "sha256": "a1cf335266146d8dacc5459e4deb8f5aa493825456cb9971d4162d77c77a803a",
+  "entries": 62,
+  "crc": "pass",
+  "rootIndex": true,
+  "bytes": 1711813,
+  "gitExcludesPrivateBirthday": true,
+  "deployed": false,
+  "deviceVerified": false
+}

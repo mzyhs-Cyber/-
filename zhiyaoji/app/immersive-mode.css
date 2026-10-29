@@ -1,0 +1,19 @@
+/* Keep the entry beside the existing practice title at all viewport widths. */
+.exam-shell .exam-heading{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0}
+.exam-shell .exam-heading strong{min-width:0;max-width:40vw}
+.exam-shell .exam-heading>.immersive-toggle{flex:none;width:32px;min-width:32px;height:36px;min-height:36px;padding:7px}
+.exam-shell .immersive-controls{position:absolute;top:env(safe-area-inset-top,0px);left:50%;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:2px;width:max-content;height:36px;padding:0;margin:0;background:transparent;border:0;box-shadow:none;pointer-events:none}
+.exam-shell .immersive-controls .exam-clock{font-size:15px;line-height:1;font-variant-numeric:tabular-nums;color:var(--reading-text);opacity:.55;pointer-events:none}
+.exam-shell .immersive-controls>.immersive-toggle{width:32px;min-width:32px;height:36px;min-height:36px;padding:7px;border:0;background:transparent;color:var(--reading-text);opacity:.55;pointer-events:auto;touch-action:manipulation}
+.exam-shell .immersive-controls>.immersive-toggle:active{background:transparent}
+.exam-shell .immersive-toggle svg{display:block;width:18px;height:18px;pointer-events:none}
+/* No header row or fake spacer. The question remains behind the two controls. */
+.exam-shell.exam-immersive>.exam-head{display:none}
+.exam-shell.exam-immersive{padding-top:env(safe-area-inset-top,0px)}
+.exam-shell.exam-immersive .split-shell{top:env(safe-area-inset-top,0px)}
+.exam-shell.exam-immersive .exam-scroll{padding-top:0}
+/* The handwriting toolbar deliberately keeps its original node and CSS. */
+.exam-shell.exam-immersive.reading-ink .qactions[data-immersive-pinned]{transform:translateY(var(--immersive-action-offset,0px))}
+.exam-shell .exam-submit-status{position:absolute;top:74px;right:20px;z-index:65;max-width:calc(100% - 40px);padding:8px 12px;margin:0;border:1px solid var(--reading-line);border-radius:10px;background:var(--reading-paper);color:var(--reading-text);font-size:13px;pointer-events:none}
+#dialog-host button{touch-action:manipulation}
+@media(max-width:540px){.exam-shell .exam-heading{gap:1px}.exam-shell .exam-heading strong{max-width:25vw}.exam-shell .exam-heading>.immersive-toggle{width:28px;min-width:28px;padding:5px}}

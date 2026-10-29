@@ -1,0 +1,11 @@
+/* R8.8.14: the material controls follow the grey note surface.
+   The active close-note control remains white and easy to locate.
+   No dimensions, canvas filters, input events or mode transitions are changed. */
+.exam-shell.reading-ink:not([data-reading="night"]) .material-head [data-exam="material"],
+.exam-shell.reading-ink:not([data-reading="night"]) .reading-material-nav [data-exam="material-close"]{
+ background:var(--reading-paper);border-color:var(--reading-line);color:var(--reading-text);box-shadow:none;
+}
+.exam-shell.reading-ink:not([data-reading="night"]) [data-exam="pen"][aria-pressed="true"],
+.exam-shell.reading-ink:not([data-reading="night"]) [data-exam="note-close"]{
+ background:#fff;border-color:#c4ced6;color:var(--choice-text,#3f719d);box-shadow:none;
+}

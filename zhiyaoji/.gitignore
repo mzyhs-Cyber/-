@@ -10,6 +10,8 @@ output/
 *.rar
 app/birthday.html
 *备份*.json
+git-*-payload.json
+verification/r51-source/
 *backup*.json
 fenbi_output/
 browser_profile/

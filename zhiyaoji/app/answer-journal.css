@@ -1,0 +1,2 @@
+.exam-shell .answer-save-status{position:absolute;z-index:70;bottom:max(10px,env(safe-area-inset-bottom));right:16px;max-width:calc(100% - 120px);padding:8px 12px;border:1px solid var(--reading-line,#d9dfe4);border-radius:10px;background:var(--reading-paper,#fff);color:var(--reading-text,#30363d);font-size:12px;line-height:1.5;box-shadow:none}
+.exam-shell .answer-save-status button{margin-left:8px;border:1px solid currentColor;border-radius:6px;padding:4px 8px;background:transparent;color:inherit;font-size:12px;touch-action:manipulation}

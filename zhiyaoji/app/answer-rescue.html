@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>知遥集 · 只读答题卡抢救</title>
+<style>
+*{box-sizing:border-box}body{max-width:900px;margin:0 auto;padding:24px 18px 60px;background:#f6f8f5;color:#303932;font:15px/1.7 system-ui}main{padding:22px;background:white;border:1px solid #dfe5df;border-radius:16px}h1{font-size:22px;margin:0 0 12px}p{margin:10px 0}.muted{color:#6c776f;font-size:13px}button,select{font:inherit;border:1px solid #bfcdbf;border-radius:9px;background:#fff;color:inherit;min-height:44px;padding:8px 14px;margin:5px 6px 5px 0}button:disabled{opacity:.45}select{width:100%}#status{padding:12px;background:#eef3ed;border-radius:10px;white-space:pre-wrap}table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:10px 6px;border-bottom:1px solid #e4e9e2;text-align:left;vertical-align:top}.scroll{overflow:auto}.actions{display:flex;flex-wrap:wrap}label{display:block;margin:12px 0}#errors{white-space:pre-wrap;overflow-wrap:anywhere;color:#865548;font-size:13px}a{color:#486448}
+</style></head><body><main>
+<h1>只读答题卡抢救</h1>
+<p class="muted">抢救工具第 3 版 · 可绕过主目录</p>
+<p>检查本机当前记录、退出备份、账号副本和历史快照。此页面不加载刷题程序，不同步、不上传、不写入学习数据库，不执行恢复。</p>
+<p class="muted">必须在出问题的原设备、原 Safari 或桌面入口、同一个刷题网址下打开。不要清除网站数据、导入备份或继续作答。扫描期间不要返回首页。</p>
+<label for="direct-id">目录读取超时时：粘贴要抢救的练习编号</label>
+<input id="direct-id" type="text" maxlength="200" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴已核实的练习编号" style="width:100%;font:inherit;padding:10px;border:1px solid #bfcdbf;border-radius:9px">
+<button id="direct">绕过目录，直接抢救</button>
+<p class="muted">此入口不读取主记录库，直接查独立答题卡与历史快照。关闭其他刷题标签页及桌面应用后重试，不要删除应用或清除网站数据。若最初从桌面图标使用，请仍留在原桌面入口的存储环境。</p>
+ <button id="load">读取练习目录</button><label for="session">要查找的练习</label><select id="session" disabled></select><button id="more" hidden>读取更多练习</button>
+<div class="actions"><button id="scan" disabled>检查可用副本</button><button id="deep" disabled>深度扫描历史快照</button><button id="stop" disabled>停止</button><button id="export" disabled>导出抢救结果</button></div>
+<label class="muted"><input type="checkbox" id="legacy"> 同时读取旧账号副本（旧格式可能较大，默认跳过）</label>
+<p id="status" role="status" aria-live="polite">先读取练习目录，再选择对应试卷。</p>
+<p class="muted">候选答案更多不代表版本更新；取消选择也是真实操作。这里不会自动合并或覆盖。导出结果用于核对，不能当作普通学习备份直接导入。</p>
+<div class="scroll"><table><thead><tr><th>副本来源</th><th>已选 / 题数</th><th>记录时间</th><th>说明</th></tr></thead><tbody id="results"></tbody></table></div><p id="errors"></p>
+</main>
+<script id="rescue-code">
+(function(root){
+ 'use strict';
+ const MAIN='mzy-study-clean-v2',DEPOT='zhiyaoji-note-depot-v1',PROFILES='mzy-study-sync-profiles-v1',JOURNAL='zhiyaoji-answer-journal-v1';
+ const model={mode:'normal',owner:null,entries:[],target:null,ids:[],identitySource:null,candidates:[],errors:[],scanned:0,deepDone:false,lastKey:null,pendingKeys:[],roots:0,legacyChecked:false,stage:'',reads:[]};
+ const connections=new Map(),cache=new Map();let stop=false,currentRoot=null,busy=false,position=0,mainHeader,sessionKeys=[];
+ const $=id=>document.getElementById(id),error=e=>{model.errors.push(String(e?.message||e));render();},yieldMain=()=>new Promise(r=>setTimeout(r,0));
+ function stage(text){model.stage=text;render();}
+ function reset(name,db){if(connections.get(name)===db)connections.delete(name);try{db?.close();}catch{}}
+ async function open(name){
+  if(connections.has(name))return connections.get(name);
+  if(typeof indexedDB.databases==='function')try{const names=await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(Error('目录枚举超时')),3000);Promise.resolve(indexedDB.databases()).then(x=>{clearTimeout(t);resolve(x);},e=>{clearTimeout(t);reject(e);});});if(!names.some(x=>x.name===name)){connections.set(name,null);return null;}}catch{}
+  const value=await new Promise((resolve,reject)=>{let done=false,missing=false;const req=indexedDB.open(name),timer=setTimeout(()=>finish(Error('连接数据库超时：'+name)),15000);
+   function finish(e,db){if(done){db?.close();return;}done=true;clearTimeout(timer);e?reject(e):resolve(db||null);}
+   req.onupgradeneeded=()=>{missing=true;req.transaction.abort();};
+   req.onerror=()=>missing?finish(null):finish(req.error||Error('数据库读取失败'));
+   req.onblocked=()=>finish(Error('数据库暂时被占用：'+name));req.onsuccess=()=>finish(null,req.result);
+  });if(value){value.onversionchange=()=>reset(name,value);value.onclose=()=>reset(name,value);}connections.set(name,value);return value;
+ }
+ async function read(dbName,store,key,label='历史对象',keys=false){const db=await open(dbName);if(!db||!db.objectStoreNames.contains(store))return null;
+  stage('正在读取：'+label+'。较大的单条副本最多等待 30 秒。');
+  return new Promise((resolve,reject)=>{let done=false,tx;const started=Date.now(),timer=setTimeout(()=>{finish(Error(label+'：读取超时（30 秒），已保留先前结果，可继续检查其他副本'));try{tx?.abort();}catch{}},30000);
+   function finish(e,value){if(done)return;done=true;clearTimeout(timer);model.reads.push({source:label,ms:Date.now()-started,status:e?'error':'read'});if(model.reads.length>80)model.reads.shift();if(e){reset(dbName,db);reject(e);}else resolve(value??null);}
+   try{tx=db.transaction(store,'readonly');const s=tx.objectStore(store),req=keys?s.getAllKeys(keys===true?IDBKeyRange.bound('session:','session;'):keys):s.get(key);req.onsuccess=()=>finish(null,req.result);req.onerror=()=>finish(req.error||Error(label+'：读取失败'));tx.onerror=tx.onabort=()=>finish(tx.error||Error(label+'：读取中止'));}catch(e){finish(e);}
+  });
+ }
+ async function object(hash,providedText){
+  if(!/^[a-f0-9]{64}$/.test(hash||''))throw Error('历史对象标识无效');
+  if(cache.has(hash)){const v=cache.get(hash);cache.delete(hash);cache.set(hash,v);return v;}
+  const text=providedText??await read(DEPOT,'objects',hash,'历史分块 '+hash.slice(0,8));if(typeof text!=='string')throw Error('历史对象缺失：'+hash.slice(0,12));
+  if(text.length>16*1024*1024)throw Error('已跳过过大的历史对象，尚未检查完整');
+  const actual=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v=>v.toString(16).padStart(2,'0')).join('');if(actual!==hash)throw Error('历史对象校验失败：'+hash.slice(0,12));
+  const value=JSON.parse(text);cache.set(hash,value);while(cache.size>4)cache.delete(cache.keys().next().value);return value;
+ }
+ async function* array(value,depth=0){
+  if(depth>8)throw Error('历史数组嵌套异常');
+  if(Array.isArray(value)){let i=0;for(const x of value){if(stop)return;yield x;if(++i%16===0)await yieldMain();}return;}
+  if(value?.$inkArray){for(const hash of value.$inkArray){const o=await object(hash);if(o.kind!=='ink-array')throw Error('历史数组类型不符');yield*array(o.value,depth+1);}}
+ }
+ const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
+ async function qids(session){const out=[];for await(const q of array(session?.questions))out.push(q?.id);return out;}
+ function add(source,answers,updatedAt,details={}){
+  const selected={};for(const id of model.ids){const a=answers?.[id];selected[id]={selected:a?.selected??null,excluded:Array.isArray(a?.excluded)?a.excluded.filter(v=>typeof v==='string'):[],seconds:Number(a?.seconds)||0};}
+  const count=Object.values(selected).filter(a=>typeof a.selected==='string'&&a.selected.length).length;
+  const record={source,sessionId:model.target,questionIds:model.ids.slice(),answers:selected,selectedCount:count,updatedAt:Number(updatedAt)||null,...details};
+  const signature=JSON.stringify([!!record.eventDerived,model.ids.map(id=>[selected[id].selected,selected[id].excluded])]);
+  const prior=model.candidates.find(x=>x.signature===signature);
+  if(prior){if(prior.sources.length<8&&!prior.sources.includes(source))prior.sources.push(source);prior.verifiedOwner=prior.verifiedOwner||!!record.verifiedOwner;if((record.updatedAt||0)>(prior.updatedAt||0)){prior.updatedAt=record.updatedAt;prior.answers=selected;}render();return;}
+  record.signature=signature;record.sources=[source];model.candidates.push(record);render();
+ }
+ async function visit(session,source,verifiedOwner=false,hash=null){
+  if(!session||session.id!==model.target)return;const ids=await qids(session);if(stop||!ids.length)return;
+  if(!model.ids.length){model.ids=ids;model.identitySource=source;}
+  if(!same(ids,model.ids))return;
+  add(source,session.answers,session.updatedAt,{verifiedOwner,rootHash:hash,finished:!!session.finished});
+  const events={};let last=0;
+  for await(const e of array(session.events)){if(e&&model.ids.includes(e.questionId)&&Object.prototype.hasOwnProperty.call(e,'selected')){events[e.questionId]={selected:e.selected,excluded:e.excluded||[],seconds:Number(e.questionSeconds)||0};last=Math.max(last,Number(e.at)||0);}}
+  if(Object.keys(events).length)add(source+' · 操作日志推导',events,last,{verifiedOwner,rootHash:hash,eventDerived:true});
+ }
+ async function profile(p,label,verified,hash=null){for(const part of ['base','local','pending','shadow']){if(stop)return;try{for await(const s of array(p?.[part]?.sessions))if(s?.id===model.target)await visit(s,label+' / '+part,verified,hash);}catch(e){error(e);}}}
+ function origin(){if(location.protocol!=='https:'&&location.hostname!=='localhost')throw Error('请从原刷题网址打开本页；直接打开下载的HTML无法读取原网站数据');}
+ async function entries(more=false){origin();stop=false;
+  if(!more){model.entries=[];position=0;model.errors=[];model.reads=[];mainHeader=null;sessionKeys=[];
+   try{sessionKeys=await read(MAIN,'hot',null,'练习编号目录',true)||[];}catch(e){error(e);}
+   try{mainHeader=await read(MAIN,'hot','main','练习索引');}catch(e){error(e);}
+  }
+  const all=mainHeader?.sessionStorage==='records-v1'?[...(mainHeader.sessionIds||[])].reverse():mainHeader?.sessions?.length?[...mainHeader.sessions].reverse():sessionKeys.map(k=>k.slice(8));
+  if(mainHeader?.lastSessionId){const i=all.indexOf(mainHeader.lastSessionId);if(i>0)all.unshift(...all.splice(i,1));}
+  for(const item of all.slice(position,position+8)){const s=typeof item==='string'?{id:item,title:item===mainHeader?.lastSessionId?'最近打开的练习':'练习 · '+item.slice(-8)}:item;if(!s?.id||model.entries.some(e=>e.id===s.id))continue;model.entries.push({id:s.id,title:s.title||'未命名练习',finished:s.finished,startedAt:s.startedAt});}position+=8;
+  model.stage='目录只读练习编号；选中后才读取该场练习，避免加载多场大型副本。';render();
+  if(!model.entries.length&&model.errors.length)throw Error('练习目录尚未读到，请关闭其他刷题窗口后重试；不要清除网站数据');
+  return {entries:model.entries,hasMore:position<all.length,lastSessionId:mainHeader?.lastSessionId};
+ }
+ function begin(id,mode='normal'){
+  if(typeof id!=='string'||!id.trim()||id.length>200||/[\u0000-\u001f]/.test(id))throw Error('请粘贴有效的练习编号');
+  model.mode=mode;model.target=id.trim();model.ids=[];model.identitySource=null;model.candidates=[];model.errors=[];model.scanned=0;model.deepDone=false;model.lastKey=null;model.pendingKeys=[];model.roots=0;model.owner=null;model.reads=[];model.legacyChecked=false;currentRoot=null;stop=false;cache.clear();
+ }
+ async function choose(id){
+  begin(id);
+  try{const meta=await read(MAIN,'meta','main','本机账号信息');if(meta)model.owner=meta.syncOwnerId||'guest';}catch(e){error(e);}
+  let s;try{s=(mainHeader?.sessions||[]).find(x=>x.id===id)||await read(MAIN,'hot','session:'+id,'选中的练习');if(s){await visit(s,'当前主记录',model.owner!==null);const row=model.entries.find(x=>x.id===id);if(row)row.title=s.title||row.title;}}catch(e){error(e);}
+  return s;
+ }
+ async function scan(id,{legacy=false}={}){
+  origin();await choose(id);model.legacyChecked=legacy;
+  async function attempt(fn){if(stop)return;try{await fn();}catch(e){error(e);}await yieldMain();}
+  await attempt(async()=>{const exit=await read(MAIN,'hot','exit-recovery','退出备份');if(exit?.owner===model.owner)await visit(exit.session,'退出备份',true);});
+  if(model.owner!==null){
+  const k='zhiyaoji-answer-v1:'+encodeURIComponent(model.owner)+':'+id;
+  function journal(p,label){if(p?.owner!==model.owner||p.id!==id||!Array.isArray(p.ids)||!p.ids.length)return;if(!model.ids.length){model.ids=p.ids.slice();model.identitySource=label;}if(same(p.ids,model.ids))add(label,p.answers,p.at,{verifiedOwner:true});}
+  await attempt(async()=>journal(JSON.parse(localStorage.getItem(k)||'null'),'同步答题卡备份'));
+  await attempt(async()=>journal(await read(JOURNAL,'progress',k,'独立答题卡副本'),'独立答题卡副本'));
+  await attempt(async()=>{const ptr=await read(DEPOT,'objects','profile:'+model.owner,'账号副本索引');currentRoot=ptr?.hash||null;if(currentRoot){const p=await object(currentRoot);if(p.kind==='profile-root')await profile(p.value,'当前账号本机副本',true,currentRoot);}});
+  if(legacy)await attempt(async()=>{const p=await read(PROFILES,'profiles',model.owner,'旧账号本机副本');if(p)await profile(p,'旧账号本机副本',true);});
+  }else error(Error('本机账号尚未核实，已跳过账号专属副本；同一练习的历史候选仍可只读扫描，需人工核对'));
+  stage(stop?'已停止，先前结果可导出。':'可用副本检查已结束，可继续深度扫描。');
+  return model;
+ }
+ async function direct(id){
+  origin();begin(id,'independent-only');id=model.target;
+  stage('已绕过主记录库。开始查找同一练习的独立答题卡与历史快照。');
+  async function attempt(fn){if(stop)return;try{await fn();}catch(e){error(e);}await yieldMain();}
+  const prefix='zhiyaoji-answer-v1:';
+  function journal(p,label){
+   if(p?.id!==id||typeof p.owner!=='string'||!Array.isArray(p.ids)||!p.ids.length||p.ids.some(x=>typeof x!=='string')||new Set(p.ids).size!==p.ids.length)return;
+   if(!model.ids.length){model.ids=p.ids.slice();model.identitySource=label;}
+   if(same(p.ids,model.ids))add(label,p.answers,p.at,{verifiedOwner:false});
+  }
+  await attempt(async()=>{for(let i=0;i<localStorage.length&&!stop;i++){const k=localStorage.key(i);if(!k?.startsWith(prefix)||!k.endsWith(':'+id))continue;const p=JSON.parse(localStorage.getItem(k)||'null');if(p&&k===prefix+encodeURIComponent(p.owner)+':'+id)journal(p,'绕过目录 · 同步答题卡备份');}});
+  await attempt(async()=>{const keys=await read(JOURNAL,'progress',null,'独立答题卡编号',IDBKeyRange.bound(prefix,'zhiyaoji-answer-v1;'))||[];for(const k of keys){if(stop)break;if(typeof k!=='string'||!k.startsWith(prefix)||!k.endsWith(':'+id))continue;const p=await read(JOURNAL,'progress',k,'独立答题卡副本');if(p&&k===prefix+encodeURIComponent(p.owner)+':'+id)journal(p,'绕过目录 · 独立答题卡副本');}});
+  await attempt(async()=>{const keys=await read(DEPOT,'objects',null,'独立历史副本索引',IDBKeyRange.bound('profile:','profile;'))||[];let n=0;
+   for(const k of keys){if(stop)break;try{const ptr=await read(DEPOT,'objects',k,'独立账号副本索引 '+(++n));if(!ptr?.hash)continue;const p=await object(ptr.hash);if(p.kind==='profile-root')await profile(p.value,'绕过目录 · 账号副本 '+n,false,ptr.hash);}catch(e){error(e);}await yieldMain();}
+  });
+  stage(stop?'已停止，已有结果可导出。':'独立副本检查结束；可继续深度扫描。账号归属尚未从主记录核实，候选需人工核对。');
+  return model;
+ }
+ async function batch(after,limit=64){const db=await open(DEPOT);if(!db||!db.objectStoreNames.contains('objects'))return {done:true,keys:[]};
+  stage('正在分段读取历史对象编号…');
+  return new Promise((resolve,reject)=>{let tx,done=false,last=after,ended=false,keys=[];const timer=setTimeout(()=>{finish(Error('历史编号读取超时，先前结果保留'));try{tx?.abort();}catch{}},30000);
+   function finish(e){if(done)return;done=true;clearTimeout(timer);if(e){reset(DEPOT,db);reject(e);}else resolve({done:ended,last,keys});}
+   tx=db.transaction('objects','readonly');const range=after?IDBKeyRange.bound(after,'g',true,true):IDBKeyRange.bound('0','g',false,true);const req=tx.objectStore('objects').openKeyCursor(range);
+   req.onsuccess=()=>{const c=req.result;if(!c){ended=true;return;}last=c.key;if(/^[a-f0-9]{64}$/.test(c.key))keys.push(c.key);if(keys.length<limit&&!stop)c.continue();};
+   tx.oncomplete=()=>finish();tx.onerror=tx.onabort=()=>finish(tx.error||Error('历史编号读取中止'));
+  });
+ }
+ async function deep(max=10000){
+  if(!model.target)throw Error('请先检查一场练习');stop=false;let count=0;
+  while(!stop&&!model.deepDone&&count<max){
+   if(!model.pendingKeys.length){const b=await batch(model.lastKey,Math.min(64,max-count));model.lastKey=b.last;model.pendingKeys=b.keys;model.batchEnded=b.done;if(!b.keys.length){model.deepDone=b.done;if(b.done)break;continue;}}
+   const hash=model.pendingKeys[0];let text;
+   // Keep this key pending on a read timeout. A later click resumes at this key,
+   // while candidates from previous keys remain exportable.
+   try{text=await read(DEPOT,'objects',hash,'历史对象 '+(model.scanned+1));}catch(e){error(e);stage('历史读取已暂停；已有结果可导出，也可再次点深度扫描重试本段。');return model;}
+   if(typeof text==='string'&&text.startsWith('{"kind":"profile-root",')){model.roots++;try{const p=await object(hash,text);if(p.kind==='profile-root')await profile(p.value,'历史快照 '+model.roots,hash===currentRoot,hash);}catch(e){error(e);}}
+   if(stop)break;model.pendingKeys.shift();model.scanned++;count++;if(!model.pendingKeys.length&&model.batchEnded)model.deepDone=true;
+   render();await yieldMain();
+  }stage(stop?'已停止，结果和扫描位置已保留。':model.deepDone?'历史编号扫描已到末尾；请查看是否有跳过或失败的副本。':'本段扫描结束，可继续深度扫描。');return model;
+ }
+ function exportData(){return {schema:1,toolVersion:3,backupType:'answer-rescue-candidates',createdAt:new Date().toISOString(),readOnly:true,sessionId:model.target,questionIds:model.ids,identitySource:model.identitySource,candidates:model.candidates.map(({signature,...r})=>r),scan:{scope:model.mode==='independent-only'?'independent journals/profile-root snapshots for the selected session; primary/exit/owner deliberately skipped':'current/exit/journal/profile-root snapshots for the selected session',mainDatabaseSkipped:model.mode==='independent-only',objects:model.scanned,profileRoots:model.roots,enumeratedDone:model.deepDone,complete:model.deepDone&&!model.errors.length,legacyAccountCopyChecked:model.legacyChecked,legacyMainSnapshotChecked:false,errors:model.errors.slice(),recentReads:model.reads.slice()}};}
+ function render(){
+  const body=$('results');if(!body)return;body.replaceChildren();
+  for(const p of [...model.candidates].sort((a,b)=>b.selectedCount-a.selectedCount||(b.updatedAt||0)-(a.updatedAt||0))){const tr=document.createElement('tr');for(const text of [p.source,p.selectedCount+' / '+model.ids.length,p.updatedAt?new Date(p.updatedAt).toLocaleString():'未记录',p.eventDerived?'按日志最后操作推导，含取消':p.verifiedOwner?'已匹配本机账号与练习':'同一练习历史候选，需核对']){const td=document.createElement('td');td.textContent=text;tr.append(td);}body.append(tr);}
+  $('errors').textContent=model.errors.join('\n');$('export').disabled=!model.target&&!model.reads.length&&!model.errors.length;
+  $('status').textContent=(model.stage?model.stage+'\n':'')+(model.target?'候选 '+model.candidates.length+' 份；最多保留 '+Math.max(0,...model.candidates.map(x=>x.selectedCount))+' 个选择。\n历史对象已检查 '+model.scanned+' 项，'+(model.deepDone?'历史扫描已到末尾。':'历史尚未全部检查。'):'');
+ }
+ async function action(fn){if(busy)return;busy=true;for(const id of ['load','scan','deep','more','direct'])$(id).disabled=true;$('stop').disabled=false;try{await fn();}catch(e){error(e);$('status').textContent='检查未完成：'+e.message;}finally{busy=false;for(const id of ['load','scan','deep','more','direct'])$(id).disabled=false;$('stop').disabled=true;}}
+ root.AnswerRescue={model,entries,scan,direct,deep,exportData,stop:()=>stop=true,close:()=>{for(const db of connections.values())db?.close();connections.clear();}};
+ if($('load')){
+  async function load(more){const r=await entries(more),select=$('session');select.replaceChildren();for(const e of r.entries){const o=document.createElement('option');o.value=e.id;o.textContent=e.title+(e.finished===undefined?'':e.finished?' · 已完成':' · 未完成');select.append(o);}if(r.entries.some(e=>e.id===r.lastSessionId))select.value=r.lastSessionId;select.disabled=!r.entries.length;$('scan').disabled=!r.entries.length;$('more').hidden=!r.hasMore;stage('已读取 '+r.entries.length+' 场练习编号。最近一次优先；其他练习暂显示编号，选中后读取。');}
+  $('load').onclick=()=>action(()=>load(false));$('more').onclick=()=>action(()=>load(true));$('scan').onclick=()=>action(()=>scan($('session').value,{legacy:$('legacy').checked}));$('deep').onclick=()=>action(()=>deep());$('stop').onclick=()=>stop=true;
+  $('direct').onclick=()=>action(async()=>{await direct($('direct-id').value);if(!stop)await deep();});
+  try{const id=new URLSearchParams(location.hash.slice(1)).get('session');if(id)$('direct-id').value=id.slice(0,200);}catch{}
+  $('export').onclick=()=>{const blob=new Blob([JSON.stringify(exportData())],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='知遥集_答题卡抢救候选_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);};
+ }
+})(window);
+</script></body></html>

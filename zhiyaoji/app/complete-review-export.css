@@ -1,0 +1,6 @@
+.complete-export-summary{font:12px/1.7 system-ui;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;padding:12px;border:1px solid #dce3de;border-radius:10px;background:transparent;color:inherit;margin:12px 0}
+
+.complete-export-formats{align-items:stretch;margin-top:14px}
+.complete-export-formats>.export-copy{min-width:0;min-height:44px;margin:0;border:1px solid #2f493a;border-radius:10px;padding:9px 6px;font-size:12px;line-height:1.5}
+.complete-export-formats>#export-records,.complete-export-formats>#export-legacy{min-height:44px;line-height:1.5}
+.review-ai-export{flex:0 0 44px;width:44px;height:44px;min-height:44px}

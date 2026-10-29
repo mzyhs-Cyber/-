@@ -80,7 +80,7 @@
 .ink-layout-notice{position:absolute;right:18px;bottom:20px;z-index:34;max-width:calc(100% - 92px);border:1px solid var(--reading-line);border-radius:9px;background:var(--reading-paper);color:var(--reading-muted);font-size:12px;padding:8px 12px}
 
 /* 2.9.17: same-position touch controls and consistent question header spacing. */
-.exam-shell .reading-control-overlay{position:fixed!important;z-index:24;pointer-events:auto;touch-action:manipulation;margin:0!important;transform:none!important;right:auto;bottom:auto}
+.exam-shell .reading-control-overlay{position:absolute!important;z-index:24;pointer-events:auto;touch-action:manipulation;margin:0!important;transform:none!important;right:auto;bottom:auto}
 .exam-shell .exclude-button{width:44px;height:44px;min-width:44px;min-height:44px}
 .exam-shell .reading-control-overlay.reading-excluded{color:#6c8097;background:#e7edf4;border-radius:9px}
 .exam-shell .qactions [data-exam=mark].marked{color:#d5a125}.exam-shell .qactions [data-exam=mark].marked svg{fill:#f5d66b}
@@ -105,3 +105,52 @@
 .exam-shell .rich,.exam-shell .review-explanation.rich,.exam-shell .rich table{font-size:var(--reading-font)}
 
 .answer-group{padding:14px 0;border-top:1px solid #e9edf1}.answer-group:first-child{border-top:0}.answer-group h3{font-size:13px;font-weight:550;margin:0 0 12px;color:#4f5963}
+
+.exam-shell .option-row .option-button{border:0!important;background:transparent!important;box-shadow:none!important;padding:12px 58px 12px 0;gap:14px}
+.exam-shell .option-button .option-letter{width:36px;height:36px;min-width:36px;flex:0 0 36px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:600;border:1px solid var(--reading-line);background:transparent}
+.exam-shell .option-row.selected .option-letter{background:#4789ef;border-color:#4789ef;color:white}
+.exam-shell .option-row.correct .option-letter{background:#349779;border-color:#349779;color:white}
+.exam-shell .option-row.incorrect .option-letter{background:#d97570;border-color:#d97570;color:white}
+.exam-shell .qactions{margin-right:38px}
+.exam-shell [data-exam=mark][aria-pressed=true] svg{fill:#ffc83d;stroke:#eeb62a}
+.exam-shell .reading-note-toolbar{padding-right:25px}
+.exam-shell .qactions .pen-active{background:#e7eeeb;color:#456658;border-radius:9px;box-shadow:none}
+.exam-shell[data-reading=night] .qactions .pen-active{background:#46564e;color:#e0ebe5}
+.exam-shell .exam-scroll,.exam-shell .split-scroll{overflow-anchor:none;scroll-behavior:auto}
+@media(max-width:600px){.exam-shell .qactions{margin-right:14px}.exam-shell .reading-note-toolbar{padding-right:12px}.exam-shell .option-button .option-letter{width:34px;height:34px;min-width:34px;flex-basis:34px}.exam-shell .option-row .option-button{gap:12px}}
+.reading-control-placeholder{display:inline-block;pointer-events:none}
+.export-panel .export-copy{display:block;width:100%;min-height:44px;background:#465f50;border:0;border-radius:10px;color:white}.export-copy-hint{font-size:11px;line-height:1.7;color:#919b95;margin:9px 0 20px}.export-format-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.export-format-buttons .button{min-width:0;padding:10px 5px;font-size:11px;white-space:normal}.export-copy-fallback{display:block;width:100%;min-height:220px;margin-top:16px;padding:12px;font-size:12px;line-height:1.7;border:1px solid #dde3de;border-radius:10px}
+
+/* R8.2: same DOM position in both modes; header controls receive pen/touch above canvas. */
+.exam-shell .qactions{position:relative;z-index:10;pointer-events:auto;touch-action:manipulation}
+
+/* Compact review actions. The drawing surfaces and existing header icons stay put. */
+.review-feedback{padding:4px;color:var(--text,#30363d)}.review-feedback label{display:block;font-size:14px}.review-feedback textarea{display:block;box-sizing:border-box;width:100%;min-height:130px;margin-top:10px;padding:12px;border:1px solid #d9dde1;border-radius:10px;font:16px/1.6 system-ui;background:var(--surface,#fff);color:inherit;resize:vertical;user-select:text;-webkit-user-select:text;touch-action:auto}.review-feedback p{font-size:12px;line-height:1.6}.review-feedback .button{min-height:44px}
+.exam-shell .qactions .review-chip{font:13px/1.2 system-ui;white-space:nowrap;min-width:54px;height:32px;padding:6px 10px;border:1px solid var(--reading-line,#dce0e5);border-radius:9px;background:var(--reading-paper,#fff);color:var(--reading-text,#30363d);align-self:center;cursor:pointer;touch-action:manipulation}.exam-shell .qactions .review-cause-chip{margin-right:5px}.exam-shell .qactions .review-cause-chip.has-cause{border-color:#a6bba8;background:#f1f6f0}.exam-shell .qactions .review-learning-chip{margin-right:8px;background:#fff0b9;border-color:#e6ce79;color:#806014}.exam-shell .qactions .review-learning-chip.is-excluded{background:#f1f2f4;border-color:#d8dce2;color:#737a84}.exam-shell .qactions .review-chip:focus-visible{outline:2px solid #b58f27;outline-offset:3px}
+.review-provenance{padding:18px 24px;border-top:1px solid var(--reading-line,#e1e5eb);font-size:12px;overflow-wrap:anywhere}.review-provenance h3{font-size:14px}
+.review-finish-bar{flex:none;padding:8px 16px;background:var(--reading-paper,#fff);border-top:1px solid var(--reading-line,#e1e5eb);z-index:13;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.review-finish-bar .button{min-height:44px}.review-finish-status{font-size:12px;line-height:1.6;margin:0}.review-finish-report{padding:18px}.review-finish-report p{margin-top:10px}
+/* Keep the lower legacy star in the review drawer; suppress its upper duplicate. */
+.review-shell .answer-drawer .answer-cell .star-mark{display:none}
+/* The answer-card dock occupies the left 110px of the review footer. */
+.review-shell .review-finish-bar{padding-left:120px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+@media(max-width:540px){.exam-shell.review-workspace .qhead{padding-left:12px;padding-right:8px;gap:4px;flex-wrap:wrap}.exam-shell .qactions .review-chip{font-size:12px;padding:6px 7px;min-width:44px}.exam-shell .qactions .review-cause-chip{margin-right:2px}.exam-shell .qactions .review-learning-chip{margin-right:2px}}
+
+.practice-history-badge{display:inline-block;padding:3px 9px;border-radius:7px;background:#f2f3f4;color:#7d858c;font-size:12px;line-height:1.5;font-weight:400;white-space:nowrap}.practice-history-badge.is-done{background:#fff1bf;color:#806319}.paper-history-status{margin:10px 0}.release-module-row [data-module-history]{margin-left:auto;padding-left:12px;flex-shrink:0}.release-module-row [data-module-history][hidden]{display:none}
+@media(max-width:540px){.release-module-row{flex-wrap:wrap}.release-module-row [data-module-history]{padding-left:0}}
+
+/* R8.8.2: neutral grey writing surfaces; the transparent ink canvas is untouched. */
+.exam-shell.reading-ink:not([data-reading=night]){
+ --reading-paper:#e8e8e8;
+ --reading-line:#d1d1d1;
+ --reading-text:#303438;
+ background:#dedfe1;
+}
+.exam-shell.reading-ink:not([data-reading=night]) .reading-note-toolbar{
+ background:#dedfe0;
+ border-color:#c7c9cb;
+ color:#50565d;
+}
+.exam-shell.reading-ink:not([data-reading=night]) .reading-note-toolbar .icon-button.active{
+ background:#cdd0d3;
+ color:#343a40;
+}

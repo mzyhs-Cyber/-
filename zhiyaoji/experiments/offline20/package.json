@@ -1,0 +1,1 @@
+{"name":"zhiyaoji-offline20-experiment","version":"0.1.0","private":true,"type":"module","scripts":{"test":"node --test test/*.test.mjs","experiment":"node experiment.mjs"}}

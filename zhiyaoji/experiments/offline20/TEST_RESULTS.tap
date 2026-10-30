@@ -1,0 +1,202 @@
+TAP version 13
+# Subtest: fixed 8/7/5 and one intact five-question material
+ok 1 - fixed 8/7/5 and one intact five-question material
+  ---
+  duration_ms: 20.955374
+  type: 'test'
+  ...
+# Subtest: immutable input and reproducible seed
+ok 2 - immutable input and reproducible seed
+  ---
+  duration_ms: 26.327429
+  type: 'test'
+  ...
+# Subtest: exclude from learning contributes zero but remains seen
+ok 3 - exclude from learning contributes zero but remains seen
+  ---
+  duration_ms: 13.526017
+  type: 'test'
+  ...
+# Subtest: unconfirmed observations are seen without diagnosing a weakness
+ok 4 - unconfirmed observations are seen without diagnosing a weakness
+  ---
+  duration_ms: 5.136903
+  type: 'test'
+  ...
+# Subtest: unfinished exposure is not recycled as new
+ok 5 - unfinished exposure is not recycled as new
+  ---
+  duration_ms: 5.972154
+  type: 'test'
+  ...
+# Subtest: training wrong receives 3x weight; later distinct training correct lowers priority
+ok 6 - training wrong receives 3x weight; later distinct training correct lowers priority
+  ---
+  duration_ms: 0.732913
+  type: 'test'
+  ...
+# Subtest: latest review revision retracts previous inclusion, even if input order reverses
+ok 7 - latest review revision retracts previous inclusion, even if input order reverses
+  ---
+  duration_ms: 0.325186
+  type: 'test'
+  ...
+# Subtest: repeat original question does not manufacture independent evidence
+ok 8 - repeat original question does not manufacture independent evidence
+  ---
+  duration_ms: 0.220272
+  type: 'test'
+  ...
+# Subtest: guess or prompted correct cannot dissolve error evidence
+ok 9 - guess or prompted correct cannot dissolve error evidence
+  ---
+  duration_ms: 0.30353
+  type: 'test'
+  ...
+# Subtest: unanswered not silently labelled wrong
+ok 10 - unanswered not silently labelled wrong
+  ---
+  duration_ms: 0.310368
+  type: 'test'
+  ...
+# Subtest: invalid future timestamp excluded
+ok 11 - invalid future timestamp excluded
+  ---
+  duration_ms: 0.225331
+  type: 'test'
+  ...
+# Subtest: cross-paper aliases are excluded transitively
+ok 12 - cross-paper aliases are excluded transitively
+  ---
+  duration_ms: 5.446874
+  type: 'test'
+  ...
+# Subtest: duplicate aliases cannot enter one plan twice
+ok 13 - duplicate aliases cannot enter one plan twice
+  ---
+  duration_ms: 4.842525
+  type: 'test'
+  ...
+# Subtest: all seen cannot be silently padded with old questions
+ok 14 - all seen cannot be silently padded with old questions
+  ---
+  duration_ms: 0.449675
+  type: 'test'
+  ...
+# Subtest: incomplete material is rejected rather than split
+ok 15 - incomplete material is rejected rather than split
+  ---
+  duration_ms: 4.906324
+  type: 'test'
+  ...
+# Subtest: overlarge 6-question material cannot be squeezed into five slots
+ok 16 - overlarge 6-question material cannot be squeezed into five slots
+  ---
+  duration_ms: 5.395108
+  type: 'test'
+  ...
+# Subtest: seen question rejects its whole material group
+ok 17 - seen question rejects its whole material group
+  ---
+  duration_ms: 6.788132
+  type: 'test'
+  ...
+# Subtest: strict gate distinguishes complete fields from verified answers
+ok 18 - strict gate distinguishes complete fields from verified answers
+  ---
+  duration_ms: 6.46842
+  type: 'test'
+  ...
+# Subtest: strict offline resources gate never called ready when unknown
+ok 19 - strict offline resources gate never called ready when unknown
+  ---
+  duration_ms: 0.406895
+  type: 'test'
+  ...
+# Subtest: disputed, suspect duplicate and unknown-topic candidates are rejected
+ok 20 - disputed, suspect duplicate and unknown-topic candidates are rejected
+  ---
+  duration_ms: 0.985798
+  type: 'test'
+  ...
+# Subtest: difficulty bound prefers comparable items and excludes far difficulty
+ok 21 - difficulty bound prefers comparable items and excludes far difficulty
+  ---
+  duration_ms: 12.150576
+  type: 'test'
+  ...
+# Subtest: recent Jiangsu reserve remains protected
+ok 22 - recent Jiangsu reserve remains protected
+  ---
+  duration_ms: 9.98114
+  type: 'test'
+  ...
+# Subtest: same-type slot cap prevents all eight verbal items coming from one type
+ok 23 - same-type slot cap prevents all eight verbal items coming from one type
+  ---
+  duration_ms: 12.039665
+  type: 'test'
+  ...
+# Subtest: cancellation and yielding work on a large index
+ok 24 - cancellation and yielding work on a large index
+  ---
+  duration_ms: 1.193369
+  type: 'test'
+  ...
+# Subtest: Beijing midnight boundary
+ok 25 - Beijing midnight boundary
+  ---
+  duration_ms: 0.095916
+  type: 'test'
+  ...
+# Subtest: concurrent requests commit one plan and freeze after feedback changes
+ok 26 - concurrent requests commit one plan and freeze after feedback changes
+  ---
+  duration_ms: 15.089486
+  type: 'test'
+  ...
+# Subtest: unfinished plan survives the next day, with owner isolation
+ok 27 - unfinished plan survives the next day, with owner isolation
+  ---
+  duration_ms: 9.722018
+  type: 'test'
+  ...
+# Subtest: disk failure is surfaced and never returned as committed
+ok 28 - disk failure is surfaced and never returned as committed
+  ---
+  duration_ms: 11.217151
+  type: 'test'
+  ...
+# Subtest: returned plan cannot mutate stored plan
+ok 29 - returned plan cannot mutate stored plan
+  ---
+  duration_ms: 26.872066
+  type: 'test'
+  ...
+# Subtest: weakness selection leaves maintenance slots when feasible
+ok 30 - weakness selection leaves maintenance slots when feasible
+  ---
+  duration_ms: 33.185653
+  type: 'test'
+  ...
+# Subtest: full material may override focus split with a visible exception
+ok 31 - full material may override focus split with a visible exception
+  ---
+  duration_ms: 15.237752
+  type: 'test'
+  ...
+# Subtest: recent window expands only for subjects with insufficient evidence
+ok 32 - recent window expands only for subjects with insufficient evidence
+  ---
+  duration_ms: 0.211717
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 633.006279

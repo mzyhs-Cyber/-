@@ -1,8 +1,8 @@
 /* Public image bytes have a separate bounded cache. Account APIs never enter caches. */
 'use strict';
-const CACHE='jiangsu-study-shell-v2-9-18-r8-8-53';
+const CACHE='jiangsu-study-shell-v2-9-18-r8-8-54';
 const MEDIA_CACHE='zhiyaoji-public-images-v1';
-const READING_FILES=['./reading-continuity.js','./sync-cooperate.js'];
+const READING_FILES=['./reading-continuity.js','./sync-cooperate.js','./ink-retention.js'];
 async function imageResponse(req){
  const cache=await caches.open(MEDIA_CACHE),cached=await cache.match(req);if(cached)return cached;
  const response=await fetch(req);if(response.ok||response.type==='opaque'){

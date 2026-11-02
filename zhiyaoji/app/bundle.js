@@ -3,7 +3,7 @@ window.Study = window.Study || {};
 (function(S) {
 'use strict';
 S.VERSION='2.9.18';
-S.BUILD='20261027-r8-8-20';
+S.BUILD='2.9.18-r8-8-54';
 S.DB_NAME='mzy-study-clean-v2';
 S.SUBJECTS=['政治理论','常识判断','言语理解','数量关系','判断推理','资料分析'];
 S.LETTERS=['A','B','C','D'];
@@ -383,6 +383,7 @@ class ExamController{
  dispose(){
   if(this.disposed)return;if(!this.s._review){this.pulse();S.pauseSession(this.s,'exit');}S.focusTracker?.end(this.s);this.disposed=true;this.abort.abort();clearInterval(this.timer);clearTimeout(this.advanceTimer);cancelAnimationFrame(this.scrollFrame);cancelAnimationFrame(this.imageLayoutFrame);
   this.clearLayers();this.root.innerHTML='';this.root.hidden=true;if(S.exam===this)S.exam=null;
+  if(!this.s._review)S.NoteVault?.releaseSession(this.s).catch(()=>{});
  }
 }
 S.BaseExamController=ExamController;
@@ -3238,7 +3239,7 @@ class WorkspaceView{
  fitBuffer(c){const w=Math.max(1,Math.round(this.size.width*this.dpr)),h=Math.max(1,Math.round(this.size.height*this.dpr));if(c.width!==w)c.width=w;if(c.height!==h)c.height=h;}
  resize(){S.lockInkSurface?.(this);S.restoreReadingAnchor?.(this);const w=Math.max(1,this.root.clientWidth),h=Math.max(1,this.root.clientHeight);this.size={width:w,height:h};this.regionCache=null;this.dpr=Math.min(2,(globalThis.devicePixelRatio||1)*(globalThis.visualViewport?.scale||1),Math.sqrt(3400000/(Math.max(w,this.exam.root.clientWidth||w)*Math.max(h,(this.exam.root.clientHeight||h)-64))));S.captureReadingAnchor?.(this);
   if(!this.visible){this.releaseBuffers();return;}this.fitBuffer(this.canvas);this.fitBuffer(this.base);if(this.exam.originalNotes)this.fitBuffer(this.original);this.invalidate();this.refreshLayout();}
- refreshLayout(){if(!this.alive)return;if(this.pointer!==null){this.layoutPending=true;return;}this.regionCache=null;for(const r of this.geometry().regions){const current=this.store.note(r.key),original=this.exam.originalNotes?.[r.key];if(current.strokes.length||original?.strokes?.length)this.prepareLayout(r);}}
+ refreshLayout(){if(!this.alive)return;if(this.pointer!==null){this.layoutPending=true;return;}this.regionCache=null;const geo=this.geometry();for(const r of geo.regions){if(r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;const current=this.store.note(r.key),original=this.exam.originalNotes?.[r.key];if(current.strokes.length||original?.strokes?.length)this.prepareLayout(r,geo);}}
  geometry(){
   const pane=this.root.getBoundingClientRect(),scrollTop=this.scroll.scrollTop;
   if(!this.regionCache){const material=this.scroll.id==='split-material-scroll';let regions=[];
@@ -3252,17 +3253,17 @@ class WorkspaceView{
   return {pane,regions};
  }
  target(key){if(this.activeKey===key&&this.exam.lastInk===this)return;this.activeKey=key;const region=this.geometry().regions.find(r=>r.key===key);if(!region)return;this.exam.lastInk=this;this.parent={dataset:{noteKey:key}};const i=this.exam.s.questions.findIndex(q=>'q:'+q.id===key);if(i>=0)this.exam.toolIndex=i;const caption=S.$('#reading-note-target',this.exam.root);if(caption)caption.textContent=key.startsWith('m:')?'材料草稿':'第 '+(i+1)+' 题草稿';this.exam.updateControls?.();}
- prepareLayout(region){
-  const geo=this.geometry(),sx=this.size.width/geo.pane.width,sy=this.size.height/geo.pane.height,key=region.key,note=this.store.note(key),w=this.size.width,h=region.anchor.height*sy;
+ prepareLayout(region,geo=this.geometry()){
+  const sx=this.size.width/geo.pane.width,sy=this.size.height/geo.pane.height,key=region.key,note=this.store.note(key),w=this.size.width,h=region.anchor.height*sy;
   let f=this.facades?.get(key);if(!f){this.facades=this.facades||new Map();f={alive:true,parent:null,note,layoutEpoch:0};this.facades.set(key,f);}
   const node=region.node;
-  f.onLayoutCaptured=()=>{this.invalidate();this.exam.persistInk();};f.refreshBasis=()=>{const now=this.geometry(),region=now.regions.find(r=>r.key===key);if(region)f.originRect={left:now.pane.left,top:region.anchor.top};};f.domRoot=node;f.originRect={left:geo.pane.left,top:region.anchor.top};f.pixelRatioX=sx;f.pixelRatioY=sy;f.parent={dataset:{noteKey:key},get isConnected(){return node.isConnected;},get textContent(){return node.textContent;},querySelectorAll:s=>node.querySelectorAll(s),getBoundingClientRect:()=>({left:geo.pane.left,top:region.anchor.top,width:w,height:h})};
+  f.onLayoutCaptured=()=>{this.invalidate();this.exam.persistInk();};f.refreshBasis=()=>{f.originRect={left:this.root.getBoundingClientRect().left,top:node.getBoundingClientRect().top};};f.domRoot=node;f.originRect={left:geo.pane.left,top:region.anchor.top};f.pixelRatioX=sx;f.pixelRatioY=sy;f.parent={dataset:{noteKey:key},get isConnected(){return node.isConnected;},get textContent(){return node.textContent;},querySelectorAll:s=>node.querySelectorAll(s),getBoundingClientRect:()=>({left:geo.pane.left,top:region.anchor.top,width:w,height:h})};
   if(f.lastWidth!==w||f.lastHeight!==h){f.layoutReady=false;f.layoutEpoch++;f.lastWidth=w;f.lastHeight=h;}
-  note.lastSize={width:w,height:h};S.queueInkLayout(f);return f;
+  note.lastSize={width:w,height:h};if(!f.layoutReady&&!f.captureJob&&!f.layoutTimer)S.queueInkLayout(f);return f;
  }
  append(key,stroke){
   const geo=this.lastGeometry||this.geometry(),region=geo.regions.find(r=>r.key===key);if(!region)return;
-  const f=this.prepareLayout(region);Object.assign(stroke,{id:S.uid(),gestureId:this.gestureUid,coordinateSpace:'pane-question-v1',renderStyle:'smooth-v2',startedAt:this.strokeStartedAt||Date.now(),endedAt:Date.now(),layoutId:f.layoutReady?f.note.layoutId:null,layoutEpoch:f.layoutEpoch,basisWidth:f.lastWidth,basisHeight:f.lastHeight});
+  const f=this.prepareLayout(region,geo);Object.assign(stroke,{id:S.uid(),gestureId:this.gestureUid,coordinateSpace:'pane-question-v1',renderStyle:'smooth-v2',startedAt:this.strokeStartedAt||Date.now(),endedAt:Date.now(),layoutId:f.layoutReady?f.note.layoutId:null,layoutEpoch:f.layoutEpoch,basisWidth:f.lastWidth,basisHeight:f.lastHeight});
   this.store.append(key,stroke);S.recordInkEvent(f,'stroke',stroke);this.changed();
  }
  changed(){this.exam.persistInk();}
@@ -3288,7 +3289,7 @@ class WorkspaceView{
  }
  paint(){
   if(!this.alive)return;this.frame=0;if(!this.visible){this.exam.showInkLayoutNotice?.(null,this);return;}const geo=this.pointer!==null&&this.router.geometry?this.router.geometry:this.geometry();this.lastGeometry=geo;
-  if(this.dirty){this.clearCanvas(this.base);if(this.exam.s._review)this.clearCanvas(this.original);for(const r of geo.regions){if(r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;for(const st of this.store.rows(r.key))drawCompatible(this.base.getContext('2d'),st,r,geo,this.size,this.store.note(r.key));if(this.exam.s._review)for(const st of (this.exam.originalNotes?.[r.key]?.strokes||[]))drawCompatible(this.original.getContext('2d'),st,r,geo,this.size,this.exam.originalNotes?.[r.key]);}this.dirty=false;this.exam.showInkLayoutNotice?.(geo.unplaced,this);}
+  if(this.dirty){this.clearCanvas(this.base);if(this.exam.s._review)this.clearCanvas(this.original);for(const r of geo.regions){if(r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;if(this.store.rows(r.key).length)this.prepareLayout(r,geo);for(const st of this.store.rows(r.key))drawCompatible(this.base.getContext('2d'),st,r,geo,this.size,this.store.note(r.key));if(this.exam.s._review)for(const st of (this.exam.originalNotes?.[r.key]?.strokes||[]))drawCompatible(this.original.getContext('2d'),st,r,geo,this.size,this.exam.originalNotes?.[r.key]);}this.dirty=false;this.exam.showInkLayoutNotice?.(geo.unplaced,this);}
   const current=this.router.current,r=current&&geo.regions.find(r=>r.key===this.router.region.key),review=!!this.exam.s._review;
   let foreground=this.base;
   if(review&&current?.brush==='erase'){this.fitBuffer(this.live);const live=this.clearCanvas(this.live);live.save();live.setTransform(1,0,0,1,0,0);live.drawImage(this.base,0,0);live.restore();if(r)draw(live,current,r,geo,this.size,false);foreground=this.live;}else if(this.live.width!==1||this.live.height!==1)this.live.width=this.live.height=1;
@@ -3372,7 +3373,7 @@ class ReadingControls{
   if(parent.isConnected)parent.insertBefore(node,placeholder?.parentNode===parent?placeholder:next?.parentNode===parent?next:null);
   placeholder?.remove();
   node.classList.remove('reading-control-overlay');for(const key of ['display','left','top','width','height'])node.style.removeProperty?.(key);
- }this.items=[];this.scope=null;if(hadItems){controlMetrics.restores++;controlMetrics.lastRestoreMs=performance.now()-started;controlMetrics.maxRestoreMs=Math.max(controlMetrics.maxRestoreMs,controlMetrics.lastRestoreMs);}}
+ }this.items=[];this._positionItems=null;this._positionGroups=null;this.scope=null;if(hadItems){controlMetrics.restores++;controlMetrics.lastRestoreMs=performance.now()-started;controlMetrics.maxRestoreMs=Math.max(controlMetrics.maxRestoreMs,controlMetrics.lastRestoreMs);}}
  sync(){const e=this.exam;if(!e.inkOn||e.disposed){this.restore();return;}const scope=e.split?S.$('.split-shell',e.root):S.$('#question-scroll',e.root);
   if(!scope){this.restore();return;}if(this.scope===scope&&this.items.length&&this.items.every(x=>x.anchor.isConnected&&x.host.isConnected)){this.schedule();return;}
   this.restore();this.scope=scope;const started=performance.now(),planned=[],labels=[],observed=new Set();
@@ -3385,7 +3386,7 @@ class ReadingControls{
     const host=scroll.closest('.ink-pane-view')||e.root,box=node.getBoundingClientRect(),inset=anchor.getBoundingClientRect().right-box.right;
     // The CSS hit target is 44px. A zero/stale button rect must not turn an
     // entire row width into an inset and move all four controls off screen.
-    const item={node,parent:node.parentNode,next:node.nextSibling,anchor,scroll,host,index,rightInset:Number.isFinite(inset)&&inset>=0&&inset<=16?inset:8,kind:'exclude',width:20,height:20};
+    const item={node,parent:node.parentNode,next:node.nextSibling,anchor,scroll,host,card,index,rightInset:Number.isFinite(inset)&&inset>=0&&inset<=16?inset:8,kind:'exclude',width:20,height:20};
     planned.push(item);observed.add(host);observed.add(scroll);
    }
   }
@@ -3406,7 +3407,11 @@ class ReadingControls{
  schedule(){if(this.frame||this.exam.disposed)return;this.frame=requestAnimationFrame(()=>{this.frame=0;this.position();});}
  position(){const panes=new Map(),hosts=new Map(),toolbar=S.$('.reading-note-toolbar',this.exam.root),bar=toolbar&&!toolbar.hidden?toolbar.getBoundingClientRect():null;
   const viewport=window.visualViewport,visibleTop=viewport?.offsetTop||0,visibleBottom=visibleTop+(viewport?.height||window.innerHeight||Infinity);
-  const positions=this.items.map(x=>{const a=x.anchor.getBoundingClientRect();if(!panes.has(x.scroll))panes.set(x.scroll,x.scroll.getBoundingClientRect());const p=panes.get(x.scroll),naturalTop=a.top+(a.height-x.height)/2;
+  // All paper controls remain bound; only visible cards need per-option rectangles.
+  if(this._positionItems!==this.items){this._positionItems=this.items;this._positionGroups=new Map();for(const x of this.items){if(!x.card)continue;let g=this._positionGroups.get(x.scroll);if(!g){g=[];this._positionGroups.set(x.scroll,g);}if(g.at(-1)!==x.card)g.push(x.card);}}
+  const visibleCards=new Set();
+  for(const [scroll,cards]of this._positionGroups){const p=scroll.getBoundingClientRect();panes.set(scroll,p);const top=Math.max(p.top,bar?.bottom||0,visibleTop),bottom=Math.min(p.bottom,visibleBottom);let lo=0,hi=cards.length;while(lo<hi){const mid=(lo+hi)>>1;if(cards[mid].getBoundingClientRect().bottom<=top)lo=mid+1;else hi=mid;}for(let i=lo;i<cards.length;i++){const r=cards[i].getBoundingClientRect();if(r.top>=bottom)break;if(r.bottom>top)visibleCards.add(cards[i]);}}
+  const positions=this.items.map(x=>{if(x.card&&!visibleCards.has(x.card))return {x,display:'none',left:x.node.style.left,top:x.node.style.top};const a=x.anchor.getBoundingClientRect();if(!panes.has(x.scroll))panes.set(x.scroll,x.scroll.getBoundingClientRect());const p=panes.get(x.scroll),naturalTop=a.top+(a.height-x.height)/2;
    const floor=Math.max(p.top,bar?.bottom||0,visibleTop)+4,ceiling=Math.min(p.bottom,visibleBottom)-x.height-4;
    // Keep the active question's close switch reachable even when its header
    // touches or scrolls past the pane edge. Exclusion buttons remain clipped.
@@ -4021,7 +4026,7 @@ S.SyncTransport={
  },
  async commit(api,profile,snapshot,head,status,deviceId){
   const work=S.SyncTransport.workMetrics={stage:'waiting',startedAt:Date.now(),objects:0,checkpoints:0,yields:0,waitingForStudy:false,finishedAt:null};
-  async function slot(){work.waitingForStudy=typeof S.syncCanTransfer==='function'&&!S.syncCanTransfer();await S.waitForSyncSlot?.();work.waitingForStudy=false;}
+  async function slot(){work.waitingForStudy=typeof S.syncCanTransfer==='function'&&!S.syncCanTransfer();if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();work.waitingForStudy=false;}
   try{
   await slot();work.stage='encode';
   const graph=await K.encode(snapshot,{checkpoint:async info=>{work.objects=info.objects;work.checkpoints++;await slot();if(S.SyncModel?.yieldMain)await S.SyncModel.yieldMain();else await new Promise(resolve=>setTimeout(resolve,0));work.yields++;}});
@@ -4048,7 +4053,7 @@ S.SyncTransport={
   // snapshot and server's previous root remain available for recovery.
   verifiedUploadGraphs.set(profile,{root:graph.root,hashes:new Set(hashes)});
   delete profile.objectCache;work.stage='complete';return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size,knownRequests,reusedVerifiedObjects}};
-  }catch(e){work.stage='failed';work.error=String(e?.name||'Error');throw e;}
+  }catch(e){work.waitingForStudy=false;work.stage=e?.code==='STUDY_BUSY'?'deferred':'failed';work.error=String(e?.name||'Error');throw e;}
   finally{work.finishedAt=Date.now();}
  }
 };
@@ -4117,16 +4122,17 @@ V.packNote=async n=>{if(!n||V.isRef(n))return n;const token=[n.strokes,n.strokes
 V.loadNote=async n=>{if(!V.isRef(n))return n;const o=JSON.parse(await V.getText(n.hash));if(o.kind!=='ink-note')throw Error('笔记对象类型错误');return expand(o.value);};
 async function notes(ns){const out={};for(const[k,n]of Object.entries(ns||{}))out[k]=await V.packNote(n);return out;}
 V.freezeEvidence=async s=>{if(s.submissionEvidence)return;const frozen=await notes(s.notes);s.submissionEvidence={version:1,capturedAt:Date.now(),origin:s.finished?'legacy-unknown':'submission',notes:frozen,events:JSON.parse(JSON.stringify(s.events||[]))};};
-V.packSession=async s=>{const out={...s,notes:await notes(s.notes)};if(s.reviewNotes)out.reviewNotes=await notes(s.reviewNotes);if(s.submissionEvidence)out.submissionEvidence={...s.submissionEvidence,notes:await notes(s.submissionEvidence.notes)};return out;};
-V.packSnapshot=async s=>{if(!s||!V.enabled())return s;const out={...s,sessions:[]};for(const row of s.sessions||[])out.sessions.push(await V.packSession(row));if(s.conflicts){out.conflicts=[];for(const c of s.conflicts){const x={...c};if(['notes','reviewNotes'].includes(c.path?.[2])&&c.path.length===4)for(const k of ['base','local','remote'])if(x[k])x[k]=await V.packNote(x[k]);if(c.path?.[2]==='submissionEvidence')for(const k of ['base','local','remote'])if(x[k]?.notes)x[k]={...x[k],notes:await notes(x[k].notes)};if(['notes','reviewNotes'].includes(c.path?.[2])&&c.path.length===3)for(const k of ['base','local','remote'])if(x[k])x[k]=await notes(x[k]);if(['notes','reviewNotes'].includes(c.path?.[2])&&c.path.length===4){
+V.packSession=async s=>{s=S.inkRetention?.view(s)||s;const out={...s,notes:await notes(s.notes)};if(s.reviewNotes)out.reviewNotes=await notes(s.reviewNotes);if(s.submissionEvidence)out.submissionEvidence={...s.submissionEvidence,notes:await notes(s.submissionEvidence.notes)};return out;};
+V.packSnapshot=async s=>{if(!s||!V.enabled())return s;s=S.inkRetention?.snapshot(s)||s;const out={...s,sessions:[]};for(const row of s.sessions||[])out.sessions.push(await V.packSession(row));if(s.conflicts){out.conflicts=[];for(const c of s.conflicts){const x={...c};if(['notes','reviewNotes'].includes(c.path?.[2])&&c.path.length===4)for(const k of ['base','local','remote'])if(x[k])x[k]=await V.packNote(x[k]);if(c.path?.[2]==='submissionEvidence')for(const k of ['base','local','remote'])if(x[k]?.notes)x[k]={...x[k],notes:await notes(x[k].notes)};if(['notes','reviewNotes'].includes(c.path?.[2])&&c.path.length===3)for(const k of ['base','local','remote'])if(x[k])x[k]=await notes(x[k]);if(['notes','reviewNotes'].includes(c.path?.[2])&&c.path.length===4){
  if(!c.resolved){const session=out.sessions.find(s=>s.id===c.path[1]),variants=[session?.[c.path[2]]?.[c.path[3]],x.local,x.remote].filter(Boolean),count=n=>n?.count||0,maxClear=Math.max(0,...variants.map(n=>n.clearCount||0)),minClear=Math.min(...variants.map(n=>n.clearCount||0)),cleared=maxClear>minClear?variants.filter(n=>(n.clearCount||0)===maxClear):[],winner=(cleared.length?cleared:variants).sort((a,b)=>cleared.length?((b.at||0)-(a.at||0)||String(a.hash).localeCompare(String(b.hash))):count(b)-count(a)||(b.at||0)-(a.at||0)||String(a.hash).localeCompare(String(b.hash)))[0];if(session&&winner){session[c.path[2]]={...session[c.path[2]],[c.path[3]]:winner};x.winnerHash=winner.hash;x.resolved=true;x.resolution=cleared.length?'保留明确清除':'保留有效笔画最多版本';}}
  if(x.resolved)for(const k of ['base','local','remote'])delete x[k];
 }out.conflicts.push(x);}}return out;};
 // Content hashes may share immutable storage, never mutable note ownership.
 // Empty notes commonly have identical hashes across questions and materials.
-V.hydrateSession=async s=>{
+V.hydrateSession=async (s,{fields=['notes','reviewNotes','submissionEvidence']}={})=>{
+ S.inkRetention?.strip(s);
  const loaded=new Map(),remaining=new Map(),seen=new WeakSet();
- const maps=[s.notes,s.reviewNotes,s.submissionEvidence?.notes];
+ const maps=fields.map(k=>k==='submissionEvidence'?s.submissionEvidence?.notes:s[k]);
  const detached=n=>typeof globalThis.structuredClone==='function'?globalThis.structuredClone(n):JSON.parse(JSON.stringify(n));
  for(const ns of maps)for(const n of Object.values(ns||{}))if(V.isRef(n))remaining.set(n.hash,(remaining.get(n.hash)||0)+1);
  async function load(n){
@@ -4168,7 +4174,7 @@ C.deviceId=(()=>{try{const key='zhiyaoji-sync-device';let id=localStorage.getIte
 const encode=new TextEncoder();
 const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',encode.encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 async function api(path,data,{timeoutMs=25000}={}){
- if(/^\/api\/sync\/v2\/(?:known|put|commit)(?:\?|$)/.test(path))await S.waitForSyncSlot?.();
+ if(/^\/api\/sync\/(?:v2\/)?(?:head|read|chunk|known|put|commit)(?:\?|$)/.test(path))if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
  const endpoint=String(path).split('?')[0],method=data===undefined?'GET':'POST',bodyText=data===undefined?undefined:JSON.stringify(data);
  const canRetry=['/api/account/health','/api/account/me','/api/sync/head','/api/sync/chunk','/api/sync/v2/head','/api/sync/v2/read','/api/sync/v2/known','/api/sync/v2/put'].includes(endpoint);
  for(let attempt=1;attempt<=(canRetry?2:1);attempt++){
@@ -4193,7 +4199,7 @@ async function api(path,data,{timeoutMs=25000}={}){
 if(S.NoteVault)S.NoteVault.remoteGet=async hash=>{const first=await api('/api/sync/v2/read',{items:[{hash,index:0}]}),parts=[first.items[0].data],total=first.items[0].total;for(let i=1;i<total;i++){const r=await api('/api/sync/v2/read',{items:[{hash,index:i}]});parts.push(r.items[0].data);}return parts.join('');};
 C.presentation=function(){const user=typeof C.user?.id==='string'&&C.user.id.trim()?C.user:null;if(!user)return {user:null,name:'登录同步',avatar:'账',label:'本机模式',detail:'尚未登录，记录保存在本机'};const name=user.username||'学习账号',label=!C.verified?'待联网验证':/未完成|失败|暂不可用|暂停|冲突|过期|额度|超时/.test(C.status)?'同步待处理':!C.profileReady?'接续记录中':/^已同步/.test(C.status)?'已同步':/待|正在|同步中|上传|下载/.test(C.status)?'待同步':'已连接';return {user,name,avatar:name.slice(0,1),label,detail:!C.verified?'账号待联网验证，记录已保存在本机':C.status};};
 function status(text){if(C.status===text)return;C.status=text;const p=C.presentation();S.$$('[data-sync-status]').forEach(n=>n.textContent=p.detail);S.$$('[data-account-status]').forEach(n=>n.textContent=p.label);}
-function busyExam(){return !!S.deletingRecords|| (!!S.exam&&!S.exam.s.finished)||!!S.review;}
+function busyExam(){return !!S.deletingRecords||!!S.openingPractice||!!S.preparingInk|| (!!S.exam&&!S.exam.disposed&&!S.exam.s.finished)||!!S.review;}
 const profileFaults=new Map();
 // A readable profile can still fail to commit on Safari. Keep that failure
 // separate from read failures so a manual retry cannot re-merge the whole
@@ -4244,7 +4250,8 @@ async function putProfile(id,value){
 }
 function newProfile(){return {base:M.empty(),baseHash:null,rev:0,local:M.empty(),pending:null,shadow:null,lastSyncAt:null};}
 async function captureCurrent(){
- for(let retry=0;retry<3;retry++){const revision=S.learningRevision,state=S.state,packed=S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(state)):null,value=await M.captureAsync(packed?{...state,sessions:packed.sessions,meta:{...state.meta,syncConflicts:packed.conflicts}}:state);if(state===S.state&&revision===S.learningRevision)return value;await M.yieldMain();}
+ if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
+ for(let retry=0;retry<3;retry++){if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();const revision=S.learningRevision,state=S.state,packed=S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(state)):null,value=await M.captureAsync(packed?{...state,sessions:packed.sessions,meta:{...state.meta,syncConflicts:packed.conflicts}}:state);if(state===S.state&&revision===S.learningRevision)return value;await M.yieldMain();}
  throw Error('本机正在持续更新，已保留本机记录，稍后再同步');
 }
 async function effective(){const current=await captureCurrent();return profile?.pending?await M.mergeAsync(profile.shadow||profile.base,current,profile.pending):current;}
@@ -4318,7 +4325,7 @@ async function adopt(user){
  await rememberIdentity(user);
  if(previous!==user.id)await putProfile(user.id,profile);
  C.profileReady=true;C.recoveredOwner=user.id;return true;
- }catch(e){C.profileReady=false;if(previous!==user.id)throw e;C.lastAdoptionError={name:e.name,stage:e.storageStage||e.syncPhase||'adopt'};status('账号已登录；记录接续未完成，同步暂停，可继续本机练习');return false;}
+ }catch(e){C.profileReady=false;if(e?.code==='STUDY_BUSY'){C.pendingInitialization=true;status('做题期间暂缓账号接续，本机记录正常保存');return false;}if(previous!==user.id)throw e;C.lastAdoptionError={name:e.name,stage:e.storageStage||e.syncPhase||'adopt'};status('账号已登录；记录接续未完成，同步暂停，可继续本机练习');return false;}
 }
 async function rememberIdentity(user){
  const cached=S.state.meta.syncCachedUser,changed=cached?.id!==user.id||cached?.username!==user.username||S.state.meta.syncLoggedOut;
@@ -4346,11 +4353,13 @@ async function run({pullOnly=false}={}){
  if(!C.user)return;if(!C.verified){status('账号待联网验证，本机记录已保留');return;}const id=C.user.id;
  if(!C.profileReady){status('账号已登录；本地副本待核验，同步暂停，可继续本机练习');return;}
  if(S.state.meta.syncOwnerId!==id){status('本机记录所属账号变化，已暂停上传；请重新登录核对');return;}
+ if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();if(C.user?.id!==id)return;
  if(navigator.onLine===false){await stash();status('当前离线：已保存在本机，联网后同步');return;}
  if(S.NoteVault?.enabled()){const storage=await api('/api/account/health');if(storage.noteStorage!=='r2')throw Error('请在当前Pages项目绑定R2桶，变量名为STUDY_NOTES，并重新部署；本机记录未删除');}
  const identity=await api('/api/account/me');if(identity.user?.id!==id){C.verified=false;throw Error('登录账号已改变，请重新连接后再同步');}
  for(let retry=0;retry<4;retry++){
-  const {head,snapshot:remote}=await phase('sync-download',()=>S.SyncTransport.remote(api,profile,readRemote,status));if(C.user?.id!==id)return;
+  if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();if(C.user?.id!==id)return;
+  const {head,snapshot:remote}=await phase('sync-download',()=>S.SyncTransport.remote(api,profile,readRemote,status));if(C.user?.id!==id)return;if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
   if(![...S.state.meta.syncConflicts||[],...profile.base?.conflicts||[]].some(c=>!c.resolved)&&!profile.pending&&remote===profile.base&&M.same((S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(S.state)):M.view(S.state)),profile.base)){C.performance.noChangeSyncs=(C.performance.noChangeSyncs||0)+1;status(pullOnly?'账号已连接，记录无变化':'已同步，记录无变化');return true;}
   const localAtStart=await phase('sync-capture',()=>captureCurrent()),local=profile?.pending?await M.mergeAsync(profile.shadow||profile.base,localAtStart,profile.pending):localAtStart;await stash(local);
   const merged=await phase('sync-merge',()=>M.mergeAsync(profile.base,local,remote));let saved;
@@ -4391,6 +4400,7 @@ C.sync=async function(options={}){
  const j=scheduleState(),generation=j.generation;C.cycleGeneration=generation;C.cyclePullOnly=!!options.pullOnly;
  if(j.blockedUntil>Date.now()){status('今日云端写入额度已用完，本机待上传记录已保留');return;}
  cycle=run(options).then(ok=>{if(ok&&!options.pullOnly)clearScheduleSuccess(j,generation);return ok;}).catch(e=>{
+  if(e?.code==='STUDY_BUSY'){j.requested=true;j.retryAt=0;saveSchedule(j);status('做题期间暂缓大批同步，本机记录正常保存');return false;}
   if(e.status===401){C.user=null;profile=null;C.verified=false;C.profileReady=false;S.renderHeader(S.route);}
   if(!options.pullOnly)j.requested=true;
   if(/额度|daily.{0,40}(?:write|row)|行写入.*(?:限制|超)/i.test(e.message))j.blockedUntil=(Math.floor(Date.now()/86400000)+1)*86400000;
@@ -4445,7 +4455,7 @@ async function restoreLocal(){
  if(profileWriteFaults.has(owner)){status('账号副本写入失败，同步已暂停；本机记录仍可使用');return;}
  try{profile=(await phase('profile-read',()=>getProfile(owner)))||newProfile();if(!profile.pending&&!profile.shadow&&M.same(M.view(S.state),profile.local)){C.recoveredOwner=owner;C.profileReady=true;status('本机记录已就绪，等待联网同步');return;}const current=await phase('restore-capture',()=>captureCurrent());const recovery=await phase('restore-merge',()=>M.mergeAsync(profile.base||M.empty(),profile.local||M.empty(),current));const restored=profile.pending?await phase('restore-pending-merge',()=>M.mergeAsync(profile.shadow||profile.base,recovery,profile.pending)):recovery;
  const changed=!M.same(profile.local,restored),pending=!!(profile.pending||profile.shadow);if(changed){await phase('recovery-copy',()=>putProfile(owner,{...profile,local:restored}));profile.local=restored;}await apply(restored,owner);if(pending){await phase('recovery-finish',()=>putProfile(owner,{...profile,local:restored,pending:null,shadow:null}));}profile.pending=null;profile.shadow=null;C.recoveredOwner=owner;C.profileReady=true;
- }catch(e){C.lastFailureStage=C.lastFailureStage||'restore';status('本机记录已就绪，账号副本暂不可用');return;}
+ }catch(e){if(e?.code==='STUDY_BUSY'){C.pendingInitialization=true;status('做题期间暂缓账号接续，本机记录正常保存');return;}C.lastFailureStage=C.lastFailureStage||'restore';status('本机记录已就绪，账号副本暂不可用');return;}
  status('本机记录已就绪，等待联网同步');
 }
 C.init=async function(){
@@ -4773,7 +4783,7 @@ S.bindHomeExperience=function(){
  const birthday=H.birthday(),key='birthday-offered-2026-12-01';if(birthday.morning&&!get(key,'')&&!S.exam){put(key,'1');S.openBirthday();}
 };
 // One lifecycle observer. No page re-render while answering; nothing changes timed exam deadlines.
-const lifecycle=setInterval(()=>{if(S.route!=='home'||document.hidden)return;const key=H.quoteSlot(),p=H.period(),oldBirthday=!!S.$('#birthday-entry');if(key!==quoteKey||p!==heroPeriod||oldBirthday!==H.birthday().available){closeBirthday();S.renderHome();}},30000);lifecycle?.unref?.();
+const lifecycle=setInterval(()=>{if(S.route!=='home'||document.hidden||S.exam||S.review||S.openingPractice)return;const key=H.quoteSlot(),p=H.period(),oldBirthday=!!S.$('#birthday-entry');if(key!==quoteKey||p!==heroPeriod||oldBirthday!==H.birthday().available){closeBirthday();S.renderHome();}},30000);lifecycle?.unref?.();
 })(window.Study);
 
 /* Versioned evidence: immutable submission notes + editable review notes. */
@@ -4801,7 +4811,7 @@ S.recordInkEvent=function(layer,type,stroke,extra={}){
 };
 S.queueInkLayout=function(layer){
  clearTimeout(layer.layoutTimer);if(!layer.alive)return;
- layer.layoutTimer=setTimeout(()=>{if(!layer.alive)return;if(layer.current||S.activeInkPointer||Date.now()-(S.lastInteractionAt||0)<1100){S.queueInkLayout(layer);return;}S.captureInkLayout(layer);},1200);
+ layer.layoutTimer=setTimeout(()=>{layer.layoutTimer=0;if(!layer.alive)return;if(layer.current||S.activeInkPointer||Date.now()-(S.lastInteractionAt||0)<1100){S.queueInkLayout(layer);return;}S.captureInkLayout(layer);},1200);
 };
 S.captureInkLayout=function(layer){
  if(!document.createTreeWalker||!document.createRange||!globalThis.getComputedStyle)return Promise.resolve(false);layer.refreshBasis?.();
@@ -5383,7 +5393,7 @@ S.boot=async function(){
     }
     S.accountSync?.restoreCachedIdentity?.();S.setBootProgress?.(90);
     const expired=await S.checkExpired();if(!expired)S.go('home');S.ready=true;S.bootTimings.localReadyMs=performance.now()-started;S.setBootProgress?.(100);
-    const bankTask=S.importBundledBank((label,n,total)=>{const box=S.$('#bundled-bank-progress');if(box)box.textContent=label+' '+n+'/'+total;}).then(()=>{S.bankConnectionError='';if(S.route==='home')S.renderHome();}).catch(e=>{console.error(e);S.bankConnectionError=S.isLocalStorageError?.(e)?'本地数据库暂时不可用：'+e.message+'。请保留当前页面并先导出学习备份；这不表示题库网址错误。':'题库接入未完成：'+e.message+'。请到管理题库检查地址后重试。';if(S.route==='home')S.renderHome();S.toast(S.bankConnectionError);});
+    const bankTask=S.importBundledBank((label,n,total)=>{const box=S.$('#bundled-bank-progress');if(box)box.textContent=label+' '+n+'/'+total;}).then(()=>{S.bankConnectionError='';if(S.route==='home'&&!S.exam&&!S.review&&!S.openingPractice)S.renderHome();}).catch(e=>{console.error(e);S.bankConnectionError=S.isLocalStorageError?.(e)?'本地数据库暂时不可用：'+e.message+'。请保留当前页面并先导出学习备份；这不表示题库网址错误。':'题库接入未完成：'+e.message+'。请到管理题库检查地址后重试。';if(S.route==='home')S.renderHome();S.toast(S.bankConnectionError);});
     requestAnimationFrame(()=>{bankTask.then(()=>S.accountSync?.connect?.()).then(()=>{S.bootTimings.networkReadyMs=performance.now()-started;}).catch(()=>{});});
     if(S.storageMode()!=='indexeddb')S.toast('当前环境不是可靠持久存储。请使用正常HTTPS浏览器并在设置中备份。');
   }catch(e){
@@ -5400,9 +5410,9 @@ S.boot=async function(){
 (function(S){'use strict';const V=S.NoteVault;if(!V)return;
 const hasRefs=s=>[s.notes,s.reviewNotes,s.submissionEvidence?.notes].some(ns=>Object.values(ns||{}).some(V.isRef));
 let opening=0;
-function prepare(s,fn){const ticket=++opening,owner=S.state.meta.syncOwnerId;if(!V.enabled()||!hasRefs(s)&&!V.isReleasing(s))return fn();S.toast('正在读取本次笔记');return V.ready(s).then(()=>V.hydrateSession(s)).then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return fn();}).catch(e=>{if(ticket===opening)S.toast('笔记未打开：'+e.message);});}
-const openExam=S.openExam;S.openExam=s=>prepare(s,()=>openExam(s));
-const openReview=S.openReview;S.openReview=(id,...args)=>{const s=S.state.sessions.find(x=>x.id===id);if(!s)return;return prepare(s,()=>openReview(id,...args));};
+function prepare(s,fn,fields){const ticket=++opening,owner=S.state.meta.syncOwnerId;if(S.inkRetentionSaving)return S.inkRetention.ready().then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return prepare(s,fn,fields);});S.inkRetention?.strip(s);if(!V.enabled()||!hasRefs(s)&&!V.isReleasing(s))return fn();S.toast('正在读取本次笔记');S.preparingInk=ticket;return V.ready(s).then(()=>V.hydrateSession(s,{fields})).then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return fn();}).catch(e=>{if(ticket===opening)S.toast('笔记未打开：'+e.message);}).finally(()=>{if(S.preparingInk===ticket)S.preparingInk=0;});}
+const openExam=S.openExam;S.openExam=s=>prepare(s,()=>openExam(s),['notes']);
+const openReview=S.openReview;S.openReview=(id,...args)=>{const s=S.state.sessions.find(x=>x.id===id);if(!s)return;return prepare(s,()=>openReview(id,...args),['reviewNotes',s.submissionEvidence?'submissionEvidence':'notes']);};
 const build=S.buildReviewPackages;S.buildReviewPackages=async(s,options)=>{if(options?.mode!=='images'){await V.ready(s);await V.hydrateSession(s);}return build(s,options);};
 // Persist editable review notes separately from immutable submission evidence.
 const close=S.closeReview;S.closeReview=function(){++opening;const s=S.review?.s;const result=close();if(s)V.releaseSession(s).catch(e=>S.toast('笔记缓存整理未完成：'+e.message));return result;};

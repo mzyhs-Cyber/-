@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r8-51';
+  const VERSION = 'D2-r8-54';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;
@@ -52,7 +52,7 @@
     try{
       truncate();
       localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events,criticalEvents,accountDetails,accountFailures,
-        run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:DIAG.currentRoute,visible:document.visibilityState,ended:false}}));
+        run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:actualRoute(),visible:document.visibilityState,ended:false}}));
       dirty=false;lastFlush=now;
     }catch{
       // Storage may be unavailable in private browsing, over quota or while WebKit is terminating.
@@ -88,7 +88,7 @@
     description:'本地诊断信息。手写延迟为JS事件至画布绘制指令完成的估计，非真实屏幕呈现延迟；异常刷新和CPU/内存原因不可直接推定。',
     applicationBase:S.BUILD||S.VERSION||'unknown',
     metrics:{eventCount:events.length,longTaskSupported:DIAG.longTaskSupported,memorySupported:DIAG.memorySupported,
-      currentRoute:DIAG.currentRoute,viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
+      currentRoute:actualRoute(),viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
     activity:activity(),accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,criticalEvents:criticalEvents.slice(),events:events.slice()});
   S.accountSync.traceDiagnostic=(name,data)=>{accountDetails.push({at:Date.now(),run:ownSession,build:S.BUILD||'unknown',name,...data});if(accountDetails.length>DETAIL_LIMIT)accountDetails.splice(0,accountDetails.length-DETAIL_LIMIT);if(data.ok===false){accountFailures.push(accountDetails.at(-1));if(accountFailures.length>12)accountFailures.shift();}dirty=true;};
   navigator.serviceWorker?.addEventListener?.('message',e=>{if(e.data?.type==='shell-redirect-normalized')add('shell_redirect_normalized');});
@@ -135,7 +135,7 @@
       const observer=new PerformanceObserver(list=>{
         for(const item of list.getEntries()){
           // Reduce write amplification: log >=80ms; the observer callback is otherwise cheap.
-          if(item.duration>=80)add('long_task',{durationMs:number(item.duration),route:DIAG.currentRoute});
+          if(item.duration>=80)add('long_task',{durationMs:number(item.duration),route:actualRoute()});
         }
       });
       observer.observe({entryTypes:['longtask']});
@@ -143,9 +143,11 @@
     }
   }catch{}
 
+  function actualRoute(){return S.exam&&!S.exam.disposed?'practice':S.review?'review':DIAG.currentRoute;}
+  function resources(){const controller=S.exam||S.review?.controller;let buffers=0,bytes=0,facades=0;for(const view of controller?.layers?.values?.()||[]){facades+=view.facades?.size||0;for(const key of ['canvas','base','live','original']){const c=view[key];if(c?.width>1&&c?.height>1){buffers++;bytes+=c.width*c.height*4;}}}return {views:controller?.layers?.size||0,buffers,estimatedCanvasMB:number(bytes/1048576),layoutFacades:facades};}
   function activity(){
     const practice=!!(S.exam&&!S.exam.disposed&&!S.exam.s?.finished),review=!!(S.review&&!S.review.disposed);
-    return {studyMode:practice?'practice':review?'review':'page',writing:!!S.activeInkPointer,
+    return {studyMode:practice?'practice':review?'review':'page',writing:!!S.activeInkPointer,resources:resources(),inkRetention:S.inkRetention?{days:S.inkRetention.days,...S.inkRetention.metrics}:null,
       syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,
       syncWork:S.SyncTransport?.workMetrics?{...S.SyncTransport.workMetrics}:null,
       persistence:S.persistenceMetrics?{hotRequests:Number(S.persistenceMetrics.hotRequests)||0,hotWrites:Number(S.persistenceMetrics.hotWrites)||0,hotFailures:Number(S.persistenceMetrics.hotFailures)||0,lastHotMs:Number(S.persistenceMetrics.lastHotMs)||0}:null,
@@ -154,7 +156,7 @@
   }
   // Periodic snapshot; no full-bank iteration or app-state serialization.
   function snapshot(kind){
-    const point={route:DIAG.currentRoute,visibility:document.visibilityState,...activity()};
+    const point={route:actualRoute(),visibility:document.visibilityState,...activity()};
     if(performance.memory?.usedJSHeapSize){
       point.jsHeapMB=number(performance.memory.usedJSHeapSize/1048576);
       point.jsHeapLimitMB=number(performance.memory.jsHeapSizeLimit/1048576);
@@ -170,7 +172,7 @@
     const now=performance.now();
     const delay=Math.max(0,now-lastHeartbeat-30000);
     lastHeartbeat=now;
-    if(delay>=250)add('timer_delay',{delayMs:number(delay),route:DIAG.currentRoute});
+    if(delay>=250)add('timer_delay',{delayMs:number(delay),route:actualRoute()});
     if(!S.activeInkPointer)snapshot('sample');write();
   },30000);
   setInterval(()=>write(),15000);
@@ -243,10 +245,10 @@
   });
   window.addEventListener('error',event=>{
     // No exception messages or filenames: could contain private content / URL.
-    add('script_error',{errorType:String(event.error?.name||'Error').slice(0,45),route:DIAG.currentRoute});
+    add('script_error',{errorType:String(event.error?.name||'Error').slice(0,45),route:actualRoute()});
   });
   window.addEventListener('unhandledrejection',event=>{
-    add('unhandled_rejection',{errorType:String(event.reason?.name||'PromiseRejection').slice(0,45),route:DIAG.currentRoute});
+    add('unhandled_rejection',{errorType:String(event.reason?.name||'PromiseRejection').slice(0,45),route:actualRoute()});
   });
 
   // ---- D2: bounded, read-only handwriting timing instrumentation. ----
@@ -362,7 +364,7 @@
     if(!visible || lastVisibleState!=='visible' || now-lastVisible<2500){lastVisibleState=document.visibilityState;return;}
     lastVisibleState=document.visibilityState;
     if(lag>=140){
-      add('event_loop_stall',{delayMs:number(lag),route:DIAG.currentRoute,...activity(),writing:activeInk.size>0,storage:S.accountSync?.storageDiagnosticInfo?.()||null},lag>=800);
+      add('event_loop_stall',{delayMs:number(lag),route:actualRoute(),...activity(),writing:activeInk.size>0,storage:S.accountSync?.storageDiagnosticInfo?.()||null},lag>=800);
     }
     writeInkSummary(false);
   },2000);

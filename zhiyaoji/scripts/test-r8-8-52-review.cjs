@@ -19,7 +19,7 @@ function storage(){
 }
 function fixture(disk=storage()){
  const frames=[],events={},shell={hidden:false,inert:false},body={style:{overflow:''},append(n){n.isConnected=true;}};
- const S={state:{meta:{syncOwnerId:'owner'},sessions:[]},SUBJECTS:['言语理解','资料分析'],escape:String,icon:()=>'<svg/>',iconButton:()=>'',toast:()=>{},closeModal(){},touchSession(s){s.updatedAt=(s.updatedAt||0)+1;},saveSoon(){S.saveRequests=(S.saveRequests||0)+1;},saveHot(){S.flushes=(S.flushes||0)+1;return S.NoteVault.packSession(S.state.sessions[0]).then(s=>{S.persisted=structuredClone(s);});},sessionAnswer:(s,q)=>s.answers[q.id],getAttempt:()=>null,isFavorite:q=>!!q.favorite,timeBadge:(s,q)=>q.slow?'slow':'',answerSubject:q=>q.subject,evidenceNotes:s=>s.submissionEvidence?.notes||s.notes||{},ensureEvidence(){},startSession(){},materialIdentity:q=>q.materialKey||'',materialNoteKey:q=>'m:'+q.materialKey};
+ const S={state:{meta:{syncOwnerId:'owner'},sessions:[]},SUBJECTS:['言语理解','资料分析'],escape:String,icon:()=>'<svg/>',iconButton:()=>'',toast:()=>{},closeModal(){},touchSession(s){s.updatedAt=(s.updatedAt||0)+1;},saveSoon(){S.saveRequests=(S.saveRequests||0)+1;},saveHot(){S.flushes=(S.flushes||0)+1;return S.lastSave=S.NoteVault.packSession(S.state.sessions[0]).then(s=>{S.persisted=structuredClone(s);});},sessionAnswer:(s,q)=>s.answers[q.id],getAttempt:()=>null,isFavorite:q=>!!q.favorite,timeBadge:(s,q)=>q.slow?'slow':'',answerSubject:q=>q.subject,evidenceNotes:s=>s.submissionEvidence?.notes||s.notes||{},ensureEvidence(){},startSession(){},materialIdentity:q=>q.materialKey||'',materialNoteKey:q=>'m:'+q.materialKey};
  S.$=(selector,scope)=>selector==='#app-shell'?shell:scope?.nodes?.[selector]||null;S.$$=(selector,scope)=>scope?.cards||[];
  class Base{
   constructor(s,r){this.s=s;this.root=r;this.layers=new Map();this.abort=new AbortController();}
@@ -88,7 +88,7 @@ async function main(){
  await test('500-question lazy load and repeated changes keep original vectors and other surfaces intact',async()=>{
   const f=fixture(),s=f.source(500);const pts=Array.from({length:48},(_,i)=>({x:i/48,y:i/96}));s.notes['q:q492']={strokes:Array.from({length:250},(_,i)=>({id:'p'+i,brush:'pen',points:structuredClone(pts)})),redo:[]};const original=hash(s.notes),c=f.controller(s),book=new f.context.window.BoundNotebook(c);book.rows('q:q492');
   for(let i=0;i<240;i++){book.append('q:q492',{id:'added'+i,brush:i%2?'pen':'erase',points:[{x:.4,y:.5}]});c.persistInk();}check(Object.keys(s.reviewNotes),['q:q492']);check(hash(s.notes),original);check(s.reviewNotes['q:q492'].strokes.length,490);
-  c.flushReviewInk();await new Promise(r=>setTimeout(r,60));assert(f.S.persisted);checks++;const p=structuredClone(f.S.persisted);await f.S.NoteVault.hydrateSession(p);check(p.reviewNotes['q:q492'].strokes.length,490);check(hash(p.notes),original);
+  c.flushReviewInk();await f.S.lastSave;assert(f.S.persisted);checks++;const p=structuredClone(f.S.persisted);await f.S.NoteVault.hydrateSession(p);check(p.reviewNotes['q:q492'].strokes.length,490);check(hash(p.notes),original);
  });
  await test('material initial frame respects a newer navigation target',()=>{
   const f=fixture(),s=f.source(4);for(const q of s.questions)q.materialKey='group';const c=f.controller(s);c.indices=[0,1,2,3];c.s.index=0;
@@ -111,7 +111,7 @@ async function main(){
   book.append('q:q0',{id:'erase',brush:'erase',coordinateSpace:'pane-question-v1',points:[{x:.1,y:.2},{x:.3,y:.4}]});
   const ops=[];function canvas(name){const ctx=new Proxy({set globalCompositeOperation(v){ops.push([name,v]);}},{get(t,k){return k in t?t[k]:(...a)=>{if(k==='drawImage')ops.push([name,'draw',a[0]?.name]);};}});return {name,width:500,height:700,getContext:()=>ctx};}
   const geo={pane:{width:500,height:700,top:0,bottom:700},regions:[{key:'q:q0',anchor:{height:700,top:0},top:0,bottom:700}]};
-  const view={alive:true,visible:true,pointer:null,dirty:true,exam:c,store:book,geometry:()=>geo,size:{width:500,height:700},router:{current:null},canvas:canvas('display'),base:canvas('base'),original:canvas('original'),live:canvas('live'),clearCanvas:can=>can.getContext('2d')};
+  const view={alive:true,visible:true,pointer:null,dirty:true,exam:c,store:book,geometry:()=>geo,size:{width:500,height:700},router:{current:null},prepareLayout(){},canvas:canvas('display'),base:canvas('base'),original:canvas('original'),live:canvas('live'),clearCanvas:can=>can.getContext('2d')};
   const method=section(' paint(){\n  if(!this.alive)return;this.frame=0;if(!this.visible)', '\n down(e){').trim().replace(/^paint\(\)/,'function()');
   const helpers=section('function drawCompatible(', 'function offscreen(');
   const paint=f.run('(function(){'+helpers+'\nreturn ('+method+');})();');paint.call(view);assert(ops.some(x=>x[0]==='base'&&x[1]==='source-over'));assert(ops.some(x=>x[0]==='base'&&x[1]==='destination-out'));assert(!ops.some(x=>x[0]==='original'&&['source-over','destination-out'].includes(x[1])));checks+=3;

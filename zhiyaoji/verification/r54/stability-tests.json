@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "checks": 593,
+  "cases": [
+    "135-question resize baseline reproduces quadratic geometry; changed path only visible surfaces",
+    "500-question resize remains one geometry pass, raw vectors remain identical",
+    "scroll prepares newly visible surface; basis refresh reads local rectangles without full-paper geometry",
+    "repeated layout preparation coalesces pending capture timers",
+    "base control method equivalence across scroll/resize; runtime repair module overrides this method",
+    "answering hydrates one map; frozen evidence and review references stay packed",
+    "three reopens and release preserve vector values and independent evidence",
+    "five days boundary, unfinished and missing dates are protected",
+    "recent review edits and active review/exam are protected",
+    "expiry removes only ink maps, keeps all answers, feedback and submission events",
+    "expired cloud/import ink is not hydrated or republished; conflicts cannot revive it",
+    "idle cleanup persists while study blocks cleanup; failed save restores notes",
+    "starting an exam interrupts encoding and releases the bulk graph; retry resumes without touching answers",
+    "account capture defers before cloning; deferred sync remains requested for the next idle tick",
+    "sync yields during note loading, lease entry, answer/review and hidden page, resumes after exit"
+  ],
+  "measurements": {
+    "layout": {
+      "baseline": {
+        "geometryCalls": 136,
+        "queued": 135
+      },
+      "fixed": {
+        "geometryCalls": 1,
+        "queued": 1
+      }
+    },
+    "controls": {
+      "baselineRows": 540,
+      "fixedRows": 4,
+      "fixedCards": 10,
+      "scope": "Base method only; ink-controls-repair.js overrides it in the real script order. This is not an added runtime speedup."
+    },
+    "hydration": {
+      "surfaces": 135,
+      "strokes": 3510,
+      "pointsPerStroke": 96,
+      "expandedMapsBefore": 3,
+      "expandedMapsAfter": 1
+    }
+  },
+  "limits": "Isolated actual production methods and IndexedDB adapter; preview daemon unavailable, no browser or iPad acceptance."
+}

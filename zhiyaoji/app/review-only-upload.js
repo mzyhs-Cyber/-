@@ -19,7 +19,7 @@
   return q&&!S.reviewDefaultScopeExcluded(q)?included(s,qid):false;
  };
  const select=(value,keys)=>Object.fromEntries(keys.filter(k=>value?.[k]!==undefined).map(k=>[k,value[k]]));
- const feedback=s=>Object.fromEntries(s.questions.map(q=>{const f=S.reviewFeedbackFor(s,q.id);return [q.id,{userCause:String(f.userCause||''),exclusionReason:String(f.exclusionReason||''),excludeFromLearning:f.excludeFromLearning===true,inclusionOverride:f.inclusionOverride!==false,...(Number.isFinite(f.updatedAt)?{updatedAt:f.updatedAt}:{}),...(f.causeOrigin==='user'?{causeOrigin:'user'}:{})}];}));
+ const feedback=s=>Object.fromEntries(s.questions.map(q=>{const f=S.reviewFeedbackFor(s,q.id);return [q.id,{userCause:String(f.userCause||''),exclusionReason:String(f.exclusionReason||''),excludeFromLearning:f.excludeFromLearning===true,inclusionOverride:f.inclusionOverride!==false,...(Number.isFinite(f.updatedAt)?{updatedAt:f.updatedAt}:{}),...(f.causeOrigin==='user'?{causeOrigin:'user'}:{}),...(['certain','uncertain','guess'].includes(f.confidence)?{confidence:f.confidence}:{})}];}));
  S.reviewOnlyRecord=function(s){
   const data=select(s,['id','title','startedAt','finishedAt','finished','mode','elapsed','timeAssessment','typeHistorySnapshot','dailyDate','dailyPackHash','dailyOwner']);
   data.answers=Object.fromEntries(s.questions.map(q=>[q.id,select(S.sessionAnswer(s,q),['selected','excluded','marked','favoriteAtAttempt','seconds'])]));

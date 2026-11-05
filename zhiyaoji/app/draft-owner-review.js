@@ -23,7 +23,7 @@
    if(b.disabled)b.disabled=false;if(b.getAttribute('aria-disabled')!=='false')b.setAttribute('aria-disabled','false');
   }
   const target=S.$('#reading-note-target',this.root);
-  const caption='第 '+(this.noteOwnerIndex+1)+' 题草稿';if(owned&&target&&target.textContent!==caption)target.textContent=caption;
+  const caption=this.lastInk?.activeKey?.startsWith('m:')?'材料共享草稿':'第 '+(this.noteOwnerIndex+1)+' 题草稿';if(owned&&target&&target.textContent!==caption)target.textContent=caption;
   return result;
  };
  const v=S.WorkspaceInkView?.prototype,append=v?.append;
@@ -63,7 +63,7 @@
     if(!restore.expanded&&c.split)c.closeMaterial(false);
     for(const [key,pos] of Object.entries(restore.positions||{}))c.s.positions[key]={...pos};
     const main=S.$('#question-scroll',c.root),left=S.$('#split-material-scroll',c.root),right=S.$('#split-q-scroll',c.root);
-    if(!c.split&&main&&restore.positions?.main)main.scrollTop=Number(restore.positions.main.top)||0;
+    if(!c.split&&main&&restore.positions?.main){if(c.practiceWindow)c.practiceWindow.restore(restore.positions.main.anchor,restore.index);else main.scrollTop=Number(restore.positions.main.top)||0;}
     const group=c.split&&restore.positions?.[c.split.groupIdentity];
     if(group){if(left)left.scrollTop=Number(group.left)||0;if(right)right.scrollTop=Number(group.right)||0;}
     c.updateControls();

@@ -1,6 +1,6 @@
 /* Public image bytes have a separate bounded cache. Account APIs never enter caches. */
 'use strict';
-const CACHE='jiangsu-study-shell-v2-9-18-r8-8-54';
+const CACHE='jiangsu-study-shell-v2-9-18-r8-8-73-gray-1';
 const MEDIA_CACHE='zhiyaoji-public-images-v1';
 const READING_FILES=['./reading-continuity.js','./sync-cooperate.js','./ink-retention.js'];
 async function imageResponse(req){
@@ -9,7 +9,7 @@ async function imageResponse(req){
   try{await cache.put(req,response.clone());const keys=await cache.keys();for(const key of keys.slice(0,Math.max(0,keys.length-80)))await cache.delete(key);}catch{}
  }return response;
 }
-const FILES=['./','./index.html','./styles.css','./home.css','./report.css','./reading.css','./ux-polish.css','./refinement.css','./appearance-a.css','./dialog-choice.css','./ink-controls.css','./source-filters.css','./source-filters.js','./modal-scroll.js','./modal-scroll.css','./reading-continuity.css','./training-memory.js','./training-review.js','./training-controls.css','./timing-repair.js','./export-scopes.js','./draft-owner-review.js','./draft-boundaries.js','./review-only-upload.js','./training-order-ink.js','./ink-controls-repair.js','./review-layout.js','./review-layout.css','./immersive-mode.js','./immersive-mode.css','./answer-journal.js','./answer-journal.css','./answer-rescue.html','./complete-review-export.js','./complete-review-export.css','./ink-answer-card.css','./countdown-policy.js','./daily-pairs.js','./daily-pairs.css','./review-surface.css','./icon-180.png','./icon-192.png','./icon-512.png','./bundle.js','./continuity.js','./performance-diagnostics.js','./storage-check.js','./bank-config.js','./icon.svg','./manifest.webmanifest'];
+const FILES=['./excluded-options.css?v=r73-gray-1','./local-records.js','./practice-window.js','./practice-window.css','./record-boundaries.js','./cloud-records.js','./storage-maintenance.js','./local-review-worker.js','./local-review-background.js','./review-render-work.js','./ink-surface-cache.js','./wrongbook.js','./wrongbook.css','./classification-data.js','./classification-adapter.js','./reading-typography.css','./local-review-engine.js','./local-review.js','./local-review.css','./','./index.html','./styles.css','./home.css','./report.css','./reading.css','./ux-polish.css','./refinement.css','./appearance-a.css','./dialog-choice.css','./ink-controls.css','./source-filters.css','./source-filters.js','./modal-scroll.js','./modal-scroll.css','./reading-continuity.css','./training-memory.js','./training-review.js','./training-controls.css','./timing-repair.js','./export-scopes.js','./draft-owner-review.js','./draft-boundaries.js','./review-only-upload.js','./training-order-ink.js','./ink-controls-repair.js','./review-layout.js','./review-layout.css','./immersive-mode.js','./immersive-mode.css','./answer-journal.js','./answer-journal.css','./answer-rescue.html','./complete-review-export.js','./complete-review-export.css','./ink-answer-card.css','./countdown-policy.js','./daily-pairs.js','./daily-pairs.css','./review-surface.css','./icon-180.png','./icon-192.png','./icon-512.png','./bundle.js','./continuity.js','./performance-diagnostics.js','./storage-check.js','./bank-config.js','./icon.svg','./manifest.webmanifest'];
 const SHELL_PATHS=new Set([...FILES,...READING_FILES].map(f=>new URL(f,self.registration.scope).pathname));
 function cleanShellResponse(response){
  if(!response?.redirected)return response;
@@ -69,3 +69,5 @@ async function studyPublicImage(request,event){
 self.addEventListener('fetch',event=>{const r=event.request;if(r.method==='GET'&&r.destination==='image'&&studyImageAllowed(new URL(r.url)))event.respondWith(studyPublicImage(r,event));});
 
 
+
+self.addEventListener('message',event=>{if(event.data?.type==='storage-maintenance-clients'&&event.ports?.[0])event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>event.ports[0].postMessage({count:cs.filter(c=>new URL(c.url).origin===self.location.origin).length})));});

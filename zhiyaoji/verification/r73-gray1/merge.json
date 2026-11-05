@@ -1,0 +1,33 @@
+{
+  "release": "R8.8.73-gray1",
+  "rulesRead": "RULES-20261102-v20",
+  "repositoryBaseCommit": "fa69938d34fab2e1166f383a565783a22a82c4a4",
+  "sourceArchiveSha256": "5827859a7e6b05a62032d2ed47d2c093b2f655cc79d05e2e1aced39dc29674df",
+  "sourceFiles": 83,
+  "modifiedFromR73": [
+    "index.html",
+    "sw.js"
+  ],
+  "addedAsset": "excluded-options.css",
+  "unchangedSourceFiles": 81,
+  "allR73ApplicationScriptsUnchanged": true,
+  "workerUnchanged": true,
+  "privateBirthdayPreservedInFullPackage": true,
+  "privateBirthdayExcludedFromPublicGit": true,
+  "deploymentPerformed": false,
+  "iPadTested": false,
+  "browserQA": "not run: preview relay unavailable in this conversation",
+  "validation": "complete",
+  "syntaxUnits": 49,
+  "localHtmlAssetReferencesValid": true,
+  "jsonMetadataValid": true,
+  "publicPrivateFileAndCredentialHeuristicPassed": true,
+  "historicalArchiveCheckFailures": [
+    "A01_snapshot_sha256",
+    "A04_entry_docs_links_version"
+  ],
+  "completeArchive": "知遥集_R73_排除变灰合并版_完整部署包.zip",
+  "archiveSha256": "55c7bddf102189e558373a6ac7a9ea9513eee3c919e88f4c3c8d7b03d3392b4e",
+  "archiveBytes": 2136566,
+  "entryCount": 85
+}

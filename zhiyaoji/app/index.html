@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-build="2.9.18-r8-8-73">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>知遥集 · R8.8.53</title>
+<title>知遥集 · R8.8.73 连续刷题性能版</title>
 <link rel="icon" href="icon.svg"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><meta name="apple-mobile-web-app-title" content="知遥集">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="styles.css?v=2.9.18-r8-8-11"><link rel="stylesheet" href="home.css?v=2.9.18-r8-8-11"><link rel="stylesheet" href="report.css?v=2.9.18-r8-8-11">
@@ -33,6 +33,9 @@
 html:has(.exam-shell:not([hidden])),body:has(.exam-shell:not([hidden])){scrollbar-width:none!important}
 html:has(.exam-shell:not([hidden]))::-webkit-scrollbar,body:has(.exam-shell:not([hidden]))::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
 </style>
+<link rel="stylesheet" href="local-review.css?v=r68">
+<link rel="stylesheet" href="reading-typography.css?v=r8-8-57">
+<link rel="stylesheet" href="wrongbook.css?v=r68"><link rel="stylesheet" href="practice-window.css?v=r73"><link rel="stylesheet" href="excluded-options.css?v=r73-gray-1">
 </head>
 <body>
 <div id="app-shell" class="app-shell">
@@ -48,20 +51,23 @@ html:has(.exam-shell:not([hidden]))::-webkit-scrollbar,body:has(.exam-shell:not(
 <script src="source-filters.js?v=2.9.18-r8-8-16"></script>
 <script src="modal-scroll.js?v=r8-8-40"></script>
 <script src="training-memory.js?v=r8-8-18"></script>
-<script src="sync-cooperate.js?v=r8-8-54"></script>
-<script src="bundle.js?v=r8-8-54"></script>
-<script src="ink-retention.js?v=r8-8-54"></script>
+<script src="sync-cooperate.js?v=r72"></script>
+<script src="local-records.js?v=r73"></script>
+<script src="practice-window.js?v=r73"></script>
+<script src="bundle.js?v=r73"></script>
+<script src="ink-surface-cache.js?v=r73"></script>
+<script src="ink-retention.js?v=r72"></script>
 <script src="training-review.js?v=r8-8-22"></script>
-<script src="reading-continuity.js?v=r8-8-19"></script>
+<script src="reading-continuity.js?v=r65"></script>
 <script src="timing-repair.js?v=r8-8-21"></script>
 <script src="export-scopes.js?v=r8-8-22"></script>
-<script src="draft-owner-review.js?v=r8-8-51"></script>
+<script src="draft-owner-review.js?v=r73"></script>
 <script src="draft-boundaries.js?v=r8-8-24"></script>
 <script>
 if(window.Study)window.Study.completeReview=async()=>{window.Study.toast('复盘上传组件未加载，请刷新后重试');return false;};
 </script>
-<script src="review-only-upload.js?v=r8-8-40"></script>
-<script src="performance-diagnostics.js?v=r8-8-54"></script>
+<script src="review-only-upload.js?v=r8-8-55"></script>
+<script src="performance-diagnostics.js?v=r73"></script>
 <script src="training-order-ink.js?v=r8-8-52"></script>
 <script src="daily-pairs.js?v=r8-8-33"></script>
 <script src="countdown-policy.js?v=r8-8-48"></script>
@@ -75,13 +81,19 @@ if(window.Study&&globalThis.indexedDB){
  Study.openExam=function(){Study.toast('答题卡保护组件未加载，请刷新后再进入练习');};
 }
 </script>
-<script src="answer-journal.js?v=r8-8-50"></script>
+<script src="answer-journal.js?v=r73"></script>
+<script src="classification-data.js?v=r8-8-61"></script>
+<script src="classification-adapter.js?v=r73"></script>
+<script src="local-review-engine.js?v=r73"></script>
+<script src="local-review-background.js?v=r73"></script>
+<script src="local-review.js?v=r72"></script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).catch(()=>{});
 }
 </script>
-</body>
+<script src="wrongbook.js?v=r63"></script>
+<script src="review-render-work.js?v=r68"></script><script src="storage-maintenance.js?v=r73"></script><script src="record-boundaries.js?v=r73"></script></body>
 </html>
 
 

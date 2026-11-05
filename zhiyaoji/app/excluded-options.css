@@ -1,0 +1,51 @@
+/* R73: exclusion styling follows the existing per-option state. */
+.exam-shell {
+  --excluded-text: #8c929b;
+  --excluded-surface: #f1f2f4;
+  --excluded-letter: #e5e7eb;
+  --excluded-line: #d9dde3;
+}
+
+.exam-shell.reading-ink:not([data-reading="night"]) {
+  --excluded-surface: #e4e7eb;
+  --excluded-letter: #d9dde3;
+  --excluded-line: #cbd1d9;
+}
+
+.exam-shell[data-reading="night"] {
+  --excluded-text: #8993a1;
+  --excluded-surface: #2c333d;
+  --excluded-letter: #363f4b;
+  --excluded-line: #48515e;
+}
+
+/* Keep result colours on graded options; dim ordinary excluded choices only. */
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-button {
+  background: var(--excluded-surface) !important;
+  color: var(--excluded-text) !important;
+}
+
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body,
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body * {
+  color: var(--excluded-text) !important;
+}
+
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-letter {
+  background: var(--excluded-letter) !important;
+  border-color: var(--excluded-line) !important;
+  color: var(--excluded-text) !important;
+}
+
+/* Image choices are dimmed without changing their source or dimensions. */
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body img,
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body svg {
+  opacity: .5;
+}
+
+/* Ink mode moves the restore control outside its original option row. */
+.exam-shell .option-row.excluded .exclude-button,
+.exam-shell .reading-control-overlay.reading-excluded {
+  background: var(--excluded-letter);
+  color: var(--excluded-text);
+  border-radius: 9px;
+}

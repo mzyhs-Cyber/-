@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知遥集 · 阅读排版对照</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7f5;color:#26352c;font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}main{max-width:1120px;margin:auto;padding:32px 20px}h1{font-size:22px;margin:0 0 8px}header>p{color:#66736a;margin:0 0 20px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}button{font:inherit;border:1px solid #d9e1da;background:#fff;color:#425449;padding:8px 14px;border-radius:9px;cursor:pointer;min-height:42px}button[aria-pressed=true]{background:#e4eee6;border-color:#a9bdae}.columns{display:grid;grid-template-columns:1fr 1fr;gap:22px}.panel{background:#fff;border:1px solid #e1e7e2;border-radius:14px;padding:26px}.caption{font-size:13px;color:#718077;margin:0 0 24px}.before{--size:18px;color:#30363d;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}.after{--size:18px;color:#000;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"}.sample{font-size:var(--size);font-weight:400;letter-spacing:normal}.before .sample{line-height:1.95}.after .sample{line-height:1.875}.sample p{font:inherit;margin:0 0 18px}.sample .options{margin-top:22px}.before .options{line-height:1.8}.options p{margin:0 0 12px}.label{color:inherit;margin-right:12px}.hint{font-size:12px;color:#758279;margin-top:24px}body.night{background:#181d25;color:#d8dee7}body.night .panel{background:#282f39;border-color:#414b59}body.night .before,body.night .after{color:#d8dee7}body.night button{background:#282f39;color:#d8dee7;border-color:#414b59}body.night button[aria-pressed=true]{background:#354c68}body.night header>p,body.night .caption,body.night .hint{color:#a7b6ac}@media(max-width:760px){main{padding:22px 14px}.columns{grid-template-columns:1fr}.panel{padding:22px}}
+</style>
+<main>
+<header><h1>阅读排版对照</h1><p>同一段文字，比较字色、字号与行距。可先在常用设备上查看。</p></header>
+<div class="toolbar" aria-label="阅读显示设置">
+<button data-size="small" aria-pressed="false">小</button><button data-size="standard" aria-pressed="true">标准</button><button data-size="large" aria-pressed="false">大</button><button id="theme" aria-pressed="false">夜间</button>
+</div>
+<div class="columns">
+<section class="panel before"><h2 class="caption">原版</h2><div class="sample">
+<p>阅读时，清晰的字形与适当的行距能够帮助我们连续理解信息。遇到较长的材料，可以先辨认时间、单位和比较对象，再回到题目寻找对应内容。</p>
+<p>2025年，某地公共文化服务覆盖居民12.8万人，同比增长6.4%。其中，线上服务占比为35.2%，比上年提高2.1个百分点。</p>
+<div class="options"><p><span class="label">A</span>注意当前时间与比较时间的区别。</p><p><span class="label">B</span>区分增长率、增长量和百分点。</p><p><span class="label">C</span>保持自然阅读，观察长句是否容易跟行。</p><p><span class="label">D</span>比较中文、数字与标点的显示效果。</p></div>
+</div></section>
+<section class="panel after"><h2 class="caption">调整后</h2><div class="sample">
+<p>阅读时，清晰的字形与适当的行距能够帮助我们连续理解信息。遇到较长的材料，可以先辨认时间、单位和比较对象，再回到题目寻找对应内容。</p>
+<p>2025年，某地公共文化服务覆盖居民12.8万人，同比增长6.4%。其中，线上服务占比为35.2%，比上年提高2.1个百分点。</p>
+<div class="options"><p><span class="label">A</span>注意当前时间与比较时间的区别。</p><p><span class="label">B</span>区分增长率、增长量和百分点。</p><p><span class="label">C</span>保持自然阅读，观察长句是否容易跟行。</p><p><span class="label">D</span>比较中文、数字与标点的显示效果。</p></div>
+</div></section>
+</div>
+<p class="hint">这是排版示例，无需作答；本页不读取或保存做题记录。</p>
+</main>
+<script>
+const before=document.querySelector('.before'),after=document.querySelector('.after');
+document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{const value=b.dataset.size;before.style.setProperty('--size',({small:16,standard:18,large:20})[value]+'px');after.style.setProperty('--size',({small:16,standard:18,large:20})[value]+'px');document.querySelectorAll('[data-size]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
+document.querySelector('#theme').onclick=function(){const enabled=document.body.classList.toggle('night');this.setAttribute('aria-pressed',String(enabled));this.textContent=enabled?'日间':'夜间';};
+</script>
+</html>

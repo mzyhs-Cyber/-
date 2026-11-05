@@ -5,6 +5,7 @@
  S.resumeIdlePen=function(exam,event){
   if(event.type!=='pointerdown'||event.pointerType!=='pen'||!exam.inkOn||exam.disposed||exam.editBlocked||exam.submitting||exam.s.finished||exam.s._review||document.hidden)return false;
   if(event.target?.closest?.('button,input,textarea,select'))return false;
+  if(!exam.s.paused&&!S.idleExpired(exam,performance.now()))return false;
   const view=[...exam.layers.values()].find(v=>v.alive&&v.visible&&v.enabled&&contains(v.canvas.getBoundingClientRect(),event.clientX,event.clientY));
   if(!view)return false;
   // Do not route an intended toolbar/control tap into the writing surface.

@@ -1,0 +1,53 @@
+/* R8.8.57: reading typography measured from Fenbi's web solution view.
+ * Scoped to reading surfaces; stored question markup and ink data are untouched.
+ */
+.exam-shell {
+  --reading-font: 18px;
+  --reading-body-leading: 1.875;
+  --reading-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+.exam-shell:not([data-reading="night"]) {
+  --reading-text: #000;
+}
+
+.exam-shell .qstem,
+.exam-shell .option-button,
+.exam-shell .option-button .rich,
+.exam-shell .material-content,
+.exam-shell .split-material-content,
+.exam-shell .peek-body,
+.exam-shell .review-explanation,
+.exam-shell .analysis-block,
+.exam-shell .analysis-block .rich,
+.exam-shell .qanalysis,
+.exam-shell .qanalysis .rich {
+  font-family: var(--reading-font-family);
+  font-size: var(--reading-font);
+  font-weight: 400;
+  line-height: var(--reading-body-leading);
+  letter-spacing: normal;
+  color: var(--reading-text);
+}
+
+.exam-shell .qstem p,
+.exam-shell .option-button p,
+.exam-shell .material-content p,
+.exam-shell .split-material-content p,
+.exam-shell .peek-body p,
+.exam-shell .review-explanation p,
+.exam-shell .analysis-block p,
+.exam-shell .qanalysis p {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+}
+
+.exam-shell .rich table {
+  font-family: var(--reading-font-family);
+  font-size: var(--reading-font);
+  line-height: var(--reading-body-leading);
+}

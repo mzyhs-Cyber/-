@@ -29,3 +29,42 @@
 
 /ink-controls.css
   Cache-Control: no-cache
+
+/storage-maintenance.js
+  Cache-Control: no-cache
+
+/local-records.js
+  Cache-Control: no-cache
+
+/practice-window.js
+  Cache-Control: no-cache
+
+/practice-window.css
+  Cache-Control: no-cache
+
+/record-boundaries.js
+  Cache-Control: no-cache
+
+/local-review-engine.js
+  Cache-Control: no-cache
+
+/local-review-worker.js
+  Cache-Control: no-cache
+
+/performance-diagnostics.js
+  Cache-Control: no-cache
+
+/ink-surface-cache.js
+  Cache-Control: no-cache
+
+/answer-journal.js
+  Cache-Control: no-cache
+
+/local-review-background.js
+  Cache-Control: no-cache
+
+/classification-adapter.js
+  Cache-Control: no-cache
+
+/draft-owner-review.js
+  Cache-Control: no-cache

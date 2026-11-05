@@ -1,9 +1,57 @@
+/* Cloud projection is separate from local snapshots/backups. Never mutate ink maps. */
+(function(root,factory){const policy=factory();if(typeof module==='object'&&module.exports)module.exports=policy;else (root.Study=root.Study||{}).CloudRecords=policy;})(typeof window==='object'?window:globalThis,function(){'use strict';
+ function session(s){const out={...s,notes:{}};if(s.reviewNotes)out.reviewNotes={};if(s.submissionEvidence)out.submissionEvidence={...s.submissionEvidence,notes:{}};return out;}
+ function conflict(c){const p=c.path||[];if(p[0]==='sessions'&&(['notes','reviewNotes'].includes(p[2])||p[2]==='submissionEvidence'&&p[3]==='notes'))return null;
+  if(p[0]!=='sessions')return c;const out={...c};for(const key of ['base','local','remote'])if(c[key]&&typeof c[key]==='object'){if(p.length===2)out[key]=session(c[key]);else if(p[2]==='submissionEvidence')out[key]={...c[key],notes:{}};}return out;
+ }
+ function project(snapshot){if(!snapshot)return snapshot;return {...snapshot,sessions:(snapshot.sessions||[]).map(session),conflicts:(snapshot.conflicts||[]).map(conflict).filter(Boolean)};}
+ function withInk(s,own){if(s===own)return s;const out={...s,notes:own?.notes||{}};if(s.reviewNotes||own?.reviewNotes)out.reviewNotes=own?.reviewNotes||{};if(s.submissionEvidence)out.submissionEvidence={...s.submissionEvidence,notes:own?.submissionEvidence?.notes??own?.notes??{}};return out;}
+ function attach(snapshot,local){const originals=new Map((local?.conflicts||[]).map(c=>[c.id,c])),localConflicts=new Map((local?.conflicts||[]).filter(c=>!conflict(c)).map(c=>[c.id,c]));const conflicts=(snapshot.conflicts||[]).map(c=>{localConflicts.delete(c.id);const own=originals.get(c.id),path=c.path||[];if(!own||path[0]!=='sessions')return c;const out={...c};for(const key of ['base','local','remote'])if(c[key]&&own[key]){if(path.length===2)out[key]=withInk(c[key],own[key]);else if(path[2]==='submissionEvidence')out[key]={...c[key],notes:own[key].notes||{}};}return out;});const source=new Map((local?.sessions||[]).map(s=>[s.id,s]));return {...snapshot,conflicts:[...conflicts,...localConflicts.values()],sessions:(snapshot.sessions||[]).map(s=>withInk(s,source.get(s.id)))};}
+ async function merge(model,base,local,remote){return attach(await model.mergeAsync(project(base),project(local),project(remote)),local);}
+ function assertNoInk(snapshot){const stack=[snapshot],seen=new WeakSet();while(stack.length){const v=stack.pop();if(!v||typeof v!=='object'||seen.has(v))continue;seen.add(v);if(v.$ink===1||Array.isArray(v.strokes)||v.inkHistory&&typeof v.inkHistory==='object')throw Error('记录中仍含未隔离的手写内容，已停止上传；本机数据保留');for(const x of Object.values(v))if(x&&typeof x==='object')stack.push(x);}return snapshot;}
+ return {version:1,project,session,attach,merge,assertNoInk};
+});
+
+/* Original paper counts from the existing classified bank; no question or study data. */
+(function(S){
+'use strict';const evidence={"paper-f1oj7":{"title":"2019年四川省公务员录用考试《行测》题（下半年）（网友回忆版）","retained":100,"expected":100},"paper-f3eg5s":{"title":"2026年浙江省公务员录用考试《行测》题（C类）（网友回忆版）","retained":110,"expected":110},"paper-fag0ml":{"title":"2018年421联考《行测》题（四川卷）（网友回忆版）","retained":100,"expected":100},"paper-fgr4h3":{"title":"2020年广东省公务员录用考试《行测》试题（乡镇卷）（网友回忆版）","retained":100,"expected":100},"paper-fm40h2":{"title":"2020年福建省公务员考试《行测》试题（网友回忆版）","retained":120,"expected":120},"paper-g26uy4":{"title":"广东省2020年度选调生和急需紧缺专业公务员招录笔试 综合行政能力测验（网友回忆版）","retained":100,"expected":100},"paper-gxv6b6":{"title":"2026年天津市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-hctxr6":{"title":"安徽省2019年面向全国重点高校定向招录选调生《行测》题（网友回忆版）","retained":39,"expected":40},"paper-hgfh90":{"title":"2017年422联考《行测》题（天津卷）","retained":120,"expected":120},"paper-i204ag":{"title":"2021年新疆公务员录用考试《行测》试题（网友回忆版）","retained":110,"expected":115},"paper-1aep7rx":{"title":"2025年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-1ahk4mk":{"title":"2022年贵州省公务员录用考试《行测》题（网友回忆版）","retained":115,"expected":115},"paper-1aq6dpi":{"title":"广东省2019年选调优秀大学毕业生笔试 综合行政能力测验题（网友回忆版）","retained":80,"expected":80},"paper-1avgk30":{"title":"2024年福建省公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1axilws":{"title":"2023年山东省公务员录用考试《行测》试题（网友回忆版）","retained":90,"expected":90},"paper-1axknxg":{"title":"2022年浙江省公务员录用考试《行测》题（C类）（网友回忆版）","retained":119,"expected":120},"paper-1b4pcd":{"title":"2023年贵州省公务员录用考试《行测》题（网友回忆版）","retained":109,"expected":110},"paper-1ben82v":{"title":"2021年广东省公务员录用考试《行测》题（乡镇卷）（网友回忆版）","retained":95,"expected":100},"paper-1bj4acs":{"title":"2024年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-wx8p6h":{"title":"2018年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":130,"expected":130},"paper-x0zocf":{"title":"2025年浙江省公务员录用考试《行测》题（C类）（网友回忆版）","retained":115,"expected":115},"paper-xg5nez":{"title":"2017年新疆兵团公务员录用考试《行测》题（网友回忆版）","retained":107,"expected":110},"paper-xl9jrw":{"title":"广东省2020年度选调生和急需紧缺专业公务员招录笔试 思维能力测验（网友回忆版）","retained":99,"expected":100},"paper-xlhjhb":{"title":"2019年重庆市选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-yqwmuu":{"title":"2020年浙江公务员考试《行测》（B类）试题（网友回忆版）","retained":100,"expected":100},"paper-zf5gtv":{"title":"2020年重庆市选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-ziimrk":{"title":"2017年北京市公务员录用考试《行测》题","retained":125,"expected":135},"paper-zmsb7j":{"title":"2017年四川省公务员考试《行测》题（定向乡镇）","retained":100,"expected":100},"paper-1bm7fot":{"title":"2021年广东省公务员录用考试《行测》题（县级卷）（网友回忆版）","retained":99,"expected":100},"paper-1ccfbkn":{"title":"天津市选调2018年应届优秀大学毕业生到基层培养锻炼考试题（网友回忆版）","retained":99,"expected":144},"paper-1ckhc0y":{"title":"2024年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":130,"expected":135},"paper-1ctbgi1":{"title":"广东省2021年度选调生和急需紧缺专业公务员招录笔试 综合行政能力测验（网友回忆版）","retained":100,"expected":100},"paper-1cyhqro":{"title":"2021年北京市公务员录用考试《行测》题（区级及以上卷）（网友回忆版）","retained":125,"expected":135},"paper-1dmwpjj":{"title":"2022年北京市公务员录用考试《行测》题（网友回忆版）","retained":124,"expected":135},"paper-1dp8phj":{"title":"2018年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":135,"expected":135},"paper-1du7nyb":{"title":"2021年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-1iobmr1":{"title":"2024年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":134,"expected":135},"paper-1iu2vhs":{"title":"2020年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-1iyqgiu":{"title":"2021年重庆市选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-1izjmel":{"title":"2025年天津市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1j8s66m":{"title":"2024年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-1jh9yk0":{"title":"2024年重庆市定向选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-1jk9c7j":{"title":"2026年重庆市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1jpr8fs":{"title":"2023年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":120,"expected":120},"paper-131gh1v":{"title":"2022年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":134,"expected":135},"paper-136vb27":{"title":"2023年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":125,"expected":125},"paper-1377peu":{"title":"2023年国家公务员录用考试《行测》题（行政执法卷网友回忆版）","retained":130,"expected":130},"paper-13po7ju":{"title":"2024年浙江省公务员录用考试《行测》题（C类）（网友回忆版）","retained":115,"expected":115},"paper-13zxhuz":{"title":"2025年广东省公务员录用考试《行测》题（网友回忆版）","retained":84,"expected":90},"paper-145sa1m":{"title":"2026年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-149qb9":{"title":"2021年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":130,"expected":130},"paper-14ok7ci":{"title":"2024年四川省公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-m05srb":{"title":"2019年420联考《行测》题（天津卷）（网友回忆版）","retained":120,"expected":120},"paper-mbqybk":{"title":"2017年天津市选调生选拔考试 综合知识试卷（精选）","retained":99,"expected":144},"paper-naq7mm":{"title":"2026年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":120,"expected":120},"paper-nudow6":{"title":"2019年420联考《行测》题（福建卷）（网友回忆版）","retained":120,"expected":120},"paper-o3ap70":{"title":"2026年广东省公务员录用考试《行测》题（网友回忆版）","retained":83,"expected":90},"paper-o8z6cw":{"title":"2017年422联考《行测》题（新疆卷）","retained":120,"expected":120},"paper-okdx3d":{"title":"2020年北京市公务员录用考试《行测》题（乡镇卷）（网友回忆版）","retained":118,"expected":130},"paper-oqi2ks":{"title":"2024年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":125,"expected":125},"paper-p0oyrc":{"title":"2017年国家公务员录用考试《行测》题（地市级）","retained":130,"expected":130},"paper-1ysqqr7":{"title":"2026年国家公务员录用考试《行测》题（行政执法卷网友回忆版）","retained":130,"expected":130},"paper-2z3ltw":{"title":"2018年福建省选调生考试《行政职业能力测验》","retained":110,"expected":110},"paper-3bz73p":{"title":"2021年四川下半年公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-3nnwyn":{"title":"2025年四川省考/选调公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-3o25hf":{"title":"2022年天津市公务员录用考试《行测》试题（网友回忆版）","retained":90,"expected":90},"paper-3pztke":{"title":"2019年重庆市法检系统招录考试《行测》题（网友回忆版）","retained":119,"expected":120},"paper-41eege":{"title":"2023年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":135,"expected":135},"paper-48jf0a":{"title":"2020年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-tt8k2k":{"title":"2017年江苏省公务员录用考试《行测》题(B类)","retained":135,"expected":135},"paper-u1fif":{"title":"2021年贵州省公务员录用考试《行测》题（网友回忆版）","retained":114,"expected":115},"paper-u2wyov":{"title":"2023年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-uky2t4":{"title":"2021年四川省公务员录用考试《行测》题（网友回忆版）","retained":97,"expected":100},"paper-v3x87d":{"title":"2026年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":115,"expected":115},"paper-vlzbx6":{"title":"2021年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":125,"expected":125},"paper-vtb44m":{"title":"2025年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":120,"expected":120},"paper-wvfyif":{"title":"2025年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":134,"expected":135},"paper-i2c3kh":{"title":"2023年浙江省公务员录用考试《行测》题（C类）（网友回忆版）","retained":115,"expected":115},"paper-i3k17p":{"title":"2021年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":130,"expected":130},"paper-ibpqub":{"title":"2020年贵州省公务员录用考试《行测》试题（网友回忆版）","retained":115,"expected":115},"paper-ipjorl":{"title":"2018年广东省公务员录用考试《行测》题（县级、乡镇统一卷）（网友回忆版）","retained":100,"expected":100},"paper-j363yt":{"title":"2025年福建省公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-j7kanm":{"title":"2023年北京市公务员录用考试《行测》题（网友回忆版）","retained":100,"expected":135},"paper-km21cd":{"title":"2018年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":125,"expected":130},"paper-kzs8ny":{"title":"2017年重庆市公务员录用考试《行测》题（下半年）","retained":120,"expected":120},"paper-4ne0fh":{"title":"2020年山东省公务员录用考试《行测》试题（网友回忆版）","retained":90,"expected":90},"paper-4p9n15":{"title":"2020年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":135,"expected":135},"paper-4stobm":{"title":"2018年421联考《行测》题（福建卷）（网友回忆版）","retained":120,"expected":120},"paper-5eii83":{"title":"2017年福建省选调生考试《行政职业能力测验》","retained":110,"expected":110},"paper-5f26u4":{"title":"广东省2019年选调优秀大学毕业生笔试 思维能力测验（网友回忆版）","retained":80,"expected":80},"paper-5qag7w":{"title":"2025年重庆市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-5u6u5l":{"title":"2023年度浙江省党政机关选调应届优秀大学毕业生《行测》题（网友回忆版）","retained":50,"expected":50},"paper-6tixyu":{"title":"2023年新疆公务员录用考试《行测》试题（网友回忆版）","retained":96,"expected":115},"paper-79lqaz":{"title":"2023年四川省公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-7pdpdw":{"title":"2018年北京市公务员录用考试《行测》题（网友回忆版）","retained":124,"expected":135},"paper-abqjwj":{"title":"2023年广东省公务员录用考试《行测》题（县级卷）（网友回忆版）","retained":99,"expected":100},"paper-asqivw":{"title":"2019年420联考《行测》题（重庆卷）（网友回忆版）","retained":120,"expected":120},"paper-b2hepa":{"title":"2020年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":135,"expected":135},"paper-b7z4u5":{"title":"广东省2021年度选调生和急需紧缺专业公务员招录笔试 思维能力测验（网友回忆版）","retained":99,"expected":100},"paper-bctgny":{"title":"2024年广东省公务员录用考试《行测》题（网友回忆版）","retained":80,"expected":90},"paper-ccasdj":{"title":"2017年江苏省公务员录用考试《行测》题（C类）","retained":130,"expected":130},"paper-ccin2y":{"title":"2024年贵州省公务员录用考试《行测》题（网友回忆版）","retained":110,"expected":110},"paper-clzyqu":{"title":"2023年天津市公务员考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-dbr2qg":{"title":"2021年天津市公务员考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1jr1i8m":{"title":"2021年安徽省公务员录用考试《行测》题（网友回忆版）","retained":110,"expected":110},"paper-1k3xb3d":{"title":"2025年重庆市定向选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-1klg1a4":{"title":"2019年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":130,"expected":130},"paper-1knjwaa":{"title":"2019年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":135,"expected":135},"paper-1kwdqq6":{"title":"2022年广东省公务员录用考试《行测》题（乡镇卷）（网友回忆版）","retained":100,"expected":100},"paper-1lxohy9":{"title":"2020年四川省公务员考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-1md0qry":{"title":"2020年重庆市公务员录用考试《行测》试题（网友回忆版）","retained":120,"expected":120},"paper-1myud9z":{"title":"2018年421联考《行测》题（新疆卷）（网友回忆版）","retained":120,"expected":120},"paper-1na9aww":{"title":"2018年421联考《行测》题（贵州卷）（网友回忆版）","retained":115,"expected":115},"paper-14yjtxs":{"title":"2020年安徽省公务员录用考试《行测》试题（网友回忆版）","retained":110,"expected":110},"paper-151dxb9":{"title":"2017年422联考《行测》题（贵州卷）","retained":120,"expected":120},"paper-15dwqf4":{"title":"2018年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":135,"expected":135},"paper-15nxyom":{"title":"2021年北京市公务员录用考试《行测》题（乡镇卷）（网友回忆版）","retained":120,"expected":130},"paper-15yn77l":{"title":"2019年新疆生产建设兵团面向社会招录公务员考试《行测》题（网友回忆版）","retained":114,"expected":115},"paper-169o64c":{"title":"2021年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":135,"expected":135},"paper-16r8eln":{"title":"2022年重庆市公务员录用考试《行测》题（网友回忆版）","retained":119,"expected":120},"paper-16tpl3i":{"title":"2017年422联考《行测》题（四川卷）","retained":100,"expected":100},"paper-p50hi9":{"title":"2022年重庆市选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-p5qdo4":{"title":"2024年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":129,"expected":130},"paper-p98oh3":{"title":"2018年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-p9nfff":{"title":"2024年安徽省公务员录用考试《行测》题（网友回忆版）","retained":110,"expected":110},"paper-qlplgm":{"title":"2018年新疆生产建设兵团面向社会招录公务员考试《行测》题（网友回忆版）","retained":109,"expected":110},"paper-r1tp9u":{"title":"2018年重庆市选调优秀大学生到基层工作考试《行测》题","retained":98,"expected":100},"paper-rashb5":{"title":"2024年新疆公务员录用考试《行测》试题（网友回忆版）","retained":115,"expected":115},"paper-rkdyk":{"title":"2019年420联考《行测》题（贵州卷）（网友回忆版）","retained":115,"expected":115},"paper-ru7d09":{"title":"2021年福建省公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-108ge35":{"title":"2024年国家公务员录用考试《行测》题（行政执法卷网友回忆版）","retained":130,"expected":130},"paper-10xb5cp":{"title":"2023年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":135,"expected":135},"paper-118gdsi":{"title":"2025年山东省公务员录用考试《行测》试题（网友回忆版）","retained":112,"expected":120},"paper-11fstlf":{"title":"2019年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":130,"expected":130},"paper-11sqomv":{"title":"2021年度浙江省党政机关选调应届优秀大学毕业生《行测》题（网友回忆版）","retained":55,"expected":55},"paper-129t2zq":{"title":"2021年山东省公务员录用考试《行测》试题（网友回忆版）","retained":90,"expected":90},"paper-12aso5l":{"title":"2023年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-12elj6w":{"title":"2025年国家公务员录用考试《行测》题（行政执法卷网友回忆版）","retained":130,"expected":130},"paper-1nb1yzh":{"title":"2020年新疆公务员录用考试《行测》试题（网友回忆版）","retained":120,"expected":120},"paper-1ng72dy":{"title":"2025年新疆生产建设兵团面向社会招录公务员考试《行测》题（网友回忆版）","retained":114,"expected":115},"paper-1nhx7r0":{"title":"2025年新疆公务员录用考试《行测》试题（网友回忆版）","retained":104,"expected":115},"paper-1nqoxnu":{"title":"2022年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":129,"expected":130},"paper-1ohk906":{"title":"安徽省2020年面向全国重点高校定向招录选调生《行测》题（网友回忆版）","retained":40,"expected":40},"paper-1oyfkh":{"title":"2025年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":125,"expected":125},"paper-1phu4wj":{"title":"2017年广东省公务员录用考试《行测》题（县级、乡镇统一卷）","retained":100,"expected":100},"paper-1pszj1u":{"title":"2025年安徽省公务员录用考试《行测》题（网友回忆版）","retained":125,"expected":125},"paper-1pz7857":{"title":"2025年贵州省公务员录用考试《行测》题（网友回忆版）","retained":110,"expected":110},"paper-rv8u7e":{"title":"2018年421联考《行测》题（山东卷）（网友回忆版）","retained":120,"expected":120},"paper-rvi0az":{"title":"2019年420联考《行测》题（新疆卷）（网友回忆版）","retained":120,"expected":120},"paper-s3l3cf":{"title":"2017年422联考《行测》题（山东卷）","retained":120,"expected":120},"paper-s6v17":{"title":"2018年421联考《行测》题（安徽卷）（网友回忆版）","retained":110,"expected":110},"paper-s89r9v":{"title":"2023年福建省公务员录用考试《行测》题（网友回忆版）","retained":119,"expected":120},"paper-sjjtkg":{"title":"2026年贵州省公务员录用考试《行测》题（网友回忆版）","retained":110,"expected":110},"paper-t9ut5i":{"title":"2026年四川省考/选调公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-tarfrs":{"title":"2026年新疆区考公务员录用考试《行测》试题（网友回忆版）","retained":103,"expected":115},"paper-tk6xdc":{"title":"2025年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":134,"expected":135},"paper-1fp0a4j":{"title":"2018年421联考《行测》题（天津卷）（网友回忆版）","retained":120,"expected":120},"paper-1fzebem":{"title":"2026年福建省公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1ghv83b":{"title":"2022年国家公务员录用考试《行测》题（行政执法卷网友回忆版）","retained":130,"expected":130},"paper-1h2e8vs":{"title":"2022年广东省公务员录用考试《行测》题（县级卷）（网友回忆版）","retained":100,"expected":100},"paper-1hdaa88":{"title":"2021年重庆市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1hze6og":{"title":"2024年度浙江省党政机关选调应届优秀大学毕业生《行测》题（网友回忆版）","retained":50,"expected":50},"paper-1iaym7l":{"title":"2024年新疆生产建设兵团面向社会招录公务员考试《行测》题（网友回忆版）","retained":115,"expected":115},"paper-1ibir8c":{"title":"2019年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-1s9rfgl":{"title":"2017年422联考《行测》题（浙江A卷）","retained":125,"expected":125},"paper-1spzgg9":{"title":"2017年重庆市选调优秀大学生到基层工作考试《行测》题","retained":99,"expected":100},"paper-1swa21":{"title":"2020年浙江公务员考试《行测》（A类）试题（网友回忆版）","retained":98,"expected":100},"paper-1t9dfu6":{"title":"2020年四川下半年公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-1tm4im":{"title":"2019年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-1ur4wr1":{"title":"2026年安徽省公务员录用考试《行测》题（网友回忆版）","retained":123,"expected":125},"paper-1uu36fq":{"title":"2019年广东省公务员录用考试《行测》题（县级卷）（网友回忆版）","retained":100,"expected":100},"paper-1v9vzki":{"title":"2022年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":124,"expected":125},"paper-1vhkz3y":{"title":"2017年天津滨海新区公务员考试《行测》题（网友回忆版）","retained":119,"expected":120},"paper-1w90id6":{"title":"2021年新疆生产建设兵团面向社会招录公务员考试《行测》题（网友回忆版）","retained":115,"expected":115},"paper-1wvu155":{"title":"2024年山东省公务员录用考试《行测》试题（网友回忆版）","retained":119,"expected":120},"paper-1x5dgsx":{"title":"2017年江苏省公务员录用考试《行测》题(A类)","retained":135,"expected":135},"paper-1xo7nhc":{"title":"2020年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":130,"expected":130},"paper-1xuys":{"title":"2019年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":130,"expected":130},"paper-1y2prs0":{"title":"2018年四川省公务员录用考试《行测》题（下半年）（网友回忆版）","retained":100,"expected":100},"paper-1yfpmrl":{"title":"2023年广东省公务员录用考试《行测》题（乡镇卷）（网友回忆版）","retained":100,"expected":100},"paper-1ykkf7h":{"title":"2019年江苏省公务员录用考试《行测》题（B类）（网友回忆版）","retained":135,"expected":135},"paper-1r97s0x":{"title":"2021年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":129,"expected":130},"paper-1rbdppr":{"title":"2022年四川省公务员录用考试《行测》题（网友回忆版）","retained":100,"expected":100},"paper-1rcqrr0":{"title":"2022年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":133,"expected":135},"paper-1rj8ahx":{"title":"2017年422联考《行测》题（重庆卷）","retained":120,"expected":120},"paper-1rjof3o":{"title":"2024年天津市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-1rsz9a9":{"title":"2018年浙江省公务员录用考试《行测》题（A类）（网友回忆版）","retained":140,"expected":140},"paper-1rt84b0":{"title":"2017年422联考《行测》题（安徽卷）","retained":110,"expected":110},"paper-1s0qzsv":{"title":"2019年420联考《行测》题（安徽卷）（网友回忆版）","retained":110,"expected":110},"paper-836stc":{"title":"2022年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":134,"expected":135},"paper-85p43i":{"title":"2022年国家公务员录用考试《行测》题（地市级网友回忆版）","retained":130,"expected":130},"paper-8ozcml":{"title":"2024年重庆市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-8u77ha":{"title":"2019年420联考《行测》题（山东卷）（网友回忆版）","retained":120,"expected":120},"paper-8v8jtd":{"title":"2022年安徽省公务员录用考试《行测》题（网友回忆版）","retained":109,"expected":110},"paper-8vt8n7":{"title":"2022年山东省公务员录用考试《行测》试题（网友回忆版）","retained":88,"expected":90},"paper-8wich5":{"title":"2019年北京市公务员录用考试《行测》题（网友回忆版）","retained":125,"expected":135},"paper-958in9":{"title":"2019年福建省选调生考试《行政职业能力测验》","retained":110,"expected":110},"paper-1e042ja":{"title":"2018年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":140,"expected":140},"paper-1ebd0er":{"title":"2021年江苏省公务员录用考试《行测》题（A类）（网友回忆版）","retained":135,"expected":135},"paper-1eche59":{"title":"2020年北京市公务员录用考试《行测》题（区级及以上卷）（网友回忆版）","retained":125,"expected":135},"paper-1eeshmh":{"title":"2021年新疆生产建设兵团行政执法类公务员考试《行测》题（网友回忆版）","retained":115,"expected":115},"paper-1esfugd":{"title":"2020年广东省公务员录用考试《行测》试题（县级卷）（网友回忆版）","retained":93,"expected":100},"paper-1fdmvxs":{"title":"2017年422联考《行测》题（浙江B卷）","retained":120,"expected":120},"paper-1fecrj6":{"title":"2017年国家公务员录用考试《行测》题（副省级）","retained":135,"expected":135},"paper-1fmisbn":{"title":"2024年浙江省公务员录用考试《行测》题（B类）（网友回忆版）","retained":120,"expected":120},"paper-17099sn":{"title":"2025年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-186o5zo":{"title":"2023年重庆市选调优秀大学生到基层工作考试《行测》题","retained":100,"expected":100},"paper-18ek953":{"title":"2017年422联考《行测》题（福建卷）","retained":120,"expected":120},"paper-18zarm8":{"title":"2023年安徽省公务员录用考试《行测》题（网友回忆版）","retained":110,"expected":110},"paper-18ze5wo":{"title":"2019年1月天津市定向招录选调生考试综合能力测试试卷（精选）","retained":50,"expected":50},"paper-19gtieo":{"title":"2019年广东省公务员录用考试《行测》题（乡镇卷）（网友回忆版）","retained":100,"expected":100},"paper-19l2jwj":{"title":"2021年浙江省公务员录用考试《行测》题（C类）（网友回忆版）","retained":120,"expected":120},"paper-19ug6sh":{"title":"2019年420联考《行测》题（四川卷）（网友回忆版）","retained":100,"expected":100},"paper-1aapqu0":{"title":"2022年四川下半年公务员录用考试《行测》试题（网友回忆版）","retained":100,"expected":100},"paper-depayy":{"title":"2017年四川省公务员录用考试《行测》题（下半年）","retained":100,"expected":100},"paper-e3tmqy":{"title":"2023年重庆市公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-e67290":{"title":"2026年国家公务员录用考试《行测》题（副省级网友回忆版）","retained":135,"expected":135},"paper-e7wenh":{"title":"2018年重庆市公务员录用考试《行测》题（下半年）","retained":120,"expected":120},"paper-e80nwe":{"title":"2020年天津市公务员考试《行测》试题（网友回忆版）","retained":119,"expected":120},"paper-eaq4g":{"title":"2018年421联考《行测》题（重庆卷）（网友回忆版）","retained":120,"expected":120},"paper-ej9hoi":{"title":"2022年福建省公务员录用考试《行测》题（网友回忆版）","retained":120,"expected":120},"paper-erlt3g":{"title":"2020年度浙江省党政机关选调应届优秀大学毕业生《行测》题（网友回忆版）","retained":55,"expected":55},"paper-f0zhbd":{"title":"2025年江苏省公务员录用考试《行测》题（C类）（网友回忆版）","retained":117,"expected":130}};
+S.expectedPaperCount=function(p){
+ const valid=n=>Number.isSafeInteger(Number(n))&&Number(n)>0&&Number(n)<=10000;
+ const original=p?.sourceExpectedCount??p?.expected_count;if(valid(original))return Number(original);
+ const row=evidence[p?.id];
+ // Repair only known managed papers whose old declaration equals retained rows.
+ // Never replace a local paper's declaration or infer original size from local slots.
+ if(row&&p.bundledManaged===true&&!p.localImported&&p.importSource!=='local'&&p.title===row.title&&Number(p.expectedCount)===row.retained)return row.expected;
+ return p?.expectedCount;
+};
+})(window.Study=window.Study||{});
+/* Network failures never imply IndexedDB failure. No learning-state writes. */
+(function(S){'use strict';
+S.bankRead=async function(url,format='json',options={}){
+ const {timeoutMs=15000,...request}=options,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{
+  const response=await fetch(url,{...request,signal:controller.signal});
+  if(!response.ok)throw Object.assign(Error('题库请求失败（HTTP '+response.status+'）'),{name:'BankRequestError',category:'bank-http',status:response.status});
+  return format==='buffer'?await response.arrayBuffer():await response.json();
+ }catch(error){
+  if(error.name==='BankRequestError')throw error;
+  if(error.name==='SyntaxError')throw Object.assign(Error('题库清单或分片未返回有效JSON，请核对题库站部署'),{name:'BankFormatError',category:'bank-format'});
+  const interrupted=controller.signal.aborted||error.name==='AbortError'||/abort|cancel/i.test(error.message||'');
+  throw Object.assign(Error(interrupted?'题库请求超时或被中断，已有题库仍可使用':'题库网络连接未完成，请联网后重试'),{name:'BankRequestError',category:interrupted?'bank-interrupted':'bank-network'});
+ }finally{clearTimeout(timer);}
+};
+S.bankErrorMessage=function(error){
+ if(String(error?.category||'').startsWith('bank-'))return error.message+'；本机学习记录保留。';
+ if(S.isLocalStorageError?.(error))return '本地数据库暂时不可用：'+error.message+'。请保留当前页面并先导出学习备份。';
+ return '题库接入未完成：'+String(error?.message||error)+'。已成功接入的分片和本机记录保留。';
+};
+})(window.Study=window.Study||{});
 /* Shared application constants; production data comes from the external bank. */
 window.Study = window.Study || {};
 (function(S) {
 'use strict';
 S.VERSION='2.9.18';
-S.BUILD='2.9.18-r8-8-54';
+S.BUILD='2.9.18-r8-8-73';
 S.DB_NAME='mzy-study-clean-v2';
 S.SUBJECTS=['政治理论','常识判断','言语理解','数量关系','判断推理','资料分析'];
 S.LETTERS=['A','B','C','D'];
@@ -214,15 +262,20 @@ class ExamController{
  }
  render(){
   const s=this.s;let lastSubject=null,seen=new Set();
-  const stack=s.questions.map((q,i)=>{
+  const reviewRows=s._review&&Array.isArray(s._reviewIndices)?new Set(s._reviewIndices):null;
+  const heads=new Map();s.questions.forEach((q,i)=>{
+   if(reviewRows&&!reviewRows.has(i))return '';
    let head='';if(q.subject!==lastSubject){head=`<div class="module-heading">${E(q.subject)}<small>${s.questions.filter(t=>t.subject===q.subject).length}题</small></div>`;lastSubject=q.subject;}
    const materialIdentity=S.materialIdentity?S.materialIdentity(q):q.materialKey;let mat='';if(q.materialKey&&!seen.has(materialIdentity)){seen.add(materialIdentity);mat=S.materialMarkup(q,i,s);}
-   return head+mat+S.questionMarkup(q,i,s);
-  }).join('');
+   heads.set(i,head+mat);
+  });
+  const itemMarkup=i=>(heads.get(i)||'')+S.questionMarkup(s.questions[i],i,s);
+  this.practiceWindow?.destroy();this.practiceWindow=S.PracticeWindow&&s.questions.length>18?S.PracticeWindow.create(this,itemMarkup):null;
+  const stack=this.practiceWindow?this.practiceWindow.html():s.questions.map((q,i)=>reviewRows&&!reviewRows.has(i)?'':itemMarkup(i)).join('');
   this.root.innerHTML=`<header class="exam-head"><div class="exam-head-left">${S.iconButton('close','退出练习','data-exam="exit"')}${S.iconButton(s.timed?'clock':'pause',s.timed?'限时演练不可暂停':'暂停计时','data-exam="pause"')}<span class="exam-clock" id="exam-clock">${S.clock(s.timed?(s.deadline-Date.now())/1000:s.elapsed)}</span></div><div class="exam-heading"><strong>${E(s.title)}</strong><small>${s.timed?'倒计时 · 到时自动交卷':'专注刷题 · 自动保存'}</small></div><div class="exam-head-right"><span class="exam-progress" id="exam-progress">${s.index+1}/${s.questions.length}</span>${S.iconButton('grid','答题卡','data-exam="card"')}<button class="button primary" data-exam="submit">交卷</button></div></header>
    <div class="exam-scroll" id="question-scroll"><div class="question-stack">${stack}<div class="exam-end">已到本组最后一题。<br><button class="button primary" data-exam="submit">交卷并查看报告</button></div></div></div>`;
   this.root.addEventListener('click',e=>this.onClick(e),{signal:this.abort.signal});
-  this.decorateOptions(this.root);
+  this.decorateOptions(this.root);this.practiceWindow?.attach();
   this.root.addEventListener('scroll',e=>{
    if(!(e.target instanceof Element))return;
    if(e.target.scrollLeft)e.target.scrollLeft=0;
@@ -251,7 +304,7 @@ class ExamController{
    else{a.excluded.includes(l)?a.excluded=a.excluded.filter(x=>x!==l):a.excluded.push(l);if(a.selected===l)a.selected=null;}
    S.recordAction?.(this.s,action,{questionId:q.id,selected:a.selected,excluded:a.excluded.slice()});
    this.s.updatedAt=Date.now();S.saveSoon();this.refreshAnswer(i);
-   if(action==='answer'&&a.selected&&S.state.settings.autoAdvance){
+   if(action==='answer'&&a.selected&&S.state.settings.autoAdvance&&this.s.mode!=='wrongbook'){
      this.advanceTimer=setTimeout(()=>{if(!this.inkOn&&!this.s.paused&&i<this.s.questions.length-1){const next=this.s.questions[i+1];if(q.materialKey&&S.materialIdentity(q)!==S.materialIdentity(next))return;this.jump(i+1,true);}},156);
    }
    return;
@@ -300,11 +353,12 @@ class ExamController{
  }
  onScroll(target){
   if(this.disposed)return;S.lastInteractionAt=Date.now();
+  if(target.id==='question-scroll'&&!this.split)this.practiceWindow?.paint();
   if(target.id==='question-scroll'||target.id==='split-q-scroll'){
    const r=target.getBoundingClientRect(),cards=S.$$('[data-question]',target);let best=null,lo=0,hi=cards.length;while(lo<hi){const mid=(lo+hi)>>1;if(cards[mid].getBoundingClientRect().bottom<=r.top+50)lo=mid+1;else hi=mid;}if(cards[lo]){const cr=cards[lo].getBoundingClientRect();if(cr.top<r.bottom)best=Number(cards[lo].dataset.question);}
    if(best!=null){if(best!==this.s.index)this.pulse();this.s.index=best;this.updateClock();}
   }
-  if(target.id==='question-scroll'){this.s.positions.main={top:target.scrollTop};}
+  if(target.id==='question-scroll'){this.s.positions.main={top:target.scrollTop,anchor:this.practiceWindow?.captureAnchor()||null};}
   if(this.split){
    const left=S.$('#split-material-scroll',this.root),right=S.$('#split-q-scroll',this.root);
    this.s.positions[this.split.groupIdentity||this.split.key]={left:left?.scrollTop||0,right:right?.scrollTop||0};
@@ -343,6 +397,7 @@ class ExamController{
   i=Math.max(0,Math.min(this.s.questions.length-1,i));this.pulse();const previous=this.s.index;this.s.index=i;const q=this.s.questions[i];if(previous!==i)S.recordAction?.(this.s,'question-change',{questionId:q.id,from:previous,to:i});
   if(this.split&&q.materialKey!==this.split.key){this.closeMaterial(false);if(q.materialKey)this.openMaterial(i);}
   const scroll=this.split?S.$('#split-q-scroll',this.root):S.$('#question-scroll',this.root);
+  if(!this.split)this.practiceWindow?.ensure(i);
   const target=S.$(`[data-question="${i}"]`,scroll);if(target){
    let top=target.getBoundingClientRect().top-scroll.getBoundingClientRect().top+scroll.scrollTop-15;
    if(!this.split){
@@ -738,7 +793,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)window.Stud
 'use strict';
 
 const STABLE_VERSION = '2.9.18';
-const IDB_VERSION = 2;
+const IDB_VERSION = 3; // Fence old clients before the new local format.
 const DAY = 86400000;
 const REVIEW_DAYS = [1,3,7,14,30,60];
 
@@ -893,7 +948,7 @@ function normalizeState(raw,{clone=true}={}){
     p.title=String(p.title||'未命名试卷');
     p.year=finiteInt(p.year,Number(String(p.title).match(/20\d{2}/)?.[0]||0))||null;
     p.region=String(p.region||'');
-    p.expectedCount=finiteInt(p.expectedCount,Array.isArray(p.slots)?p.slots.length:0);
+    p.expectedCount=finiteInt(S.expectedPaperCount?S.expectedPaperCount(p):p.expectedCount,Array.isArray(p.slots)?p.slots.length:0);
     p.slots=Array.isArray(p.slots)?p.slots.map((slot,i)=>({
       slotId:String(slot.slotId||`${p.id}:slot:${finiteInt(slot.order,i+1)}`),
       order:finiteInt(slot.order,i+1),
@@ -908,7 +963,7 @@ function normalizeState(raw,{clone=true}={}){
   v.sessions=v.sessions.map(s=>{
     s.id=String(s.id||S.uid());
     s.title=String(s.title||'专项练习');
-    s.questions=Array.isArray(s.questions)?s.questions.map(q=>normalizeQuestion(q,paperMap)).filter(Boolean):[];
+    s.questions=Array.isArray(s.questions)?s.questions.map(q=>q?._deferredSnapshot?q:normalizeQuestion(q,paperMap)).filter(Boolean):[];
     s.answers=s.answers&&typeof s.answers==='object'?s.answers:{};
     s.notes=s.notes&&typeof s.notes==='object'?s.notes:{};
     s.index=finiteInt(s.index,0);
@@ -1044,10 +1099,31 @@ async function idbRead(name,key='main',retry=true){
   req.onsuccess=()=>end(null,req.result??null);req.onerror=()=>end(req.error||Error('读取本地数据库失败'));tx.onabort=()=>end(tx.error||Error('读取事务中止'));
  });}catch(e){resetStore(owner);if(retry&&e.name!=='QuotaExceededError')return idbRead(name,key,false);throw e;}
 }
+async function detailRows(prefix){const tx=await storeTransaction('hot','readonly');return new Promise((resolve,reject)=>{const rows=[],r=tx.objectStore('hot').openCursor(IDBKeyRange.bound(prefix,prefix+'\uffff'));r.onsuccess=()=>{const c=r.result;if(c){rows.push([c.key,c.value]);c.continue();}};tx.oncomplete=()=>resolve(rows);tx.onerror=tx.onabort=()=>reject(tx.error||Error('作答分段读取失败'));});}
+async function readQuestionSnapshot(key){const rows=await idbRead('hot',key);if(!Array.isArray(rows)||await S.SyncCodec.hash(S.SyncCodec.stable(rows))!==key.slice('snapshot:'.length))throw Error('原题快照校验失败，已停止打开；现有记录保留');return rows;}
+S.ensureSessionQuestions=s=>S.LocalRecords?.hydrate(s,readQuestionSnapshot)||Promise.resolve(s);
+S.ensureAllQuestionSnapshots=async()=>{for(const s of S.state.sessions||[])await S.ensureSessionQuestions(s);};
+S.resolveQuestionRows=async questions=>{const snapshots=new Map();for(const q of questions||[])if(q._deferredSnapshot&&!snapshots.has(q._deferredSnapshot))snapshots.set(q._deferredSnapshot,await readQuestionSnapshot('snapshot:'+q._deferredSnapshot));return questions.map(q=>{if(!q._deferredSnapshot)return q;const actual=snapshots.get(q._deferredSnapshot)?.[q._snapshotIndex];if(actual?.id!==q.id)throw Error('历史原题快照不完整');if(q._bankDeferred){delete q._bankDeferred;delete q._catalogEligible;delete q._catalogClassification;delete q._deferredSnapshot;delete q._snapshotIndex;Object.assign(q,actual);return q;}return actual;});};
+S.ensureBankQuestions=async()=>{for(let i=0;i<S.state.bank.length;i+=128){await S.resolveQuestionRows(S.state.bank.slice(i,i+128));await new Promise(r=>setTimeout(r,0));}};
+S.migrateLocalSessions=async function(){
+ if(!S.ready||document.hidden||S.exam&&!S.exam.disposed||S.review||S.openingPractice||S.accountSync?.phase)return false;const state=S.state,row=state.sessions.find(s=>!S.LocalRecords.isStored(s));if(!row)return false;
+ return new Promise((resolve,reject)=>{writeChain=writeChain.catch(()=>{}).then(async()=>{if(state!==S.state||S.exam&&!S.exam.disposed||S.review||S.openingPractice||S.accountSync?.phase){resolve(false);return;}
+  if(S.LocalRecords.needsPrime(row))S.LocalRecords.prime(row,await detailRows(S.LocalRecords.prefix(row)),S.SyncCodec.stable);const stored=S.NoteVault?.enabled()?await S.NoteVault.packSession(row):row,plan=await S.LocalRecords.plan(row,{stored,stable:S.SyncCodec.stable,hash:S.SyncCodec.hash});
+  if(state!==S.state||S.exam&&!S.exam.disposed||S.review||S.openingPractice){resolve(false);return;}S.storageMaintenance?.beforeWrite?.();const tx=await storeTransaction('hot','readwrite');for(const[k,v]of plan.writes)tx.objectStore('hot').put(v,k);for(const k of plan.deletes)tx.objectStore('hot').delete(k);await S.awaitStoreTransaction(tx,'整理历史记录');plan.commit();S.localMutationVersion=(S.localMutationVersion||0)+1;sessionTokens.set(row.id,sessionToken(row));if(row.finished)S.LocalRecords.defer(row);resolve(true);
+ }).catch(reject);});
+};
+S.readLocalInkProtection=async function(){await S.saveHot({learningChange:false});const values=[S.state.meta,S.state.aiReviews,S.state.learning,await idbRead('hot','exit-recovery'),await idbRead('state')];for(const s of S.state.sessions){const raw=await idbRead('hot','session:'+s.id);if(raw?._localFormat===2){for(const[,row]of await detailRows(S.LocalRecords.prefix(s)))if(row.field!=='answers')values.push(row.value);}else values.push(raw);}return[...values,...await S.readLegacyProfileRoots()];};
+S.migrateBankCatalog=async function(){
+ const state=S.state,bank=state.bank;if(S.bankCatalogReady||bank.length<256)return false;const idle=()=>S.state===state&&S.state.bank===bank&&S.ready&&!document.hidden&&!S.bankImporting&&!S.openingPractice&&!S.preparingInk&&(!S.exam||S.exam.disposed)&&!S.review&&!S.accountSync?.phase&&!S.storageMaintenance?.active;if(!idle())return false;const catalog=[],preview=html=>String(html||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,160);
+ for(let i=0;i<bank.length;i+=128){if(!idle())return false;const rows=await S.resolveQuestionRows(bank.slice(i,i+128)),ref=await S.SyncCodec.hash(S.SyncCodec.stable(rows));if(!idle())return false;const tx=await storeTransaction('hot','readwrite');tx.objectStore('hot').put(rows,'snapshot:'+ref);await S.awaitStoreTransaction(tx,'保存原题快照');for(let n=0;n<rows.length;n++){const q=rows[n];catalog.push({...q,stemHtml:preview(q.stemHtml)||'图片题',optionsHtml:(q.optionsHtml||[]).map(x=>preview(x)||'图片选项'),explanationHtml:'',materialHtml:q.materialHtml?'材料 '+(q.materialKey||q.id):'',_bankDeferred:true,_catalogEligible:globalThis.LocalReviewEngine?.valid?.(q),_catalogClassification:{version:S.classificationVersion,result:S.classificationFor(q)},_deferredSnapshot:ref,_snapshotIndex:n});}await new Promise(r=>setTimeout(r,0));}
+ if(!idle())return false;return new Promise((resolve,reject)=>{writeChain=writeChain.catch(()=>{}).then(async()=>{if(!idle()){resolve(false);return;}S.storageMaintenance?.beforeWrite?.();const tx=await storeTransaction('cold','readwrite');tx.objectStore('cold').put({schema:3,bankFormat:1,catalogClassificationVersion:S.classificationVersion,bank:catalog,papers:state.papers,mediaAudit:state.mediaAudit},'main');await S.awaitStoreTransaction(tx,'保存题库目录');if(!idle()){resolve(false);return;}state.bank=catalog;S.bankCatalogReady=true;S.reindex();S.localMutationVersion=(S.localMutationVersion||0)+1;resolve(true);}).catch(reject);});
+};
+
 async function writeStores(candidate){
+  for(const row of candidate.sessions||[])await S.ensureSessionQuestions(row);
   const packed=S.NoteVault?.enabled()?{...candidate,sessions:(await S.NoteVault.packSnapshot({sessions:candidate.sessions})).sessions}:candidate;
-  const parts=splitState(packed);sessionTokens=new Map();attemptToken=null;metaToken=null;
-  const tx=await storeTransaction(['cold','hot','meta'],'readwrite');
+  const parts=splitState(packed);sessionTokens=new Map();attemptToken=null;metaToken=null;globalToken=null;
+  const tx=await storeTransaction(['cold','hot','meta'],'readwrite');S.storageMaintenance?.beforeWrite?.();
   // IDB put() performs structured cloning itself. Pre-cloning here doubled
   // peak memory while a large bank was being saved.
   tx.objectStore('cold').put(parts.cold,'main');
@@ -1055,9 +1131,10 @@ async function writeStores(candidate){
   tx.objectStore('meta').put(parts.meta,'main');
   tx.objectStore('meta').put(parts.audit,'import-audit');
   tx.objectStore('meta').put(candidate.mediaAudit,'media-audit');
-  await S.awaitStoreTransaction(tx,'本地数据库事务');
+  await S.awaitStoreTransaction(tx,'本地数据库事务');S.LocalRecords?.reset();S.bankCatalogReady=false;S.localMutationVersion=(S.localMutationVersion||0)+1;
 }
 S.persistState=async function(candidate){
+ for(const row of candidate.sessions||[])await S.ensureSessionQuestions(row);if(candidate.bank)candidate.bank=await S.resolveQuestionRows(candidate.bank);
   const normalized=normalizeState(candidate);
   if(mode!=='indexeddb'){
     S.saveError='当前环境不支持可靠的IndexedDB持久保存';
@@ -1077,20 +1154,41 @@ S.persistState=async function(candidate){
   });
 };
 
+// Import candidates are built from validated state and sanitized incoming rows.
+// Commit cold data and import metadata only; answer/ink records remain on the hot path.
+S.persistImportedBank=async function(candidate){
+ candidate.bank=await S.resolveQuestionRows(candidate.bank);
+ if(mode!=='indexeddb')throw Error('当前环境不支持可靠的IndexedDB持久保存');
+ return await new Promise((resolve,reject)=>{
+  writeChain=writeChain.catch(()=>{}).then(async()=>{
+   try{
+    const incoming=candidate.meta;candidate.mediaAudit=S.state.mediaAudit;
+    const meta={...S.state.meta,duplicateCandidates:incoming.duplicateCandidates,answerConflicts:incoming.answerConflicts,bankContentRevision:(Number(S.state.meta.bankContentRevision)||0)+1,updatedAt:nowISO()};
+    candidate.meta={...meta,importRecords:incoming.importRecords};
+    const tx=await storeTransaction(['cold','meta'],'readwrite');
+    tx.objectStore('cold').put({schema:3,bank:candidate.bank,papers:candidate.papers,mediaAudit:candidate.mediaAudit},'main');
+    tx.objectStore('meta').put(Object.fromEntries(Object.entries(meta).filter(([k])=>k!=='importRecords')),'main');
+    tx.objectStore('meta').put(incoming.importRecords||[],'import-audit');
+    await S.awaitStoreTransaction(tx,'题库保存');S.bankCatalogReady=false;S.saveError=null;resolve();
+   }catch(error){S.saveError=error.message;reject(error);}
+  });
+ });
+};
 S.openStore=async function(){
   if(db){try{db.close();}catch{}db=null;}
   try{
     if(!('indexedDB' in globalThis))throw Error('浏览器不支持IndexedDB');
     await connectStore();
-    const [cold,hot,meta,audit]=await Promise.all([idbRead('cold'),idbRead('hot'),idbRead('meta'),idbRead('meta','import-audit')]);
-    sessionTokens=new Map();
+    const [cold,hot,meta,audit]=await Promise.all([idbRead('cold'),idbRead('hot'),idbRead('meta'),idbRead('meta','import-audit')]);S.bankCatalogReady=cold?.bankFormat===1&&cold.catalogClassificationVersion===S.classificationVersion;if(cold?.bankFormat===1&&!S.bankCatalogReady)cold.bank=await S.resolveQuestionRows(cold.bank);
+    sessionTokens=new Map();globalToken=null;
     if(hot){
-      if(hot.sessionStorage==='records-v1'){
+      if(hot.sessionStorage==='records-v2'){const globals=await idbRead('hot','learning-data');if(!globals)throw Error('学习统计分段读取不完整');Object.assign(hot,globals);}
+      if(['records-v1','records-v2'].includes(hot.sessionStorage)){
         const restored=[],recoveredIds=new Set(),recovery=await idbRead('hot','exit-recovery');
-        for(const id of hot.sessionIds||[]){let row=await idbRead('hot','session:'+id);const backup=recovery?.session;
+        for(const id of hot.sessionIds||[]){let row=await idbRead('hot','session:'+id);if(row?._localFormat===2)row=await S.LocalRecords.restore(row,{read:key=>idbRead('hot',key),rows:detailRows});if(row?._deferredQuestions&&row.questions.some(q=>q._catalogClassification?.version!==S.classificationVersion))await S.ensureSessionQuestions(row);const backup=recovery?.session;
  const samePaper=row&&Array.isArray(row.questions)&&Array.isArray(backup?.questions)&&row.questions.length===backup.questions.length&&row.questions.every((q,i)=>q.id===backup.questions[i].id);
  const newerBackup=row&&!row.finished&&!backup?.finished&&samePaper&&Number.isFinite(Number(backup.updatedAt))&&Number(backup.updatedAt)>Number(row.updatedAt||0);
- if(backup?.id===id&&recovery.owner===(meta?.syncOwnerId||'guest')&&!meta?.deletedSessions?.[id]&&(!row||newerBackup)){row=backup;recoveredIds.add(id);S.storageRecoveryNotice='已从本机退出备份恢复一份练习';}if(!row||row.id!==id)throw Error('练习记录分段读取不完整，已停止启动：'+id);if(S.NoteVault?.enabled()){
+ if(backup?.id===id&&recovery.owner===(meta?.syncOwnerId||'guest')&&!meta?.deletedSessions?.[id]&&(!row||newerBackup)){row=backup;recoveredIds.add(id);S.storageRecoveryNotice='已从本机退出备份恢复一份练习';}if(!row||row.id!==id)throw Error('练习记录分段读取不完整，已停止启动：'+id);if(S.NoteVault?.enabled()&&!row._deferredQuestions){
  const hadInline=[row.notes,row.reviewNotes,row.submissionEvidence?.notes].some(ns=>Object.values(ns||{}).some(n=>!S.NoteVault.isRef(n)));
  const packed=await S.NoteVault.packSession(row);
  if(hadInline){const migration=await storeTransaction('hot','readwrite');migration.objectStore('hot').put(packed,'session:'+id);await S.awaitStoreTransaction(migration,'分离笔记迁移');S.NoteVault.migrationProgress(restored.length+1,hot.sessionIds.length);}
@@ -1098,7 +1196,7 @@ S.openStore=async function(){
 }restored.push(row);}
         hot.sessions=restored;const attempts=await idbRead('hot','attempts');if(!Array.isArray(attempts))throw Error('历史作答读取不完整，已停止启动');hot.attempts=attempts;for(const row of restored)if(!recoveredIds.has(row.id)&&Object.values(row.notes||{}).every(n=>S.NoteVault?.isRef(n)))sessionTokens.set(row.id,sessionToken(row));attemptToken=[attempts,attempts.length];
       }
-      if(S.NoteVault?.enabled()){if(hot.sessionStorage!=='records-v1')hot.sessions=(await S.NoteVault.packSnapshot({sessions:hot.sessions||[]})).sessions;if(meta?.syncConflicts)meta.syncConflicts=(await S.NoteVault.packSnapshot({conflicts:meta.syncConflicts})).conflicts;}
+      if(S.NoteVault?.enabled()){if(!['records-v1','records-v2'].includes(hot.sessionStorage))hot.sessions=(await S.NoteVault.packSnapshot({sessions:hot.sessions||[]})).sessions;if(meta?.syncConflicts)meta.syncConflicts=(await S.NoteVault.packSnapshot({conflicts:meta.syncConflicts})).conflicts;}
       const combined=combineState(cold,hot,meta,audit);const media=await idbRead('meta','media-audit');if(media)combined.mediaAudit=media;return combined;
     }
     const legacy=await idbRead('state');
@@ -1132,26 +1230,26 @@ S.save=function(){
 // Individual session records use existing object stores and IDB version 2.
 // Full imports still write a compatible main snapshot. The first incremental
 // save atomically materializes all sessions; later saves clone only changed ones.
-let sessionTokens=new Map(),attemptToken=null,metaToken=null;
+let sessionTokens=new Map(),attemptToken=null,metaToken=null,globalToken=null;
 const sessionToken=s=>[s,Number(s.updatedAt)||0,s.finished,s.finishedAt,s.index,s.elapsed,s.paused,s.notes,s.reviewNotes,s.submissionEvidence];
 const sameToken=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
 S.learningRevision=0;
 S.touchSession=function(s){S.learningRevision++;if(s)s.updatedAt=Math.max(Date.now(),(Number(s.updatedAt)||0)+1);};
 async function writeHotRecords(state,{force=false}={}){
- const hot={schema:3,sessionStorage:'records-v1',sessionIds:state.sessions.map(s=>s.id),sessions:[],learning:state.learning,aiReviews:state.aiReviews,settings:state.settings,lastSessionId:state.lastSessionId};
+ const stages=S.persistenceMetrics.lastHotPhases={startedAt:Date.now(),stage:'pack',packMs:0,planMs:0,enqueueMs:0,commitMs:0};
+ const hot={schema:3,sessionStorage:'records-v2',sessionIds:state.sessions.map(s=>s.id),sessions:[null],lastSessionId:state.lastSessionId};
+ const globalData={learning:state.learning,aiReviews:state.aiReviews,settings:state.settings},gt=[state.learning?.reviewState,state.learning?.canonicalStats,...Object.entries(state.learning?.localReviewPlans||{}).flat(),JSON.stringify(state.learning?.favorites||{}),JSON.stringify(state.settings),state.attempts.length,state.attempts.at(-1),state.aiReviews,state.aiReviews?.length,state.aiReviews?.at(-1)];
  const active=S.review?.s||S.exam?.s,changed=[];
  for(const row of state.sessions){const token=sessionToken(row);if(force||row===active||!row.updatedAt||!sameToken(sessionTokens.get(row.id),token))changed.push({row,token});}
- const packedRows=[];for(const {row} of changed)packedRows.push(S.NoteVault?.enabled()?await S.NoteVault.packSession(row):row);
- const tx=await storeTransaction(['hot','meta'],'readwrite');
+ const plans=[];for(const{row}of changed){if(S.LocalRecords.needsPrime(row))S.LocalRecords.prime(row,await detailRows(S.LocalRecords.prefix(row)),S.SyncCodec.stable);let at=performance.now();stages.stage='pack';const stored=S.NoteVault?.enabled()?await S.NoteVault.packSession(row):row;stages.packMs+=performance.now()-at;at=performance.now();stages.stage='plan';plans.push(await S.LocalRecords.plan(row,{stored,stable:S.SyncCodec.stable,hash:S.SyncCodec.hash}));stages.planMs+=performance.now()-at;}
+ S.storageMaintenance?.beforeWrite?.();const tx=await storeTransaction(['hot','meta'],'readwrite');S.storageMaintenance?.beforeWrite?.();stages.stage='enqueue';let started=performance.now();
  const liveIds=new Set(state.sessions.map(s=>s.id));for(const id of sessionTokens.keys())if(!liveIds.has(id))tx.objectStore('hot').delete?.('session:'+id);
- for(const row of packedRows)tx.objectStore('hot').put(row,'session:'+row.id);
- tx.objectStore('hot').put(hot,'main');
+ for(const p of plans){for(const[k,v]of p.writes)tx.objectStore('hot').put(v,k);for(const k of p.deletes)tx.objectStore('hot').delete(k);}
+ tx.objectStore('hot').put(hot,'main');if(force||!sameToken(globalToken,gt))tx.objectStore('hot').put(globalData,'learning-data');
  const at=[state.attempts,state.attempts.length,state.attempts.at(-1)];if(force||!sameToken(attemptToken,at))tx.objectStore('hot').put(state.attempts,'attempts');
  const meta=splitState(state).meta,mt=[...Object.entries(meta).flat(),...Object.entries(meta.deletedSessions||{}).flat(),(meta.syncConflicts||[]).length];if(force||!sameToken(metaToken,mt))tx.objectStore('meta').put(meta,'main');
- await S.awaitStoreTransaction(tx,'保存学习数据');
- const ids=new Set(state.sessions.map(s=>s.id));for(const id of sessionTokens.keys())if(!ids.has(id))sessionTokens.delete(id);
- for(const {row,token} of changed)sessionTokens.set(row.id,token);attemptToken=at;metaToken=mt;
- S.persistenceMetrics.sessionWrites=(S.persistenceMetrics.sessionWrites||0)+changed.length;
+ stages.enqueueMs=performance.now()-started;stages.stage='commit';started=performance.now();await S.awaitStoreTransaction(tx,'保存学习数据');stages.commitMs=performance.now()-started;stages.stage='complete';S.localMutationVersion=(S.localMutationVersion||0)+1;
+ for(const p of plans)p.commit();const ids=new Set(state.sessions.map(s=>s.id));for(const id of sessionTokens.keys())if(!ids.has(id))sessionTokens.delete(id);for(const{row,token}of changed)sessionTokens.set(row.id,token);attemptToken=at;metaToken=mt;globalToken=gt;S.persistenceMetrics.sessionWrites=(S.persistenceMetrics.sessionWrites||0)+changed.length;
 }
 S.saveMediaAudit=function(){
  if(mode!=='indexeddb')return Promise.reject(Error('IndexedDB不可用'));
@@ -1160,6 +1258,7 @@ S.saveMediaAudit=function(){
  });});
 };
 S.checkpointSession=async function(session){
+ await S.ensureSessionQuestions(session);
  if(S.NoteVault?.enabled())session=await S.NoteVault.packSession(session);
  if(!session||mode!=='indexeddb')return Promise.reject(Error('本地备份不可用'));
  return new Promise((resolve,reject)=>{writeChain=writeChain.catch(()=>{}).then(async()=>{
@@ -1185,7 +1284,7 @@ function drainHot(){
    const done=hotWaiters.filter(w=>w.target<=target);hotWaiters=hotWaiters.filter(w=>w.target>target);for(const w of done)w.resolve();
    if(changeAtStart>hotNotified){hotNotified=changeAtStart;S.accountSync?.onLocalSaved?.();}
   }
- }).catch(e=>{S.persistenceMetrics.hotFailures++;S.saveError=e.message;hotWritten=hotRequested;const pending=hotWaiters;hotWaiters=[];for(const w of pending)w.reject(e);if(!hotFailureActive){hotFailureActive=true;S.toast('本机自动保存未完成，请保留页面并导出备份：'+e.message);}}).finally(()=>{hotCycle=null;if(hotWaiters.length)drainHot();});
+ }).catch(e=>{S.persistenceMetrics.hotFailures++;S.persistenceMetrics.lastHotError={name:e.name,stage:S.persistenceMetrics.lastHotPhases?.stage||'queue',at:Date.now(),message:String(e.message||'').slice(0,240)};S.saveError=e.message;hotWritten=hotRequested;const pending=hotWaiters;hotWaiters=[];for(const w of pending)w.reject(e);if(!hotFailureActive){hotFailureActive=true;S.toast('本机自动保存未完成，请保留页面并导出备份：'+e.message);}}).finally(()=>{hotCycle=null;if(hotWaiters.length)drainHot();});
 }
 S.saveHot=function({learningChange=true}={}){
  S.learningRevision++;
@@ -1267,7 +1366,7 @@ S.reindex=function(){
   for(const p of state.papers||[]){
     if(!Array.isArray(p.slots))p.slots=[];
     p.slots.sort((a,b)=>Number(a.order)-Number(b.order));
-    const expected=finiteInt(p.expectedCount,p.slots.length);
+    const expected=finiteInt(S.expectedPaperCount?S.expectedPaperCount(p):p.expectedCount,p.slots.length);
     p.expectedCount=expected||p.slots.length;
     p.verified=p.slots.length>0&&p.slots.length===p.expectedCount&&p.slots.every((s,i)=>Number(s.order)===i+1&&qById.has(s.questionId));
   }
@@ -1330,7 +1429,7 @@ S.activeBank=()=> (S.state.bank||[]).filter(q=>!q.archived&&!q.demo);
 S.paperStatus=p=>{
   const slots=Array.isArray(p?.slots)?[...p.slots].sort((a,b)=>Number(a.order)-Number(b.order)):[];
   const missing=slots.filter(s=>!S.lookup(s.questionId)).length;
-  const expected=finiteInt(p?.expectedCount,slots.length);
+  const expected=finiteInt(S.expectedPaperCount?S.expectedPaperCount(p):p?.expectedCount,slots.length);
   const contiguous=slots.length>0&&slots.every((s,i)=>Number(s.order)===i+1);
   return {slots,missingSlots:missing,expectedCount:expected||null,contiguous,complete:slots.length>0&&missing===0&&contiguous&&expected===slots.length};
 };
@@ -1697,7 +1796,7 @@ S.startSameType=function(q,sourceSession=null){
 
 S.startSession=function(questions,config={}){
   if(S.openingPractice)return;
-  const exact=['timed-module','paper','exam','timed-paper'].includes(config.mode)||!!config.paperId;
+  const exact=!!config._resolvedExactGroup||['local-review-extra','wrongbook','timed-module','paper','exam','timed-paper'].includes(config.mode)||!!config.paperId||(config.mode==='local-review'&&config.blueprint?.localReview?.dataPointToPoint===true);
   const safe=(exact?questions.slice():S.ensureGroupIntegrity(questions)).map(q=>S.presentQuestion?S.presentQuestion(q):q);
   if(!safe.length){S.toast('当前条件下没有可用题目。');return;}
   if(S.exam)S.exam.dispose();
@@ -1872,6 +1971,7 @@ S.validateState=function(candidate,{learningOnly=false,buildIndexes=true,clone=t
     const qids=s.questions.map(q=>q.id);
     if(new Set(qids).size!==qids.length)throw Error('同一练习存在重复questionId：'+s.title);
     for(const q of s.questions){
+      if(!clone&&!sanitize&&s._deferredQuestions&&q._deferredSnapshot){if(!s.answers[q.id]||!Array.isArray(s.answers[q.id].excluded))throw Error('练习答案结构不完整：'+q.id);continue;}
       if(!q.id||!Array.isArray(q.optionsHtml)||q.optionsHtml.length!==4||!q.stemHtml)throw Error('历史题目快照结构不完整：'+q.id);
       if(sanitize){q.stemHtml=S.safeHTML(q.stemHtml);q.materialHtml=S.safeHTML(q.materialHtml);q.explanationHtml=S.safeHTML(q.explanationHtml);q.optionsHtml=q.optionsHtml.map(S.safeHTML);}
       const a=s.answers[q.id];
@@ -2099,14 +2199,24 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
   const updateExisting=options.updateExisting===true;
   const bundledManaged=options.bundledManaged===true;
   const baseBank=S.state.bank,basePapers=S.state.papers;
+  const metrics=S.importWorkMetrics||(S.importWorkMetrics={previews:0,yields:0,maxSliceMs:0,clonedQuestions:0,coldCommits:0});
+  metrics.previews++;let slice=performance.now();
+  async function checkpoint(force=false){
+    if(!force&&performance.now()-slice<6)return;
+    metrics.maxSliceMs=Math.max(metrics.maxSliceMs,performance.now()-slice);metrics.yields++;
+    await new Promise(resolve=>setTimeout(resolve,0));
+    while(bundledManaged&&(S.openingPractice||S.preparingInk||S.preparingReview||S.exam&&!S.exam.disposed||S.review))await new Promise(resolve=>setTimeout(resolve,120));
+    slice=performance.now();
+  }
+  async function copyRows(rows,size){const out=[];for(let i=0;i<rows.length;i+=size){out.push(...deepClone(rows.slice(i,i+size)));await checkpoint();}return out;}
   // Import only mutates cold bank data and metadata. Reuse the learning
   // branches so a preview does not duplicate the full history as well.
   const candidate={
     ...S.state,
-    bank:deepClone(S.state.bank||[]),
-    papers:deepClone(S.state.papers||[]),
-    mediaAudit:deepClone(S.state.mediaAudit||{}),
-    meta:deepClone(S.state.meta||{})
+    bank:await copyRows(baseBank||[],100),
+    papers:await copyRows(basePapers||[],5),
+    mediaAudit:S.state.mediaAudit,
+    meta:{...S.state.meta,canonicalAliases:{...S.state.meta?.canonicalAliases},duplicateCandidates:[...S.state.meta?.duplicateCandidates||[]],answerConflicts:[...S.state.meta?.answerConflicts||[]],importRecords:[...S.state.meta?.importRecords||[]]}
   };
   const existingByOccurrence=new Map();
   const existingByIdentity=new Map();
@@ -2117,9 +2227,9 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
   const removeIdentity=q=>{const key=identityKey(q);if(!key)return;const a=(existingByIdentity.get(key)||[]).filter(x=>x.id!==q.id);if(a.length)existingByIdentity.set(key,a);else existingByIdentity.delete(key);};
   const addContent=q=>{if(!q.contentFingerprint)return;const a=existingByContent.get(q.contentFingerprint)||[];if(!a.some(x=>x.id===q.id))a.push(q);existingByContent.set(q.contentFingerprint,a);};
   const removeContent=q=>{if(!q.contentFingerprint)return;const a=(existingByContent.get(q.contentFingerprint)||[]).filter(x=>x.id!==q.id);if(a.length)existingByContent.set(q.contentFingerprint,a);else existingByContent.delete(q.contentFingerprint);};
-  const rebuildIndexes=()=>{
+  const rebuildIndexes=async()=>{
     existingByOccurrence.clear();existingByIdentity.clear();existingByContent.clear();bankIndexById.clear();
-    (candidate.bank||[]).forEach((q,i)=>{existingByOccurrence.set(occurrenceKey(q),q);bankIndexById.set(q.id,i);addIdentity(q);addContent(q);});
+    for(let i=0;i<candidate.bank.length;i++){const q=candidate.bank[i];existingByOccurrence.set(occurrenceKey(q),q);bankIndexById.set(q.id,i);addIdentity(q);addContent(q);if(i%25===0)await checkpoint();}
   };
   const refreshFingerprints=q=>{
     const norm=clean(S.plain(q.stemHtml)||'');
@@ -2130,7 +2240,7 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
     q.visualFingerprint='vf-'+S.hash(imgs)+'-'+imgs.length;
     q.identityFingerprint='if-'+S.hash(q.contentFingerprint+'|'+q.visualFingerprint);
   };
-  rebuildIndexes();
+  await rebuildIndexes();metrics.clonedQuestions+=candidate.bank.length;
   const stats={files:0,newQuestions:0,existingQuestions:0,updatedQuestions:0,crossPaper:0,suspectedDuplicates:0,updatedPapers:0,invalid:0,warnings:0};
   const issues=[],incomingPapers=[],skippedUpdateFiles=new Set(),records=[];
   let auditContext=null;
@@ -2147,8 +2257,9 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
     if(!Array.isArray(questions)||!questions.length){issues.push({file:file.name,row:0,severity:'error',message:'未找到题目数组'});stats.invalid++;continue;}
     const title=paperTitleOf(data,file),paperId=paperIdOf(data,title),{orderMap,count:cardCount}=parseCard(data),materials=parseMaterials(data),region=String(data.region||data.province||data.area||'');
     auditContext={questions,orderMap};
-    const declared=Number(data.question_count??data.questionCount??data.count??(cardCount||questions.length));
-    const paper={id:paperId,bankId:String(data.bankId||paperId),bundledManaged,localImported:!bundledManaged,importSource:bundledManaged?'cloud':'local',sourceKind:options.sourceKind||S.paperSource({...data,title}),title,year:Number(data.year)||(Number(String(title).match(/20\d{2}/)?.[0])||null),paperType:String(data.paperType||data.examType||data.category||''),region,demo:questions.every(q=>!!q.demo),expectedCount:Number.isSafeInteger(declared)&&declared>0?declared:questions.length,slots:[]};
+    const sourceExpected=Number(data.expected_count??data.expectedCount);
+    const declared=Number(data.expected_count??data.expectedCount??data.question_count??data.questionCount??data.count??(cardCount||questions.length));
+    const paper={id:paperId,bankId:String(data.bankId||paperId),bundledManaged,localImported:!bundledManaged,importSource:bundledManaged?'cloud':'local',sourceKind:options.sourceKind||S.paperSource({...data,title}),title,year:Number(data.year)||(Number(String(title).match(/20\d{2}/)?.[0])||null),paperType:String(data.paperType||data.examType||data.category||''),region,demo:questions.every(q=>!!q.demo),sourceExpectedCount:Number.isSafeInteger(sourceExpected)&&sourceExpected>0?sourceExpected:undefined,expectedCount:Number.isSafeInteger(declared)&&declared>0?declared:questions.length,slots:[]};
     // A cloud refresh cannot replace a paper explicitly imported on this device.
     const protectedPaper=candidate.papers.find(p=>p.id===paperId);
     if(bundledManaged&&S.isLocalPaper(protectedPaper)){
@@ -2158,6 +2269,7 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
     const localOrders=new Set();
     let valid=0;
     for(let i=0;i<questions.length;i++){
+      if(i%20===0)await checkpoint();
       try{
         const q=buildIncomingQuestion(questions[i],i,{title,paperId,orderMap,materialMap:materials,region});
         q.importSource=bundledManaged?'cloud':'local';q.localImported=!bundledManaged;
@@ -2246,7 +2358,7 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
         for(const oldSlot of old.slots||[]){
           const order=Number(oldSlot.order);
           if(order>paper.expectedCount||newByOrder.has(order))continue;
-          const oldQuestion=candidate.bank.find(q=>q.id===oldSlot.questionId);
+          const oldQuestion=candidate.bank[bankIndexById.get(oldSlot.questionId)];
           if(oldQuestion)newByOrder.set(order,oldSlot);
         }
         const reconciled=[...newByOrder.values()].sort((a,b)=>Number(a.order)-Number(b.order));
@@ -2255,7 +2367,7 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
           if(oldQuestion.paperId===paperId&&!incomingIds.has(oldQuestion.id))oldQuestion.archived=true;
         }
         paper.slots=reconciled;
-        paper.verified=paper.slots.length===paper.expectedCount&&paper.slots.every((slot,i)=>Number(slot.order)===i+1&&candidate.bank.some(q=>q.id===slot.questionId));
+        paper.verified=paper.slots.length===paper.expectedCount&&paper.slots.every((slot,i)=>Number(slot.order)===i+1&&bankIndexById.has(slot.questionId));
         candidate.papers[oldIndex]={...old,...paper,slots:paper.slots,updatedAt:Date.now()};
       }else{
         const mergedSlots=[...(old.slots||[])];
@@ -2272,10 +2384,8 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
   candidate.meta.duplicateCandidates=candidate.meta.duplicateCandidates||[];
   candidate.meta.duplicateCandidates.push(...issues.filter(x=>x.severity==='warning'&&/疑似重复/.test(x.message)).map(x=>({file:x.file,row:x.row,reason:x.message,createdAt:new Date().toISOString(),status:'pending'})));
   candidate.meta.duplicateCandidates=candidate.meta.duplicateCandidates.slice(-5000);
-  const oldState=S.state;
-  try{S.state=candidate;S.reindex();}finally{S.state=oldState;S.reindex();}
   const qMap=new Map(candidate.bank.map(q=>[q.id,q])),groupCounts=new Map();for(const q of candidate.bank){const key=S.materialIdentity?.(q);if(key)groupCounts.set(key,(groupCounts.get(key)||0)+1);}
-  for(const record of records){if(record.outcome==='failed'){record.quality='failed';continue;}const q=qMap.get(record.questionId);
+  for(let ri=0;ri<records.length;ri++){if(ri%200===0)await checkpoint();const record=records[ri];if(record.outcome==='failed'){record.quality='failed';continue;}const q=qMap.get(record.questionId);
    const checked=S.inspectImportedQuality(q,groupCounts);record.quality=checked.quality;record.reason=[record.reason,checked.reason].filter(Boolean).join('；');
   }
   // File-level parse errors have no trustworthy question identity or original question number.
@@ -2283,6 +2393,7 @@ S.prepareImportFiles=async function(files,onProgress=()=>{},options={}){
   for(const record of records)if(record.outcome==='failed')record.quality='failed';
   const audit={id:S.uid(),preparedAt:Date.now(),source:bundledManaged?'cloud':'local',files:listFiles.map(f=>f.name),stats:{...stats},records};
   onProgress(100,'检查完成',`可导入 ${stats.newQuestions+stats.crossPaper+stats.existingQuestions} 条有效题目，${stats.invalid} 条异常`);
+  (S.preparedImportCandidates||(S.preparedImportCandidates=new WeakSet())).add(candidate);
   return {candidate,stats,issues,incomingPapers,audit,baseBank,basePapers,sourceFiles:listFiles,importOptions:{...options}};
 };
 
@@ -2291,7 +2402,14 @@ S.commitImport=async function(preview){
   const validCount=preview.candidate.bank.length-S.state.bank.length;
   if(!validCount&&!preview.stats?.existingQuestions&&!preview.audit)return {committed:0};
   if(preview.audit){preview.candidate.meta.importRecords=[...(S.state.meta.importRecords||[]).filter(b=>b.id!==preview.audit.id),{...preview.audit,committedAt:Date.now()}];}
-  await S.persistState(preview.candidate);
+  if(S.preparedImportCandidates?.has(preview.candidate)&&S.persistImportedBank){
+    await S.persistImportedBank(preview.candidate);
+    for(const key of ['sessions','attempts','learning','aiReviews','settings','lastSessionId'])preview.candidate[key]=S.state[key];
+    preview.candidate.mediaAudit=S.state.mediaAudit;
+    const incoming=preview.candidate.meta;
+    preview.candidate.meta={...S.state.meta,duplicateCandidates:incoming.duplicateCandidates,answerConflicts:incoming.answerConflicts,importRecords:incoming.importRecords,bankContentRevision:incoming.bankContentRevision};
+    S.importWorkMetrics.coldCommits++;
+  }else await S.persistState(preview.candidate);
   S.state=preview.candidate;S.reindex();
   return {committed:validCount,stats:preview.stats,issues:preview.issues};
 };
@@ -2342,7 +2460,7 @@ window.Study.JIANGSU_MODULES={"政治理论": {"count": 10, "minutes": 8, "quota
 const order=q=>Number(q.paperOrder||q.order)||0;
 S.materialIdentity=q=>q?.materialKey?JSON.stringify([q.paperId||'',q.materialKey]):null;
 S.materialNoteKey=q=>'m:'+S.materialIdentity(q);
-S.resolveMaterialNoteKey=function(s,q){const key=S.materialNoteKey(q),old='m:'+q.materialKey;if(!s.notes[key]&&s.notes[old])s.notes[key]=JSON.parse(JSON.stringify(s.notes[old]));return key;};
+S.resolveMaterialNoteKey=function(s,q){s.notes=s.notes||{};const key=S.materialNoteKey(q),old='m:'+q.materialKey,groups=new Set((s.questions||[]).filter(x=>x.materialKey===q.materialKey).map(S.materialNoteKey));if(groups.size===1&&!s.notes[key]&&s.notes[old])s.notes[key]=JSON.parse(JSON.stringify(s.notes[old]));return key;};
 S.reliableRate=q=>{const v=q?.rate;if(v==null||String(v).trim()==='')return null;const n=Number(String(v).replace(/%$/,''));return Number.isFinite(n)&&n>=0&&n<=100?n:null;};
 const median=a=>{const b=a.slice().sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2;};
 const shuffled=a=>{const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;};
@@ -2452,7 +2570,7 @@ S.topicCandidates=function({subject,years=[],difficulty=false,difficultyMin=20,d
  if(unitBank!==S.state.bank||unitRevision!==S.indexRevision){unitCache=new Map();unitBank=S.state.bank;unitRevision=S.indexRevision;}
  if(!unitCache.has(subject))unitCache.set(subject,S.materialUnits(S.activeBank().filter(q=>q.subject===subject)));
  let units=unitCache.get(subject);
- units=units.filter(u=>(!sourceKinds||u.members.every(q=>S.questionMatchesSource(q,sourceKinds)))&&(subject!=='资料分析'||u.material)&&(!years.length||u.members.every(q=>years.includes(Number(q.year||q.paperYear))))&&u.members.some(q=>S.topicMatches(q,path)&&sourcePath.every((p,i)=>q.path?.[i]===p)&&(!matches||matches(q))));
+ units=units.filter(u=>(!sourceKinds||u.members.every(q=>S.questionMatchesSource(q,sourceKinds)))&&(subject!=='资料分析'||u.material)&&(!years.length||u.members.every(q=>years.includes(Number(q.year||q.paperYear))))&&u.members.some(q=>(!path.length||S.topicMatches(q,path))&&sourcePath.every((p,i)=>q.path?.[i]===p)&&(!matches||matches(q))));
  if(difficulty)units=units.filter(u=>{const rates=u.members.map(S.reliableRate);if(rates.some(x=>x===null))return false;rates.sort((a,b)=>a-b);const i=rates.length>>1,v=rates.length%2?rates[i]:(rates[i-1]+rates[i])/2;return v>=min&&v<=max;});
  const seen=new Set();return units.filter(u=>{const ids=u.members.map(S.canonicalKey);if(ids.some(id=>seen.has(id)))return false;ids.forEach(id=>seen.add(id));return true;});
 };
@@ -2629,7 +2747,7 @@ S.renderBankBrowser=function(root){if(!root)return;const papers=S.state.papers.f
  const options=(values,all,current)=>`<option value="">${all}</option>`+values.map(v=>`<option value="${E(v)}" ${String(v)===String(current)?'selected':''}>${E(v)}</option>`).join('');
  root.innerHTML=`<div class="bank-discovery"><label class="bank-search-label" for="bank-search">搜索试卷<span class="bank-search-field">${S.icon('search')}<input type="search" id="bank-search" placeholder="搜索卷名，如：江苏 B类" value="${E(f.query)}" autocomplete="off"></span></label><div class="bank-filters"><label>地区／模拟卷<select id="bank-filter-region">${S.paperScopeOptions(papers,f.region,'','全部地区')}</select></label><label>年份<select id="bank-filter-year">${options([...new Set(papers.map(S.paperYear).filter(Boolean))].sort((a,b)=>b-a),'全部年份',f.year)}</select></label><label>类别<select id="bank-filter-kind">${options([...new Set(papers.map(p=>S.PaperFilters.kind(p)))].sort(),'全部类别',f.kind)}</select></label><label>排序<select id="bank-filter-sort"><option value="year">年份从新到旧</option><option value="recent">最近练习优先</option></select></label></div><div class="bank-result-meta"><span id="bank-result-count" role="status"></span><button class="text-button" id="bank-filter-clear">${S.icon('clearFilter')}<span>清除筛选</span></button></div></div><div id="bank-paper-results"></div>`;
  root.querySelector('#bank-filter-sort').value=f.sort;
- function paint(){const chosen=S.PaperFilters.choose(papers,f,S.state.sessions);root.querySelector('#bank-result-count').textContent='显示 '+chosen.length+' / '+papers.length+' 份试卷';const box=root.querySelector('#bank-paper-results');box.innerHTML=chosen.map(p=>{const {questions,slots,missingSlots}=S.paperQuestions(p),st=S.paperStatus(p);return `<article class="paper-row"><div class="paper-row-main"><h3>${E(p.title)} <span class="chip">${st.complete?'题位完整':'题位待核对'}</span></h3><p>${slots.length}/${st.expectedCount||'未声明'} 个原卷题位 · ${questions.length} 个可用题目${missingSlots?' · 缺失'+missingSlots:''}</p>${S.paperHistoryMarkup(p)}${st.complete?'':'<p class="bank-incomplete-note">补齐题位后可开始本卷；可用题仍可用于专项练习。</p>'}</div><div class="paper-row-actions"><button class="button small soft" data-paper-practice="${E(p.id)}" ${st.complete?'':'disabled'}>开始本卷</button></div></article>`;}).join('')||`<div class="empty">${papers.length?'没有符合条件的试卷，可清除筛选重试。':'还没有导入题库。'}</div>`;
+ function paint(){const chosen=S.PaperFilters.choose(papers,f,S.state.sessions);root.querySelector('#bank-result-count').textContent='显示 '+chosen.length+' / '+papers.length+' 份试卷';const box=root.querySelector('#bank-paper-results');box.innerHTML=chosen.map(p=>{const {questions,slots,missingSlots}=S.paperQuestions(p),st=S.paperStatus(p);return `<article class="paper-row"><div class="paper-row-main"><h3>${E(p.title)} <span class="chip">${st.complete?'题位完整':'题位待核对'}</span></h3><p>${slots.length}/${st.expectedCount||'未声明'} 个原卷题位 · ${questions.length} 个可用题目${missingSlots?' · 缺失'+missingSlots:''}</p>${S.paperHistoryMarkup(p)}${st.complete?'':slots.length>st.expectedCount?'<p class="bank-incomplete-note">已存题位多于声明题量，需要核对原卷题号；可用题仍可专项练习。</p>':'<p class="bank-incomplete-note">原卷题位尚未完整，可用题仍可专项练习。</p>'}</div><div class="paper-row-actions"><button class="button small soft" data-paper-practice="${E(p.id)}" ${st.complete?'':'disabled'}>开始本卷</button></div></article>`;}).join('')||`<div class="empty">${papers.length?'没有符合条件的试卷，可清除筛选重试。':'还没有导入题库。'}</div>`;
  S.$$('[data-paper-report]',box).forEach(b=>b.onclick=()=>S.showReport(b.dataset.paperReport));S.$$('[data-paper-practice]',box).forEach(b=>b.onclick=()=>{const p=papers.find(p=>p.id===b.dataset.paperPractice);if(!p||!S.paperStatus(p).complete)return S.toast('这套试卷题位待核对');const {questions}=S.paperQuestions(p);S.startSession(questions,{title:p.title+' · 本卷练习',mode:'paper',paperId:p.id,paperTitle:p.title});});}
  let composing=false;const search=root.querySelector('#bank-search');search.oncompositionstart=()=>composing=true;search.oncompositionend=()=>{composing=false;f.query=search.value;paint();};search.oninput=()=>{if(!composing){f.query=search.value;paint();}};
  for(const key of ['region','year','kind','sort'])root.querySelector('#bank-filter-'+key).onchange=e=>{f[key]=e.target.value;paint();};root.querySelector('#bank-filter-clear').onclick=()=>{Object.assign(f,{query:'',region:'',year:'',kind:'',source:'',sort:'year'});S.renderBankBrowser(root);};paint();
@@ -2653,6 +2771,63 @@ function displayPaper(q){
   return no?`${title} · 第${no}题`:title;
 }
 function displayMatches(q,path){return !path.length||S.displayTopicPaths(q).some(p=>path.every((x,i)=>p[i]===x));}
+
+/* R67: request taxonomy only when opened; cache by bank and filters. */
+let homeCatalog=null,homePaint=0;
+const homeMetrics=S.homeWorkMetrics={treeBuilds:0,countsBuilds:0,treeYields:0,maxTreeSliceMs:0};
+const homePause=()=>new Promise(resolve=>setTimeout(resolve,0));
+function homeState(){
+ const settings=trainingSettings(),key=JSON.stringify([settings.years,settings.difficulty,settings.difficultyMin,settings.difficultyMax,settings.sourceKinds]);
+ if(!homeCatalog||homeCatalog.bank!==S.state.bank||homeCatalog.revision!==S.indexRevision||homeCatalog.key!==key)
+  homeCatalog={bank:S.state.bank,revision:S.indexRevision,key,settings,roots:new Map(),counts:new Map(),jobs:new Map()};
+ return homeCatalog;
+}
+function homeAlive(c){return c===homeCatalog&&c.bank===S.state.bank&&c.revision===S.indexRevision&&S.route==='home';}
+async function homeSlot(c){
+ while(homeAlive(c)&&(S.bankImporting||S.openingPractice||S.preparingInk||S.preparingReview||S.exam&&!S.exam.disposed||S.review||document.hidden))await new Promise(resolve=>setTimeout(resolve,120));
+ return homeAlive(c);
+}
+function homeNode(key){const p=key.split('|');let n=homeState().roots.get(p.shift());for(const part of p){n=n?.children.get(part);if(!n)return null;}return n;}
+async function loadHomeTree(subject){
+ const c=homeState();if(c.roots.has(subject))return c.roots.get(subject);if(c.jobs.has(subject))return c.jobs.get(subject);
+ const job=(async()=>{
+  await homePause();if(!await homeSlot(c))return null;
+  const root={children:new Map(),path:[],count:0,groups:0},units=S.topicCandidates({subject,...c.settings});let slice=performance.now();
+  for(const u of units){
+   root.count+=u.members.length;if(u.material)root.groups++;
+   const paths=new Map();for(const q of u.members)for(const p of S.displayTopicPaths(q))paths.set(p.join('|'),p);
+   const seen=new Set();for(const p of paths.values()){let node=root;for(const part of p){
+    if(!node.children.has(part))node.children.set(part,{children:new Map(),path:[...node.path,part],count:0,groups:0});
+    node=node.children.get(part);const key=node.path.join('|');if(!seen.has(key)){node.count+=u.members.length;if(u.material)node.groups++;seen.add(key);}
+   }}
+   if(performance.now()-slice>=6){homeMetrics.maxTreeSliceMs=Math.max(homeMetrics.maxTreeSliceMs,performance.now()-slice);homeMetrics.treeYields++;await homePause();if(!await homeSlot(c))return null;slice=performance.now();}
+  }
+  if(!homeAlive(c))return null;c.roots.set(subject,root);c.counts.set(subject,root.count);homeMetrics.treeBuilds++;return root;
+ })().finally(()=>c.jobs.delete(subject));c.jobs.set(subject,job);return job;
+}
+function showHomeTree(subject,token){
+ const body=S.$('[data-home-topic-body="'+subject+'"]');if(!body)return;
+ const root=homeState().roots.get(subject);
+ if(root){body.innerHTML=renderTopicNode(subject,root,0);bindTopicTree(body);return;}
+ body.textContent='正在读取题型…';
+ loadHomeTree(subject).then(tree=>{
+  if(!tree||token!==homePaint||S.route!=='home')return;
+  const target=S.$('[data-home-topic-body="'+subject+'"]');if(!target)return;
+  target.innerHTML=renderTopicNode(subject,tree,0);bindTopicTree(target);
+  const count=S.$('[data-home-topic-count="'+subject+'"]');if(count)count.textContent=tree.count+'题';
+ }).catch(()=>{if(token===homePaint&&body.isConnected)body.textContent='请收起后重新展开';});
+}
+function queueHomeCounts(token){
+ const c=homeState();setTimeout(async()=>{
+  for(const subject of S.SUBJECTS){
+   if(token!==homePaint||!await homeSlot(c))return;
+   if(!c.counts.has(subject)){const units=S.topicCandidates({subject,...c.settings});c.counts.set(subject,units.reduce((n,u)=>n+u.members.length,0));homeMetrics.countsBuilds++;}
+   const count=S.$('[data-home-topic-count="'+subject+'"]');if(count)count.textContent=c.counts.get(subject)+'题';
+   await homePause();
+  }
+ },50);
+}
+
 function nodeTree(subject){
   const root={children:new Map(),path:[],count:0,groups:0};
   const units=S.topicCandidates({subject,...trainingSettings()});
@@ -2696,15 +2871,15 @@ function renderTopicNode(subject,node,depth=0){
       <div class="topic-node-row-v29" style="--topic-depth:${depth}">
         ${has?`<button class="topic-node-label-v29 topic-node-toggle-v29" type="button" data-topic-toggle="${E(key)}" aria-expanded="${open}"><span class="release-chevron" style="transform:${open?'rotate(90deg)':''}">${S.homeChevron()}</span><strong>${E(name)}</strong></button>`:`<div class="topic-node-label-v29 topic-leaf-v297"><strong>${E(name)}</strong></div>`}
         <span class="topic-count-v297">${child.count}题</span><button class="topic-enter-v29" type="button" data-topic-enter="${E(key)}" aria-label="进入${E(name)}练习">${S.homeChevron()}</button>
-      </div>${has?`<div class="topic-node-children-v29" ${open?'':'hidden'}>${renderTopicNode(subject,child,depth+1)}</div>`:''}</div>`;
+      </div>${has?`<div class="topic-node-children-v29" data-loaded="${open?1:0}" ${open?'':'hidden'}>${open?renderTopicNode(subject,child,depth+1):""}</div>`:''}</div>`;
   }).join('');
 }
-function bindTopicTree(){
-  S.$$('[data-topic-toggle]').forEach(b=>b.onclick=()=>{
+function bindTopicTree(scope=S.$('#view')){
+  S.$$('[data-topic-toggle]',scope).forEach(b=>b.onclick=()=>{
     const node=b.closest('[data-topic-node]'),box=node?.querySelector(':scope > .topic-node-children-v29');if(!box)return;
-    const open=box.hidden;box.hidden=!open;topicTreeState.setOpen(b.dataset.topicToggle,open);b.setAttribute('aria-expanded',String(open));b.classList.toggle('open',open);const arrow=b.querySelector('.release-chevron');if(arrow)arrow.style.transform=open?'rotate(90deg)':'';
+    const open=box.hidden;if(open&&box.dataset.loaded!=='1'){const key=b.dataset.topicToggle,part=key.split('|'),subject=part.shift(),child=homeNode(key);if(child){box.innerHTML=renderTopicNode(subject,child,part.length);box.dataset.loaded='1';bindTopicTree(box);}}box.hidden=!open;topicTreeState.setOpen(b.dataset.topicToggle,open);b.setAttribute('aria-expanded',String(open));b.classList.toggle('open',open);const arrow=b.querySelector('.release-chevron');if(arrow)arrow.style.transform=open?'rotate(90deg)':'';
   });
-  S.$$('[data-topic-enter]').forEach(b=>b.onclick=()=>{
+  S.$$('[data-topic-enter]',scope).forEach(b=>b.onclick=()=>{
     const parts=b.dataset.topicEnter.split('|');const subject=parts.shift();S.startTopicTraining({subject,path:parts});
   });
 }
@@ -2714,7 +2889,7 @@ S.renderTopicSetup=function(){
   const years=[...new Set([...saved.years,...S.activeBank().map(q=>Number(q.year||q.paperYear)).filter(y=>Number.isInteger(y)&&y>1900)])].sort((a,b)=>b-a);
   S.$('#view').innerHTML=`<div class="v28-page">
     <button class="backlink" id="setup-back">${S.icon('back')}返回专项目录</button>
-    <div class="page-title v28-page-title"><div><h1>出题设置</h1><p class="setup-explanation">统一设置首页六科及其小题型后续专项练习的题目来源、年份、题量和筛选；保存后回首页选择科目开始。每日AI题包、整卷和当前练习按各自规则执行。</p></div></div>
+    <div class="page-title v28-page-title"><div><h1>出题设置</h1><p class="setup-explanation">统一设置首页六科及其小题型后续专项练习的题目来源、年份、题量和筛选；保存后回首页选择科目开始。定点复盘、整卷和当前练习按各自规则执行。</p></div></div>
     <section class="panel setup-card-v29">
       ${S.sourceKindsMarkup('setup-source-kinds',saved.sourceKinds)}
       <div class="setup-field-v29"><label for="setup-year">年份</label><select id="setup-year"><option value="all">全部年份</option><option value="3">近3年</option><option value="5">近5年</option><option value="10">近10年</option><option value="custom">自定义年份</option></select>
@@ -2771,18 +2946,17 @@ S.renderTopicSetup=function(){
   };
 };
 S.renderHome=function(){
+  const homeToken=++homePaint,homeData=homeState();
   const unfinished=(S.state.sessions||[]).filter(s=>!s.finished).sort((a,b)=>b.updatedAt-a.updatedAt)[0];
-  const recent=(S.state.sessions||[]).filter(s=>s.finished).sort((a,b)=>Number(b.finishedAt)-Number(a.finishedAt)).slice(0,3);
-  const due=S.reviewDueQuestions().length, fav=S.favoriteCount(), wrong=S.wrongQuestions().length, repeat=S.repeatErrorStats(4);
-  const bank=S.activeBank(),unique=S.uniqueCanonical(bank);
+  const fav=S.favoriteCount(),wrong=S.wrongQuestions().length;
   S.$('#view').innerHTML=`${S.homeHero()}<div class="home-primary-grid"><section class="home-today panel">
     <div class="today-head"><div><h1>今天练什么</h1>${S.examCountdown()}</div><button class="text-button" id="home-history">${S.icon('arrow')}全部训练记录</button></div>
     ${unfinished?`<button class="today-resume" id="home-resume"><span><strong>继续上次：${E(unfinished.title)}</strong><small>已完成 ${Object.values(unfinished.answers||{}).filter(a=>a?.selected!=null).length} / ${unfinished.questions.length} 题${unfinished.timed?' · 已暂停':''}</small></span><b>继续 ${S.icon('arrow')}</b></button>`:`<div class="today-empty"><strong>今天还没有进行中的练习</strong></div>`}
     <div class="learning-shortcuts-v29">
-      <button data-learning-mode="review"><strong>今日复习</strong><b>${due}</b></button>
+      
       <button data-learning-mode="favorites"><strong>我的收藏</strong><b>${fav}</b></button>
-      <button data-learning-mode="wrong"><strong>错题</strong><b>${wrong}</b></button>
-      <button data-learning-mode="repeat"><strong>反复错误</strong><b>${S.singleRepeatErrors(Infinity).length}</b></button>
+      <button data-learning-mode="wrong"><strong>错题本</strong><b>${wrong}</b></button>
+      
     </div>
   </section><div class="home-daily-primary">${S.dailyCardHTML?.()||''}</div></div>
   <div class="home-entry-grid">
@@ -2794,9 +2968,9 @@ S.renderHome=function(){
       <div class="panel-title"><div><h2>专项训练</h2></div></div>
       <div class="home-subject-list-v29">
       ${S.SUBJECTS.map(subject=>{
-        const tree=nodeTree(subject),open=topicTreeState.isOpen(subject);
-        return `<article class="subject-row-v28 ${open?'expanded':''}" data-subject-row="${E(subject)}"><div class="subject-head-v291"><button class="subject-expand-v28" type="button" data-subject-expand="${E(subject)}" aria-expanded="${open}"><span class="subject-chevron-v28" style="transform:${open?'rotate(90deg)':''}">${S.homeChevron()}</span><span class="subject-name-v28">${E(subject)}</span></button><span class="topic-count-v297">${tree.count}题</span><button class="subject-start-v291" type="button" data-topic-enter="${E(subject)}" aria-label="进入${E(subject)}练习">${S.homeChevron()}</button></div><div class="subject-children-v28" ${open?'':'hidden'}>
-          ${renderTopicNode(subject,tree,0)}</div></article>`;
+        const tree=homeData.roots.get(subject),open=topicTreeState.isOpen(subject),count=homeData.counts.get(subject);
+        return `<article class="subject-row-v28 ${open?'expanded':''}" data-subject-row="${E(subject)}"><div class="subject-head-v291"><button class="subject-expand-v28" type="button" data-subject-expand="${E(subject)}" aria-expanded="${open}"><span class="subject-chevron-v28" style="transform:${open?'rotate(90deg)':''}">${S.homeChevron()}</span><span class="subject-name-v28">${E(subject)}</span></button><span class="topic-count-v297" data-home-topic-count="${E(subject)}">${count==null?"":count+"题"}</span><button class="subject-start-v291" type="button" data-topic-enter="${E(subject)}" aria-label="进入${E(subject)}练习">${S.homeChevron()}</button></div><div class="subject-children-v28" data-home-topic-body="${E(subject)}" ${open?'':'hidden'}>
+          ${open&&tree?renderTopicNode(subject,tree,0):""}</div></article>`;
       }).join('')}
       </div>
       <div class="home-custom-v291"><button class="button soft" id="home-custom">${S.icon('settings')}<span>出题设置</span></button></div>
@@ -2813,10 +2987,9 @@ S.renderHome=function(){
   S.$$('[data-learning-mode]').forEach(b=>b.onclick=()=>S.renderLearning(b.dataset.learningMode));
   S.$$('[data-weak-subject]').forEach(b=>b.onclick=()=>S.startTopicTraining({subject:b.dataset.weakSubject,path:b.dataset.weakPath?b.dataset.weakPath.split('|'):[],unrestricted:true}));
   S.$$('[data-subject-expand]').forEach(b=>b.onclick=()=>{
-    const row=b.closest('[data-subject-row]'),box=row.querySelector('.subject-children-v28');const open=box.hidden;box.hidden=!open;topicTreeState.setOpen(b.dataset.subjectExpand,open);row.classList.toggle('expanded',open);b.setAttribute('aria-expanded',String(open));const arrow=b.querySelector('.subject-chevron-v28');if(arrow)arrow.style.transform=open?'rotate(90deg)':'';
+    const row=b.closest('[data-subject-row]'),box=row.querySelector('.subject-children-v28');const open=box.hidden;box.hidden=!open;topicTreeState.setOpen(b.dataset.subjectExpand,open);row.classList.toggle('expanded',open);if(open)showHomeTree(b.dataset.subjectExpand,homeToken);b.setAttribute('aria-expanded',String(open));const arrow=b.querySelector('.subject-chevron-v28');if(arrow)arrow.style.transform=open?'rotate(90deg)':'';
   });
-  bindTopicTree();S.bindHomeExperience();
-  if(recent.length){/* recent sessions remain in the existing records page to keep the home uncluttered */}
+  bindTopicTree();S.bindHomeExperience();queueHomeCounts(homeToken);for(const subject of S.SUBJECTS)if(topicTreeState.isOpen(subject))showHomeTree(subject,homeToken);
 };
 S.renderLearning=function(mode='review'){
   let title='',qs=[];
@@ -2854,7 +3027,7 @@ S.renderBank=function(){
   <div id="bank-browser"></div></section>`;
   S.renderBankBrowser(S.$('#bank-browser'));
   const connection=document.createElement('section');connection.className='panel bank-connection';
-  connection.innerHTML=`<h2>接入真题库</h2><label>题库站地址<input id="bank-source-url" type="url" value="${E(S.state.settings.bankBaseUrl||window.STUDY_BANK_CONFIG?.baseUrl||'')}" placeholder="https://你的题库项目.pages.dev/"></label><button class="button primary" id="bank-connect">保存并接入题库</button><p id="bank-connect-status" role="status">${E(S.bankConnectionError||'')}</p>`;
+  connection.innerHTML=`<h2>接入真题库</h2><label>题库站地址<input id="bank-source-url" type="url" value="${E(S.state.settings.bankBaseUrl||window.STUDY_BANK_CONFIG?.baseUrl||'')}" placeholder="https://你的题库项目.pages.dev/"></label><button class="button primary" id="bank-connect">保存并接入题库</button><p id="bank-connect-status" role="status">${E(S.bankConnectionError||(S.bankUpdateAvailable?'题库有更新，点击上方按钮接入。':''))}</p>`;
   S.$('#view').append(connection);
   S.$('#bank-connect',connection).onclick=async()=>{
     const b=S.$('#bank-connect',connection),status=S.$('#bank-connect-status',connection),raw=S.$('#bank-source-url',connection).value.trim();
@@ -2862,7 +3035,7 @@ S.renderBank=function(){
       const changed=S.state.settings.bankBaseUrl!==url.href;S.state.settings.bankBaseUrl=url.href;if(changed)S.state.meta.bundledBankCompletedKeys=[];
       await S.saveHot();b.disabled=true;S.bankConnectionError='';
       await S.importBundledBank((label,n,total)=>status.textContent=label+' '+n+'/'+total);S.renderBank();S.toast('真题库接入完成');
-    }catch(e){S.bankConnectionError=e.message;status.textContent='接入未完成：'+e.message;b.disabled=false;}
+    }catch(e){S.bankConnectionError=S.bankErrorMessage(e);status.textContent=S.bankConnectionError;b.disabled=false;}
   };
   S.$('#bank-import-log').onclick=()=>S.showImportRecords();S.$('#bank-import').onclick=S.chooseImport;S.$('#bank-media').onclick=()=>S.go('media');
 
@@ -2925,7 +3098,7 @@ S.renderHeader=function(route='home'){
 
 S.go=function(route){
   S.closeModal();S.closeReview?.();S.closeHomePops?.();
-  if(S.exam){if(!S.exam.s.timed)S.exam.s.paused=true;S.exam.dispose();S.saveSoon();}
+  if(S.exam){const previousExam=S.exam;if(!previousExam.s.timed)previousExam.s.paused=true;previousExam.dispose();if(S.exam===previousExam)S.exam=null;S.saveSoon();}
   S.$('#workspace').hidden=true;S.$('#app-shell').hidden=false;S.route=route;
   const map={home:S.renderHome,timed:S.renderTimed,papers:S.renderPapers,bank:S.renderBank,media:()=>S.media.render(),history:S.renderHistory,settings:S.renderSettings};
   if(route==='setup'||route==='learning')return;
@@ -3076,7 +3249,7 @@ class Notebook{
  emit(event){for(const fn of this.listeners)fn(event);}
  append(key,stroke){const rows=this.rows(key).slice();rows.push(stroke);this.notes.set(key,rows);const h=this.historyFor(key);h.undo.push({type:'append',stroke});h.redo=[];this.emit({type:'append',key,stroke});}
  clear(key){const old=this.rows(key);if(!old.length)return;const h=this.historyFor(key);h.undo.push({type:'clear',old:old.slice()});h.redo=[];this.notes.set(key,[]);this.emit({type:'reset',key});}
- undo(key){const h=this.historyFor(key),entry=h.undo.pop();if(!entry)return;if(entry.type==='append')this.notes.set(key,this.rows(key).filter(s=>s!==entry.stroke));else this.notes.set(key,entry.old.slice());h.redo.push(entry);this.emit({type:'reset',key});}
+ undo(key){const h=this.historyFor(key),entry=h.undo.pop();if(!entry)return;if(entry.type==='append')this.notes.set(key,this.rows(key).filter(s=>s!==entry.stroke&&(!entry.stroke.id||s.id!==entry.stroke.id)));else this.notes.set(key,entry.old.slice());h.redo.push(entry);this.emit({type:'reset',key});}
  redo(key){const h=this.historyFor(key),entry=h.redo.pop();if(!entry)return;if(entry.type==='append')this.notes.set(key,[...this.rows(key),entry.stroke]);else this.notes.set(key,[]);h.undo.push(entry);this.emit({type:'reset',key});}
  snapshot(){return [...this.notes].map(([key,rows])=>[key,JSON.parse(JSON.stringify(rows))]);}
 }
@@ -3185,8 +3358,10 @@ class BoundNotebook extends Notebook{
  constructor(exam){super();this.exam=exam;}
  note(key){const n=this.exam.s._review?S.reviewNoteFor(this.exam,key):S.noteFor(this.exam.s,key);if(this.exam.s._review)n.phase='review';return n;}
  rows(key){return this.note(key).strokes;}
- historyFor(key){if(!this.history.has(key))this.history.set(key,{undo:this.rows(key).map(stroke=>({type:'append',stroke})),redo:[]});return this.history.get(key);}
- emit(event){if(this.notes.has(event.key)){const note=this.note(event.key),next=this.notes.get(event.key),ids=new Set(next.map(st=>st.id));if(event.type==='reset'){note.removedStrokes=note.removedStrokes||{};for(const st of note.strokes)if(st.id&&!ids.has(st.id))note.removedStrokes[st.id]=st;for(const st of next)delete note.removedStrokes[st.id];}note.strokes=next;}super.emit(event);}
+ undo(key){const h=this.historyFor(key),g=h.undo.at(-1)?.stroke?.gestureId;do{super.undo(key);}while(g&&h.undo.at(-1)?.stroke?.gestureId===g);}
+ redo(key){const h=this.historyFor(key),g=h.redo.at(-1)?.stroke?.gestureId;do{super.redo(key);}while(g&&h.redo.at(-1)?.stroke?.gestureId===g);}
+ historyFor(key){if(!this.history.has(key)){const saved=this.note(key).inkHistory;for(const stroke of this.rows(key))if(!stroke.id)stroke.id=S.uid();this.history.set(key,saved&&Array.isArray(saved.undo)&&Array.isArray(saved.redo)?{undo:saved.undo.slice(),redo:saved.redo.slice()}:{undo:this.rows(key).map(stroke=>({type:'append',stroke})),redo:[]});}return this.history.get(key);}
+ emit(event){if(this.notes.has(event.key)){const note=this.note(event.key),next=this.notes.get(event.key),ids=new Set(next.map(st=>st.id));if(event.type==='reset'){note.removedStrokes=note.removedStrokes||{};for(const st of note.strokes)if(st.id&&!ids.has(st.id))note.removedStrokes[st.id]=st;for(const st of next)delete note.removedStrokes[st.id];}note.strokes=next;const h=this.history.get(event.key);if(h)note.inkHistory={undo:h.undo.slice(),redo:h.redo.slice()};}super.emit(event);}
 }
 function drawCompatible(ctx,st,r,geo,size,note){
  const w=size.width,h=r.anchor.height*size.height/geo.pane.height;
@@ -3234,43 +3409,42 @@ class WorkspaceView{
   if(typeof ResizeObserver==='function'&&scroll.firstElementChild){this.contentObserver=new ResizeObserver(()=>{if(this.pointer!==null){this.layoutPending=true;return;}this.regionCache=null;this.invalidate();this.refreshLayout();});this.contentObserver.observe(scroll.firstElementChild);}
   this.subscribe();this.resize();this.refreshLayout();
  }
- subscribe(){if(this.unsubscribe)this.unsubscribe();const handle=event=>{const geo=this.lastGeometry,r=geo?.regions.find(r=>r.key===event.key);if(!r){if(!geo)this.invalidate();return;}if(event.type==='append'&&!this.dirty){draw(this.base.getContext('2d'),event.stroke,r,geo,this.size);this.schedule();}else this.invalidate();};this.store.listeners.add(handle);this.unsubscribe=()=>this.store.listeners.delete(handle);}
+ subscribe(){if(this.unsubscribe)this.unsubscribe();const handle=event=>{const owner=this.ownerKey();if(event.key!==owner)return;const geo=this.lastGeometry,r=geo?.regions.find(r=>r.key===(event.stroke?.draftSurfaceKey||event.key));if(event.type==='append'&&!this.dirty&&r){drawCompatible(this.base.getContext('2d'),event.stroke,r,geo,this.size,this.store.note(owner));this.schedule();}else this.invalidate();};this.store.listeners.add(handle);this.unsubscribe=()=>this.store.listeners.delete(handle);}
+ ownerKey(){if(this.scroll.id==='split-material-scroll')return this.regionCache?.regions[0]?.key||this.scroll.querySelector('[data-note-key]')?.dataset.noteKey;const i=this.exam.inkOn&&Number.isInteger(this.exam.noteOwnerIndex)?this.exam.noteOwnerIndex:this.exam.s.index;return 'q:'+this.exam.s.questions[i]?.id;}
  releaseBuffers(){for(const c of [this.canvas,this.base,this.live,this.original])if(c.width!==1||c.height!==1)c.width=c.height=1;this.dirty=true;}
  fitBuffer(c){const w=Math.max(1,Math.round(this.size.width*this.dpr)),h=Math.max(1,Math.round(this.size.height*this.dpr));if(c.width!==w)c.width=w;if(c.height!==h)c.height=h;}
  resize(){S.lockInkSurface?.(this);S.restoreReadingAnchor?.(this);const w=Math.max(1,this.root.clientWidth),h=Math.max(1,this.root.clientHeight);this.size={width:w,height:h};this.regionCache=null;this.dpr=Math.min(2,(globalThis.devicePixelRatio||1)*(globalThis.visualViewport?.scale||1),Math.sqrt(3400000/(Math.max(w,this.exam.root.clientWidth||w)*Math.max(h,(this.exam.root.clientHeight||h)-64))));S.captureReadingAnchor?.(this);
   if(!this.visible){this.releaseBuffers();return;}this.fitBuffer(this.canvas);this.fitBuffer(this.base);if(this.exam.originalNotes)this.fitBuffer(this.original);this.invalidate();this.refreshLayout();}
- refreshLayout(){if(!this.alive)return;if(this.pointer!==null){this.layoutPending=true;return;}this.regionCache=null;const geo=this.geometry();for(const r of geo.regions){if(r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;const current=this.store.note(r.key),original=this.exam.originalNotes?.[r.key];if(current.strokes.length||original?.strokes?.length)this.prepareLayout(r,geo);}}
+ refreshLayout(){if(!this.alive)return;if(this.pointer!==null){this.layoutPending=true;return;}this.regionCache=null;const geo=this.geometry(),owner=this.ownerKey();if(!owner||S.InkSurfaceCache&&!S.InkSurfaceCache.ready(this.exam,owner))return;const rows=this.store.rows(owner);for(const r of geo.regions){if(!r.node||r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;if(rows.some(st=>(st.draftSurfaceKey||owner)===r.key))this.prepareLayout(r,geo,owner);}for(const[key,f]of this.facades||[])if(f.domRoot?.isConnected===false){f.alive=false;clearTimeout(f.layoutTimer);f.cancelLayoutCapture?.();this.facades.delete(key);}}
  geometry(){
   const pane=this.root.getBoundingClientRect(),scrollTop=this.scroll.scrollTop;
+  const win=this.scroll.id==='question-scroll'&&this.exam.practiceWindow;if(win&&this.virtualVersion!==win.version){this.regionCache=null;this.virtualVersion=win.version;}
   if(!this.regionCache){const material=this.scroll.id==='split-material-scroll';let regions=[];
    if(material){const n=this.scroll.querySelector('[data-note-key]');if(n){const a=n.getBoundingClientRect();regions=[{key:n.dataset.noteKey,node:n,anchor:a,left:pane.left,right:pane.right,top:pane.top,bottom:pane.bottom}];}}
+   else if(win){regions=win.regions(this,pane);}
    else{const cards=[...this.scroll.querySelectorAll('[data-question]')],boxes=cards.map(n=>n.getBoundingClientRect());regions=cards.map((n,i)=>{const box=boxes[i],content=n.querySelector('.qcontent')?.getBoundingClientRect(),a={left:box.left,right:box.right,top:box.top,bottom:box.bottom,width:box.width,height:content?Math.max(1,content.bottom-box.top):box.height},next=boxes[i+1],q=this.exam.s.questions[Number(n.dataset.question)];return {key:'q:'+q.id,node:n,anchor:a,left:pane.left,right:pane.right,top:i===0?Math.min(a.top,pane.top):a.top,bottom:next?next.top:Math.max(a.bottom,pane.bottom)};});}
    this.regionCache={regions,pane,scrollTop,material};
   }
   const cached=this.regionCache,dx=pane.left-cached.pane.left,dy=pane.top-cached.pane.top-(scrollTop-cached.scrollTop);
   // DOMRect dimensions are prototype accessors: object spread loses them.
-  const regions=cached.regions.map(r=>{const a=r.anchor,out={...r,left:pane.left,right:pane.right,anchor:{width:a.width,height:a.height,left:a.left+dx,right:a.right+dx,top:a.top+dy,bottom:a.bottom+dy},top:cached.material?pane.top:r.top+dy,bottom:cached.material?pane.bottom:r.bottom+dy};const f=this.facades?.get(r.key);if(f?.layoutReady)out.currentLayout=f.note.layouts?.[f.note.layoutId];return out;});
+  const regions=cached.regions.map(r=>{const a=r.anchor,out={...r,left:pane.left,right:pane.right,anchor:{width:a.width,height:a.height,left:a.left+dx,right:a.right+dx,top:a.top+dy,bottom:a.bottom+dy},top:cached.material?pane.top:r.top+dy,bottom:cached.material?pane.bottom:r.bottom+dy};const f=this.facades?.get(this.ownerKey()+'\0'+r.key);if(f?.layoutReady)out.currentLayout=f.note.layouts?.[f.capturedLayoutId||f.note.layoutId];return out;});
   return {pane,regions};
  }
- target(key){if(this.activeKey===key&&this.exam.lastInk===this)return;this.activeKey=key;const region=this.geometry().regions.find(r=>r.key===key);if(!region)return;this.exam.lastInk=this;this.parent={dataset:{noteKey:key}};const i=this.exam.s.questions.findIndex(q=>'q:'+q.id===key);if(i>=0)this.exam.toolIndex=i;const caption=S.$('#reading-note-target',this.exam.root);if(caption)caption.textContent=key.startsWith('m:')?'材料草稿':'第 '+(i+1)+' 题草稿';this.exam.updateControls?.();}
- prepareLayout(region,geo=this.geometry()){
-  const sx=this.size.width/geo.pane.width,sy=this.size.height/geo.pane.height,key=region.key,note=this.store.note(key),w=this.size.width,h=region.anchor.height*sy;
-  let f=this.facades?.get(key);if(!f){this.facades=this.facades||new Map();f={alive:true,parent:null,note,layoutEpoch:0};this.facades.set(key,f);}
-  const node=region.node;
-  f.onLayoutCaptured=()=>{this.invalidate();this.exam.persistInk();};f.refreshBasis=()=>{f.originRect={left:this.root.getBoundingClientRect().left,top:node.getBoundingClientRect().top};};f.domRoot=node;f.originRect={left:geo.pane.left,top:region.anchor.top};f.pixelRatioX=sx;f.pixelRatioY=sy;f.parent={dataset:{noteKey:key},get isConnected(){return node.isConnected;},get textContent(){return node.textContent;},querySelectorAll:s=>node.querySelectorAll(s),getBoundingClientRect:()=>({left:geo.pane.left,top:region.anchor.top,width:w,height:h})};
+ target(key){const actual=key.startsWith('m:')?key:this.ownerKey();if(!actual||this.activeKey===actual&&this.exam.lastInk===this)return;this.activeKey=actual;this.exam.lastInk=this;this.parent={dataset:{noteKey:actual}};S.InkSurfaceCache?.ready(this.exam,actual);this.invalidate();this.exam.updateControls?.();}
+ prepareLayout(region,geo=this.geometry(),owner=this.ownerKey()){
+  const sx=this.size.width/geo.pane.width,sy=this.size.height/geo.pane.height,key=region.key,note=this.store.note(owner),w=this.size.width,h=region.anchor.height*sy;
+  const fk=owner+'\0'+key;let f=this.facades?.get(fk);if(!f){this.facades=this.facades||new Map();f={alive:true,parent:null,note,layoutEpoch:0};this.facades.set(fk,f);}
+  const node=region.node;if(!node)return f;
+  f.onLayoutCaptured=()=>{this.invalidate();this.exam.persistInk();};f.refreshBasis=()=>{f.originRect={left:this.root.getBoundingClientRect().left,top:node.getBoundingClientRect().top};};f.domRoot=node;f.originRect={left:geo.pane.left,top:region.anchor.top};f.pixelRatioX=sx;f.pixelRatioY=sy;f.parent={dataset:{noteKey:owner,surfaceKey:key},get isConnected(){return node.isConnected;},get textContent(){return node.textContent;},querySelectorAll:s=>node.querySelectorAll(s),getBoundingClientRect:()=>({left:geo.pane.left,top:region.anchor.top,width:w,height:h})};
   if(f.lastWidth!==w||f.lastHeight!==h){f.layoutReady=false;f.layoutEpoch++;f.lastWidth=w;f.lastHeight=h;}
-  note.lastSize={width:w,height:h};if(!f.layoutReady&&!f.captureJob&&!f.layoutTimer)S.queueInkLayout(f);return f;
+  if(key===owner||!note.lastSize)note.lastSize={width:w,height:h};if(!f.layoutReady&&!f.captureJob&&!f.layoutTimer)S.queueInkLayout(f);return f;
  }
- append(key,stroke){
-  const geo=this.lastGeometry||this.geometry(),region=geo.regions.find(r=>r.key===key);if(!region)return;
-  const f=this.prepareLayout(region,geo);Object.assign(stroke,{id:S.uid(),gestureId:this.gestureUid,coordinateSpace:'pane-question-v1',renderStyle:'smooth-v2',startedAt:this.strokeStartedAt||Date.now(),endedAt:Date.now(),layoutId:f.layoutReady?f.note.layoutId:null,layoutEpoch:f.layoutEpoch,basisWidth:f.lastWidth,basisHeight:f.lastHeight});
-  this.store.append(key,stroke);S.recordInkEvent(f,'stroke',stroke);this.changed();
- }
+ append(key,stroke){const geo=this.lastGeometry||this.geometry(),region=geo.regions.find(r=>r.key===key);if(!region?.node)return;const owner=key.startsWith('m:')?key:this.ownerKey(),f=this.prepareLayout(region,geo,owner);Object.assign(stroke,{id:S.uid(),gestureId:this.gestureUid,coordinateSpace:'pane-question-v1',renderStyle:'smooth-v2',startedAt:this.strokeStartedAt||Date.now(),endedAt:Date.now(),layoutId:f.layoutReady?f.capturedLayoutId||f.note.layoutId:null,layoutEpoch:f.layoutEpoch,basisWidth:f.lastWidth,basisHeight:f.lastHeight,draftSurfaceKey:key});if(owner.startsWith('q:'))stroke.draftOwnerQuestionId=owner.slice(2);this.store.append(owner,stroke);S.recordInkEvent(f,'stroke',stroke);this.changed();}
  changed(){this.exam.persistInk();}
- clear(){this.finish();if(!this.activeKey)return;const before=this.store.rows(this.activeKey).map(st=>st.id);this.store.clear(this.activeKey);this.event('clear',before);}
- undo(){this.finish();if(!this.activeKey)return;const before=this.store.rows(this.activeKey).map(st=>st.id);this.store.undo(this.activeKey);this.event('undo',before);}
- redo(){this.finish();if(!this.activeKey)return;const before=this.store.rows(this.activeKey).map(st=>st.id);this.store.redo(this.activeKey);this.event('redo',before);}
- event(type,before){const f=this.facades?.get(this.activeKey);if(f)S.recordInkEvent(f,type,null,{beforeStrokeIds:before,afterStrokeIds:this.store.rows(this.activeKey).map(st=>st.id)});this.changed();}
+ clear(){this.finish();if(!this.activeKey)return;if(S.InkSurfaceCache&&!S.InkSurfaceCache.ready(this.exam,this.activeKey)){S.InkSurfaceCache.notify(this.exam,this.activeKey);return;}const before=this.store.rows(this.activeKey).map(st=>st.id);this.store.clear(this.activeKey);this.event('clear',before);}
+ undo(){this.finish();if(!this.activeKey)return;if(S.InkSurfaceCache&&!S.InkSurfaceCache.ready(this.exam,this.activeKey)){S.InkSurfaceCache.notify(this.exam,this.activeKey);return;}const before=this.store.rows(this.activeKey).map(st=>st.id);this.store.undo(this.activeKey);this.event('undo',before);}
+ redo(){this.finish();if(!this.activeKey)return;if(S.InkSurfaceCache&&!S.InkSurfaceCache.ready(this.exam,this.activeKey)){S.InkSurfaceCache.notify(this.exam,this.activeKey);return;}const before=this.store.rows(this.activeKey).map(st=>st.id);this.store.redo(this.activeKey);this.event('redo',before);}
+ event(type,before){const f=[...this.facades?.values()||[]].find(f=>f.parent?.dataset.noteKey===this.activeKey);if(f)S.recordInkEvent(f,type,null,{beforeStrokeIds:before,afterStrokeIds:this.store.rows(this.activeKey).map(st=>st.id)});this.changed();}
  setMode(editable,tool,width,visible=true){const changed=this.visible!==!!visible;this.enabled=!!editable;if(!editable&&this.pointer!==null)this.finish();this.visible=!!visible;this.canvas.hidden=!visible;this.canvas.style.pointerEvents=editable?'auto':'none';this.canvas.style.touchAction=editable?'none':'pan-y';if(changed){if(visible)this.resize();else{cancelAnimationFrame(this.frame);this.frame=0;this.releaseBuffers();this.exam.showInkLayoutNotice?.(null,this);}}}
  cancelStroke(){this.finish();}
  capturePending(){return Promise.all([...this.facades?.values()||[]].filter(f=>!f.layoutReady&&f.note.strokes?.some(st=>!st.layoutId&&st.layoutEpoch===f.layoutEpoch)).map(f=>S.captureInkLayout(f)));}
@@ -3288,21 +3462,21 @@ class WorkspaceView{
   }else this.schedule();
  }
  paint(){
-  if(!this.alive)return;this.frame=0;if(!this.visible){this.exam.showInkLayoutNotice?.(null,this);return;}const geo=this.pointer!==null&&this.router.geometry?this.router.geometry:this.geometry();this.lastGeometry=geo;
-  if(this.dirty){this.clearCanvas(this.base);if(this.exam.s._review)this.clearCanvas(this.original);for(const r of geo.regions){if(r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;if(this.store.rows(r.key).length)this.prepareLayout(r,geo);for(const st of this.store.rows(r.key))drawCompatible(this.base.getContext('2d'),st,r,geo,this.size,this.store.note(r.key));if(this.exam.s._review)for(const st of (this.exam.originalNotes?.[r.key]?.strokes||[]))drawCompatible(this.original.getContext('2d'),st,r,geo,this.size,this.exam.originalNotes?.[r.key]);}this.dirty=false;this.exam.showInkLayoutNotice?.(geo.unplaced,this);}
-  const current=this.router.current,r=current&&geo.regions.find(r=>r.key===this.router.region.key),review=!!this.exam.s._review;
-  let foreground=this.base;
+  if(!this.alive)return;this.frame=0;if(!this.visible){this.exam.showInkLayoutNotice?.(null,this);return;}const geo=this.pointer!==null&&this.router.geometry?this.router.geometry:this.geometry();this.lastGeometry=geo;const owner=this.ownerKey();if(!owner)return;
+  const ready=!S.InkSurfaceCache||S.InkSurfaceCache.ready(this.exam,owner),rows=ready?this.store.rows(owner):[],wasDirty=this.dirty;
+  if(this.dirty){this.clearCanvas(this.base);if(this.exam.s._review)this.clearCanvas(this.original);const prepared=new Set();for(const st of rows){const r=geo.regions.find(r=>r.key===(st.draftSurfaceKey||owner));if(!r||r.bottom<geo.pane.top||r.top>geo.pane.bottom)continue;if(r.node&&!prepared.has(r.key)){this.prepareLayout(r,geo,owner);prepared.add(r.key);}drawCompatible(this.base.getContext('2d'),st,r,geo,this.size,this.store.note(owner));}this.dirty=false;this.exam.showInkLayoutNotice?.(geo.unplaced,this);}
+  const current=this.router.current,r=current&&this.router.region,review=!!this.exam.s._review;let foreground=this.base;
   if(review&&current?.brush==='erase'){this.fitBuffer(this.live);const live=this.clearCanvas(this.live);live.save();live.setTransform(1,0,0,1,0,0);live.drawImage(this.base,0,0);live.restore();if(r)draw(live,current,r,geo,this.size,false);foreground=this.live;}else if(this.live.width!==1||this.live.height!==1)this.live.width=this.live.height=1;
-  const x=this.clearCanvas(this.canvas);x.setTransform(1,0,0,1,0,0);if(review)x.drawImage(this.original,0,0);x.drawImage(foreground,0,0);
-  if(r&&!(review&&current.brush==='erase')){x.setTransform(this.canvas.width/this.size.width,0,0,this.canvas.height/this.size.height,0,0);draw(x,current,r,geo,this.size,false);}
-
+  let box=null;if(current&&r&&!wasDirty&&(!review||current.brush!=='erase'&&this.original.width<=1)){let c=this.strokeBounds;if(c?.stroke!==current)c=this.strokeBounds={stroke:current,count:0,left:Infinity,right:-Infinity,top:Infinity,bottom:-Infinity};const sy=this.size.height/geo.pane.height;for(let i=c.count;i<current.points.length;i++){const p=current.points[i],x=p.x*this.size.width,y=(r.anchor.top-geo.pane.top)*sy+p.y*r.anchor.height*sy;c.left=Math.min(c.left,x);c.right=Math.max(c.right,x);c.top=Math.min(c.top,y);c.bottom=Math.max(c.bottom,y);}c.count=current.points.length;const d=this.canvas.width/this.size.width,pad=24;box={x:Math.max(0,Math.floor((c.left-pad)*d)),y:Math.max(0,Math.floor((c.top-pad)*d)),right:Math.min(this.canvas.width,Math.ceil((c.right+pad)*d)),bottom:Math.min(this.canvas.height,Math.ceil((c.bottom+pad)*d))};}
+  const x=this.canvas.getContext('2d');x.setTransform(1,0,0,1,0,0);if(box&&box.right>box.x&&box.bottom>box.y){x.clearRect(box.x,box.y,box.right-box.x,box.bottom-box.y);x.drawImage(foreground,box.x,box.y,box.right-box.x,box.bottom-box.y,box.x,box.y,box.right-box.x,box.bottom-box.y);}else{this.clearCanvas(this.canvas);x.setTransform(1,0,0,1,0,0);if(review)x.drawImage(this.original,0,0);x.drawImage(foreground,0,0);}
+  if(r&&!(review&&current.brush==='erase')){x.save();if(box){x.beginPath();x.rect(box.x,box.y,Math.max(0,box.right-box.x),Math.max(0,box.bottom-box.y));x.clip();}x.setTransform(this.canvas.width/this.size.width,0,0,this.canvas.height/this.size.height,0,0);draw(x,current,r,geo,this.size,false);x.restore();}
  }
  down(e){
   if(!this.enabled)return;if(e.pointerType==='touch'&&this.useTouchEvents)return;e.preventDefault();
   if(e.pointerType==='touch'){if(this.pointer!==null)return;this.fingers.set(e.pointerId,e.clientY);try{this.canvas.setPointerCapture(e.pointerId);}catch{}if(this.fingers.size===2)this.mean=[...this.fingers.values()].reduce((a,b)=>a+b)/2;return;}
   if(e.pointerType==='mouse'&&e.button!==0)return;
-  this.exam.cancelMaterialTransition?.();this.flushScroll();this.fingers.clear();this.finish();this.resizeIfNeeded();
-  this.pointer=e.pointerId;try{this.canvas.setPointerCapture(e.pointerId);}catch{}this.strokeStartedAt=Date.now();this.gestureUid=S.uid();S.activeInkPointer={layer:this,id:e.pointerId};S.lastInteractionAt=Date.now();this.router.begin(e,this.geometry(),this.exam.tool);this.paintInput(true);
+  this.exam.cancelMaterialTransition?.();this.flushScroll();this.fingers.clear();this.finish();this.resizeIfNeeded();if(this.scroll.id==='question-scroll'&&!this.exam.split){this.exam.practiceWindow?.paint();this.exam.practiceWindow?.measure();}
+  const fullGeometry=this.geometry(),region=fullGeometry.regions.find(r=>r.node&&e.clientX>=r.left&&e.clientX<r.right&&e.clientY>=r.top&&e.clientY<r.bottom);if(!region)return;const owner=region.key.startsWith('m:')?region.key:this.ownerKey();this.target(owner);if(S.InkSurfaceCache&&!S.InkSurfaceCache.ready(this.exam,owner)){S.InkSurfaceCache.notify(this.exam,owner);return;}this.pointer=e.pointerId;try{this.canvas.setPointerCapture(e.pointerId);}catch{}this.strokeStartedAt=Date.now();this.gestureUid=S.uid();S.activeInkPointer={layer:this,id:e.pointerId};S.lastInteractionAt=Date.now();this.router.begin(e,{...fullGeometry,regions:fullGeometry.regions.filter(r=>r.node&&r.bottom>=fullGeometry.pane.top&&r.top<=fullGeometry.pane.bottom)},this.exam.tool);this.paintInput(true);
  }
  resizeIfNeeded(){if(this.size.width!==this.root.clientWidth||this.size.height!==this.root.clientHeight)this.resize();}
  move(e){
@@ -3546,7 +3720,7 @@ class ReleaseExam extends Base{
   cover.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();this.togglePause();},{capture:true,signal:this.abort.signal});this.root.append(cover);
  }
  capturePosition(){
-  this.s.positions=this.s.positions||{};const main=S.$('#question-scroll',this.root);if(main)this.s.positions.main={top:main.scrollTop};
+  this.s.positions=this.s.positions||{};const main=S.$('#question-scroll',this.root);if(main)this.s.positions.main={top:main.scrollTop,anchor:this.practiceWindow?.captureAnchor()||null};
   if(this.split)this.s.positions[this.split.groupIdentity]={left:S.$('#split-material-scroll',this.root)?.scrollTop||0,right:S.$('#split-q-scroll',this.root)?.scrollTop||0};
   this.s.workspace={expanded:!!this.split,index:this.s.index};
  }
@@ -3558,7 +3732,7 @@ class ReleaseExam extends Base{
   if(this.s.paused){S.resumeActiveClock(this.s);this.lastPulse=performance.now();this.wasHidden=!!document.hidden;S.$('.pause-overlay',this.root)?.remove();S.saveSoon();return;}
   this.suspend('manual');
  }
- dispose(){const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta&&this.savedThemeColor!==undefined)themeMeta.content=this.savedThemeColor;S.disposePracticeImages?.(this);this.imageObserver?.disconnect();this.readingControls?.dispose();cancelAnimationFrame(this.imageLayoutFrame);this.cancelMaterialTransition?.();this.cancelCarousel?.();S.stopNoteMotion();super.dispose();}
+ dispose(){S.InkSurfaceCache?.detach(this);S.deferCloudAfterStudy?.();const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta&&this.savedThemeColor!==undefined)themeMeta.content=this.savedThemeColor;S.disposePracticeImages?.(this);this.imageObserver?.disconnect();this.readingControls?.dispose();cancelAnimationFrame(this.imageLayoutFrame);this.cancelMaterialTransition?.();this.cancelCarousel?.();S.stopNoteMotion();super.dispose();}
 
  onClick(e){
   if(this.submitting)return;if(Date.now()<(this.cardDismissUntil||0)){this.cardDismissUntil=0;e.preventDefault?.();e.stopImmediatePropagation?.();return;}const b=e.target.closest('[data-exam]');if(!b||!this.root.contains(b))return;
@@ -3576,7 +3750,7 @@ class ReleaseExam extends Base{
   if(action==='reading-settings'){this.readingSettings();return;}
   if(action==='brush'){this.setBrush(b.dataset.tool);return;}
   if(action==='note-close'){this.setNoteMode(this.toolIndex,false);return;}
-  if(action==='clear'){const key='q:'+this.s.questions[this.toolIndex]?.id,layer=(this.lastInk?.alive?this.lastInk:null)||[...this.layers.values()].find(l=>l.parent.dataset.noteKey===key);if(layer){this.lastInk=layer;layer.clear();this.updateControls();}return;}
+  if(action==='clear'){const key='q:'+this.s.questions[this.inkOn&&Number.isInteger(this.noteOwnerIndex)?this.noteOwnerIndex:this.toolIndex]?.id,layer=(this.lastInk?.alive?this.lastInk:null)||[...this.layers.values()].find(l=>l.parent.dataset.noteKey===key);if(layer){this.lastInk=layer;layer.clear();this.updateControls();}return;}
   if(action==='pen'){this.setNoteMode(Number(b.dataset.index));return;}
   if(action==='exclude'&&this.inkOn){this.toggleInkExclusion(b);return;}
 
@@ -3595,7 +3769,7 @@ class ReleaseExam extends Base{
   this.pulse();this.readingControls?.restore();if(this.split)this.closeMaterial(false);this.s.index=i;this.toolIndex=i;
   const key=S.materialIdentity(q),indices=this.s.questions.map((x,n)=>S.materialIdentity(x)===key?n:null).filter(n=>n!==null);
   this.split={key:q.materialKey,groupIdentity:key,indices};this.clearLayers();S.$('#question-scroll',this.root).style.visibility='hidden';
-  const noteKey=S.materialNoteKey(q),old='m:'+q.materialKey;if(!this.s.notes[noteKey]&&this.s.notes[old])this.s.notes[noteKey]=JSON.parse(JSON.stringify(this.s.notes[old]));
+  const noteKey=S.resolveMaterialNoteKey(this.s,q);
   const node=document.createElement('section');node.className='split-shell';
   const groups=this.materialGroups(),groupIndex=groups.findIndex(g=>g.key===key);
   node.innerHTML=`<div class="split-viewport"><div class="split-main"><section class="split-pane"><div class="reading-material-nav"><span>材料 ${groupIndex+1} / ${groups.length}</span><div><button type="button" data-exam="material-close" aria-label="收起材料"><span>收起材料</span>${S.icon('collapse')}</button><button type="button" data-exam="material-step" data-step="-1" ${groupIndex===0?'disabled':''} aria-label="上一篇材料">${S.icon('back')}<span>上一篇</span></button><button type="button" data-exam="material-step" data-step="1" ${groupIndex===groups.length-1?'disabled':''} aria-label="下一篇材料"><span>下一篇</span><span class="next-material-arrow">${S.icon('back')}</span></button></div></div><div class="split-scroll" id="split-material-scroll"><div class="split-material-content rich" data-note-key="${E(noteKey)}">${S.safeHTML(q.materialHtml)}</div></div></section><section class="split-pane"><div class="split-scroll" id="split-q-scroll"><div class="split-questions">${indices.map(n=>S.questionMarkup(this.s.questions[n],n,this.s,{split:true})).join('')}</div></div></section></div></div>`;
@@ -3611,9 +3785,9 @@ class ReleaseExam extends Base{
   super.closeMaterial(false);
   if(split&&scrollToCurrent){this.jump(target,false);this.capturePosition();if(!this.s._review){S.touchSession(this.s);S.saveSoon();}}
  }
- jump(i,smooth=true){const q=this.s.questions[i];if(!q)return;for(const l of this.layers.values())l.finish();this.lastInk=null;this.toolIndex=i;if(this.split&&S.materialIdentity(q)!==this.split.groupIdentity){this.closeMaterial(false);if(q.materialKey){this.openMaterial(i);return;}}const result=super.jump(i,smooth);this.selectInkTarget('q:'+q.id);this.updateControls();return result;}
+ jump(i,smooth=true){const q=this.s.questions[i];if(!q)return;for(const l of this.layers.values())l.finish();this.lastInk=null;this.toolIndex=this.inkOn&&Number.isInteger(this.noteOwnerIndex)?this.noteOwnerIndex:i;if(this.split&&S.materialIdentity(q)!==this.split.groupIdentity){this.closeMaterial(false);if(q.materialKey){this.openMaterial(i);return;}}const result=super.jump(i,smooth);this.selectInkTarget('q:'+q.id);this.updateControls();return result;}
  selectInkTarget(key){for(const v of this.layers.values())if(v.geometry().regions.some(r=>r.key===key)){v.target(key);return v;}return null;}
- onScroll(target){super.onScroll(target);this.readingControls?.schedule();if(target.id==='question-scroll'||target.id==='split-q-scroll'){this.toolIndex=this.s.index;if(!S.activeInkPointer)this.selectInkTarget('q:'+this.s.questions[this.toolIndex]?.id);}}
+ onScroll(target){super.onScroll(target);this.readingControls?.schedule();if(!this.inkOn&&(target.id==='question-scroll'||target.id==='split-q-scroll'))this.toolIndex=this.s.index;}
 
  materialGroups(){if(this._materialGroups)return this._materialGroups;const seen=new Set();return this._materialGroups=this.s.questions.map((q,index)=>({key:S.materialIdentity(q),index})).filter(g=>g.key&&!seen.has(g.key)&&seen.add(g.key));}
  switchMaterial(step){if(!this.split||this.materialBusy)return;const groups=this.materialGroups(),current=groups.findIndex(g=>g.key===this.split.groupIdentity),next=groups[current+step];if(!next)return;this.pulse();for(const l of this.layers.values())l.finish();S.animateMaterialChange(this,next.index,step);if(!this.s._review)S.saveSoon();}
@@ -3627,7 +3801,7 @@ S.openExam=function(session){
  const resumePaused=!!session.hasOpened;if(resumePaused)S.pauseSession(session,'return',{touch:false});else S.resumeActiveClock(session);session.hasOpened=true;
  S.exam=new S.ExamController(session,host);const exam=S.exam;
  if(session.workspace?.expanded&&session.questions[session.index]?.materialKey)exam.openMaterial(session.index);
- else requestAnimationFrame(()=>{if(exam.disposed)return;const main=S.$('#question-scroll',host);if(main&&session.positions?.main)main.scrollTop=session.positions.main.top||0;exam.updateInk();});
+ else requestAnimationFrame(()=>{if(exam.disposed)return;const main=S.$('#question-scroll',host);if(main&&session.positions?.main){if(exam.practiceWindow)exam.practiceWindow.restore(session.positions.main.anchor,session.index);else main.scrollTop=session.positions.main.top||0;}exam.updateInk();});
 };
 
 })(window.Study);
@@ -3676,7 +3850,7 @@ S.importBundledBank=async function(onProgress=()=>{}){
  S.bankImporting=true;try{
  const IMPORTER_VERSION='3';
  const manifestUrl=S.bankURL('bank/manifest.json');
- const manifest=await fetch(manifestUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('独立题库索引加载失败（HTTP '+r.status+'）');return r.json();});
+ const manifest=await S.bankRead(manifestUrl,'json',{cache:'no-store'});
  if(!manifest||!Array.isArray(manifest.batches)||!manifest.version)throw Error('题库索引格式无效');
  const issues=[];
  const previousPaperIds=new Set(S.state.meta.bundledBankPaperIds||[]);
@@ -3695,9 +3869,7 @@ S.importBundledBank=async function(onProgress=()=>{}){
   try{
    for(const batch of group){
     onProgress('正在校验题库分片…',completed.size,manifest.batches.length);
-    const response=await fetch(S.bankURL(batch.file),{cache:'default'});
-    if(!response.ok)throw Error('题库分片加载失败：'+batch.file+'（HTTP '+response.status+'）');
-    const bytes=await response.arrayBuffer();
+    const bytes=await S.bankRead(S.bankURL(batch.file),'buffer',{cache:'default',timeoutMs:60000});
     if(bytes.byteLength>20*1000*1000)throw Error('题库分片超过20MB安全上限：'+batch.file);
     if(!globalThis.crypto?.subtle)throw Error('当前浏览器不支持 SHA-256 校验，请使用 HTTPS 网页。');
     const digest=await crypto.subtle.digest('SHA-256',bytes);
@@ -3738,6 +3910,7 @@ S.importBundledBank=async function(onProgress=()=>{}){
  S.state.meta.bundledBankCompletedKeys=[...completed];
  S.state.meta.bundledBankIssues=[...(S.state.meta.bundledBankIssues||[]),...issues].slice(-2000);
  if(allDone){
+  S.bankUpdateAvailable=null;
   await S.retireLegacyBank(manifest);
   S.state.meta.bundledBankVersion=manifest.version;
   S.state.meta.bundledBankSummary={papers:manifest.papers,sourceQuestions:manifest.questions,issues:issueCount,importerVersion:IMPORTER_VERSION,completedBatches:manifest.batches.length};
@@ -3749,6 +3922,15 @@ S.importBundledBank=async function(onProgress=()=>{}){
  if(failures.length)throw Error('部分题库分片未完成：'+failures.map(x=>x.files.join(', ')+'：'+x.message).join('；')+'。已成功分片会保留进度，刷新后可重试。');
  return {papers:manifest.papers,questions:manifest.questions,issues:issueCount,completedBatches:manifest.batches.length};
  }finally{S.bankImporting=false;}
+};
+S.checkBundledBank=async function(onProgress=()=>{}){
+ if(!S.state.bank?.length)return S.importBundledBank(onProgress);
+ const manifest=await S.bankRead(S.bankURL('bank/manifest.json'),'json',{cache:'no-store'});
+ if(!manifest.version||!Array.isArray(manifest.batches))throw Error('题库索引格式无效');
+  const completed=new Set(S.state.meta.bundledBankCompletedKeys||[]);
+  const pending=manifest.batches.filter(b=>!completed.has('3:'+b.sha256));
+  S.bankUpdateAvailable=pending.length?{version:manifest.version,batches:pending.length}:null;
+  return {checked:true,updateAvailable:!!pending.length,pendingBatches:pending.length};
 };
 const commit=S.commitImport;
 let importCommits=Promise.resolve();
@@ -3817,7 +3999,17 @@ function same(a,b){
 }
 const map=(xs,key)=>new Map((xs||[]).map(x=>[key(x),x]));
 function fingerprint(s){let a=2166136261,b=5381;for(let i=0;i<s.length;i++){a=Math.imul(a^s.charCodeAt(i),16777619);b=Math.imul(b,33)^s.charCodeAt(i);}return (a>>>0).toString(16)+(b>>>0).toString(16)+'-'+s.length;}
-function view(state){return {schema:3,sessions:state.sessions||[],attempts:state.attempts||[],learning:{favorites:state.learning?.favorites||{}},aiReviews:state.aiReviews||[],conflicts:state.meta?.syncConflicts||[],deletedSessions:state.meta?.deletedSessions||{}};}
+function mergeDailyPlans(...maps){
+ const out={};for(const entries of maps)for(const [key,plan]of Object.entries(entries||{})){
+  if(!plan||plan.ready!==true||!Array.isArray(plan.ids)||!Array.isArray(plan.rows)||typeof plan.date!=='string')continue;
+  const old=out[key],stamp=p=>Number(p.createdAt)||Number.MAX_SAFE_INTEGER;
+  if(!old||stamp(plan)<stamp(old)||stamp(plan)===stamp(old)&&plan.ids.join('|')<old.ids.join('|'))out[key]=clone(plan);
+ }
+ const owners=new Map();for(const key of Object.keys(out)){const owner=key.slice(0,key.lastIndexOf('|'));if(!owners.has(owner))owners.set(owner,[]);owners.get(owner).push(key);}
+ for(const keys of owners.values())for(const key of keys.sort().slice(0,-14))delete out[key];
+ return out;
+}
+function view(state){return {schema:3,sessions:state.sessions||[],attempts:state.attempts||[],learning:{favorites:state.learning?.favorites||{},localReviewPlans:state.learning?.localReviewPlans||{}},aiReviews:state.aiReviews||[],conflicts:state.meta?.syncConflicts||[],deletedSessions:state.meta?.deletedSessions||{}};}
 function capture(state){return clone(view(state));}
 function* mergeSteps(base,local,remote){
  base=base||empty();local=local||empty();remote=remote||empty();
@@ -3906,19 +4098,19 @@ function* mergeSteps(base,local,remote){
  const favorites=object(base.learning?.favorites,local.learning?.favorites,remote.learning?.favorites,['favorites']);
  // Automatic policy: the existing merged result is authoritative; archive both differing versions without asking the user.
  for(const c of conflicts.values())if(!c.resolved){c.resolved=true;c.autoMerged=true;c.resolution='已按逐项合并规则自动处理，保留原版本';}
- return {schema:3,deletedSessions,sessions:sessions.sort((a,b)=>(a.startedAt||0)-(b.startedAt||0)),attempts:attempts.sort((a,b)=>(a.finishedAt||0)-(b.finishedAt||0)),learning:{favorites},aiReviews,conflicts:[...conflicts.values()]};
+ return {schema:3,deletedSessions,sessions:sessions.sort((a,b)=>(a.startedAt||0)-(b.startedAt||0)),attempts:attempts.sort((a,b)=>(a.finishedAt||0)-(b.finishedAt||0)),learning:{favorites,localReviewPlans:mergeDailyPlans(base.learning?.localReviewPlans,local.learning?.localReviewPlans,remote.learning?.localReviewPlans)},aiReviews,conflicts:[...conflicts.values()]};
 }
 // Shared algorithm: synchronous compatibility and cooperative browser execution.
 function merge(base,local,remote){const it=mergeSteps(base,local,remote);let step;do{step=it.next();}while(!step.done);return step.value;}
 const yieldMain=()=>globalThis.scheduler?.yield?globalThis.scheduler.yield():new Promise(resolve=>setTimeout(resolve,0));
 async function mergeAsync(base,local,remote){
  const it=mergeSteps(base,local,remote);let step,started=Date.now();
- do{step=it.next();if(!step.done&&(Date.now()-started>=6)){await yieldMain();started=Date.now();}}while(!step.done);return step.value;
+ do{step=it.next();if(!step.done&&(Date.now()-started>=6)){await yieldMain();if(typeof window!=='undefined')window.Study?.requireSyncSlot?.();started=Date.now();}}while(!step.done);return step.value;
 }
 async function captureAsync(state){
- const out={schema:3,sessions:[],attempts:[],learning:{favorites:clone(state.learning?.favorites||{})},aiReviews:clone(state.aiReviews||[]),conflicts:clone(state.meta?.syncConflicts||[]),deletedSessions:clone(state.meta?.deletedSessions||{})};
+ const out={schema:3,sessions:[],attempts:[],learning:{favorites:clone(state.learning?.favorites||{}),localReviewPlans:clone(state.learning?.localReviewPlans||{})},aiReviews:clone(state.aiReviews||[]),conflicts:clone(state.meta?.syncConflicts||[]),deletedSessions:clone(state.meta?.deletedSessions||{})};
  // Snapshot array membership before yielding; every returned record is detached.
- for(const name of ['sessions','attempts']){const rows=[...(state[name]||[])];let started=Date.now();for(let i=0;i<rows.length;i++){out[name].push(clone(rows[i]));if(Date.now()-started>=6){await yieldMain();started=Date.now();}}}
+ for(const name of ['sessions','attempts']){const rows=[...(state[name]||[])];let started=Date.now();for(let i=0;i<rows.length;i++){out[name].push(clone(rows[i]));if(Date.now()-started>=6){await yieldMain();if(typeof window!=='undefined')window.Study?.requireSyncSlot?.();started=Date.now();}}}
  return out;
 }
 function restoreVariant(snapshot,conflict,variant){
@@ -3932,7 +4124,7 @@ function restoreVariant(snapshot,conflict,variant){
  else throw Error('此类冲突请导出两份记录核对');
  out.conflicts=out.conflicts.map(c=>c.id===conflict.id?{...c,resolved:true}:c);return out;
 }
-return {empty,clone,stable,same,view,capture,merge,mergeAsync,captureAsync,yieldMain,restoreVariant};
+return {empty,clone,stable,same,view,capture,mergeDailyPlans,merge,mergeAsync,captureAsync,yieldMain,restoreVariant};
 });
 
 /* Lossless transport graph. Local schema and the original bank stay untouched. */
@@ -3940,11 +4132,11 @@ return {empty,clone,stable,same,view,capture,merge,mergeAsync,captureAsync,yield
 'use strict';const stable=x=>JSON.stringify(x,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v),clone=x=>JSON.parse(JSON.stringify(x));
 async function hash(text){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 function splitText(text,size=24000){const parts=[];for(let i=0;i<text.length;){let end=Math.min(text.length,i+size);const code=text.charCodeAt(end-1);if(end<text.length&&code>=0xd800&&code<=0xdbff)end--;parts.push(text.slice(i,end));i=end;}return parts;}
-async function encode(snapshot,{checkpoint}={}){
+async function encode(snapshot,{checkpoint,storeObject,recordsOnly=false}={}){
  const objects=new Map(),memo=new Map(),external=new Set();
  let work=0,started=Date.now();
  async function cooperate(){if(checkpoint&&(++work>=32||Date.now()-started>=6)){await checkpoint({objects:objects.size});work=0;started=Date.now();}}
- async function put(kind,value){await cooperate();const text=stable({kind,value});if(memo.has(text))return memo.get(text);const id=await hash(text);objects.set(id,text);memo.set(text,id);return id;}
+ async function put(kind,value){await cooperate();const text=stable({kind,value});if(memo.has(text))return memo.get(text);const id=await hash(text);if(!objects.has(id)){if(storeObject){await storeObject(id,text);objects.set(id,null);}else objects.set(id,text);}memo.set(text,id);if(storeObject&&memo.size>16)memo.delete(memo.keys().next().value);return id;}
  async function notes(values){const out={};for(const [k,v]of Object.entries(values||{})){await cooperate();if(v?.$ink===1){out[k]={ink:v};for(const h of v.objects||[v.hash])external.add(h);}else out[k]=await put('note',v);}return out;}
  function gather(v){if(!v||typeof v!=='object')return;if(v.$ink===1){for(const h of v.objects||[v.hash])external.add(h);return;}for(const x of Object.values(v))gather(x);}
  gather(snapshot.conflicts);
@@ -3960,13 +4152,13 @@ async function encode(snapshot,{checkpoint}={}){
  }
  const attempts=[];for(const[id,rows]of groups)attempts.push({id,ref:await put('attempts',rows)});
  const manifest={protocol:2,schema:3,sessions,attempts,learning:await put('learning',snapshot.learning||{favorites:{}}),aiReviews:await put('ai',snapshot.aiReviews||[]),conflicts:await put('conflicts',snapshot.conflicts||[]),deletedSessions:await put('deleted',snapshot.deletedSessions||{})};
- manifest.hasDeletedSessions=Object.hasOwn(snapshot,'deletedSessions');manifest.depotVersion=1;manifest.noteFormat=external.size?1:0;manifest.objects=[...new Set([...objects.keys(),...external])].sort();
+ if(recordsOnly){if(external.size)throw Error('仅同步记录模式不允许引用笔迹');manifest.recordsOnly=1;}manifest.hasDeletedSessions=Object.hasOwn(snapshot,'deletedSessions');manifest.depotVersion=1;manifest.noteFormat=external.size?1:0;manifest.objects=[...new Set([...objects.keys(),...external])].sort();
  const root=await put('root',manifest);return {root,objects,manifest,external};
 }
-async function decode(root,get,{mapNote}={}){
- const cache=new Map(),mappedNotes=new Map();async function read(ref,kind){if(kind==='note'&&mapNote){const text=await get(ref);if(await hash(text)!==ref)throw Error('同步对象校验失败');const o=JSON.parse(text);if(o.kind!==kind)throw Error('同步对象类型不匹配');return o.value;}if(!cache.has(ref)){const text=await get(ref);if(await hash(text)!==ref)throw Error('同步对象校验失败');cache.set(ref,JSON.parse(text));}const o=cache.get(ref);if(o.kind!==kind)throw Error('同步对象类型不匹配');return o.value;}
+async function decode(root,get,{mapNote,skipNotes=false}={}){
+ const cache=new Map(),mappedNotes=new Map();async function read(ref,kind){if(kind==='note'&&mapNote){const text=await get(ref);if(await hash(text)!==ref)throw Error('同步对象校验失败');const o=JSON.parse(text);if(o.kind!==kind)throw Error('同步对象类型不匹配');return o.value;}if(!cache.has(ref)){const text=await get(ref);if(await hash(text)!==ref)throw Error('同步对象校验失败');cache.set(ref,JSON.parse(text));if(cache.size>32)cache.delete(cache.keys().next().value);}const o=cache.get(ref);if(o.kind!==kind)throw Error('同步对象类型不匹配');return o.value;}
  const m=await read(root,'root');if(m.protocol!==2||m.schema!==3)throw Error('同步协议不支持');const out={schema:3,sessions:[],attempts:[],learning:await read(m.learning,'learning'),aiReviews:await read(m.aiReviews,'ai'),conflicts:[],deletedSessions:await read(m.deletedSessions,'deleted')};
- async function notes(refs){const n={};for(const[k,ref]of Object.entries(refs||{})){if(ref?.ink)n[k]=clone(ref.ink);else if(mapNote){if(!mappedNotes.has(ref))mappedNotes.set(ref,await mapNote(await read(ref,'note'),ref));n[k]=clone(mappedNotes.get(ref));}else n[k]=clone(await read(ref,'note'));}return n;}
+ async function notes(refs){const n={};if(skipNotes)return n;for(const[k,ref]of Object.entries(refs||{})){if(ref?.ink)n[k]=clone(ref.ink);else if(mapNote){if(!mappedNotes.has(ref))mappedNotes.set(ref,await mapNote(await read(ref,'note'),ref));n[k]=clone(mappedNotes.get(ref));}else n[k]=clone(await read(ref,'note'));}return n;}
  for(const row of m.sessions){const v=await read(row.ref,'session'),s=clone(v.data);s.questions=[];for(const ref of v.questions)s.questions.push(clone(await read(ref,'question')));s.notes=await notes(v.notes);if(v.reviewNotes)s.reviewNotes=await notes(v.reviewNotes);if(v.evidence)s.submissionEvidence={...clone(v.evidence.data),notes:await notes(v.evidence.notes)};out.sessions.push(s);}
  const restored=[];for(const group of m.attempts)for(const row of await read(group.ref,'attempts')){const a=clone(row.data);if(row.question){const q=await read(row.question,'question');for(const k of row.inherited)a[k]=clone(q[k]);if(row.hasSnapshot)a.questionSnapshot=clone(q);}restored.push({a,order:row.order});}out.attempts=restored.sort((a,b)=>a.order-b.order).map(x=>x.a);
  out.conflicts=await read(m.conflicts,'conflicts');if(!m.hasDeletedSessions)delete out.deletedSessions;return out;
@@ -3975,12 +4167,12 @@ return {encode,decode,hash,stable,splitText};
 });
 
 (function(S){
-'use strict';const K=S.SyncCodec;
+'use strict';const K=S.SyncCodec;const P=S.CloudRecords;
 async function wireReader(api,profile,status){
  const V=S.NoteVault,persistent=!!V?.enabled(),parts=new Map(),meta=new Map(),texts=new Map();let cachedParts=0;
  const metrics=S.SyncTransport.downloadMetrics={requests:0,reusedParts:0,savedParts:0,legacy:false};
- const key=(h,i)=>h+':'+i,inheritedTexts=new Map();
- async function inherited(hash){if(!profile.objectCache?.[hash])return null;if(!inheritedTexts.has(hash))inheritedTexts.set(hash,await K.hash(profile.objectCache[hash])===hash?profile.objectCache[hash]:null);return inheritedTexts.get(hash);}
+ const key=(h,i)=>h+':'+i,inheritedTexts=new Map(),localAvailable=new Set();
+ async function inherited(hash){if(texts.has(hash))return texts.get(hash);if(persistent&&V.peekText){const raw=await V.peekText(hash);if(typeof raw==='string'&&await K.hash(raw)===hash){localAvailable.add(hash);metrics.reusedObjects=(metrics.reusedObjects||0)+1;if(raw.length<64000){texts.set(hash,raw);if(texts.size>32)texts.delete(texts.keys().next().value);}return raw;}}if(!profile.objectCache?.[hash])return null;if(!inheritedTexts.has(hash))inheritedTexts.set(hash,await K.hash(profile.objectCache[hash])===hash?profile.objectCache[hash]:null);return inheritedTexts.get(hash);}
  async function getMeta(h){if(!meta.has(h))meta.set(h,persistent?await V.wireMeta(h):null);return meta.get(h);}
  async function part(h,i){const p=persistent?await V.wirePart(h,i):parts.get(key(h,i));if(p)metrics.reusedParts++;return p;}
  async function batch(items){
@@ -3995,9 +4187,9 @@ async function wireReader(api,profile,status){
  }
  async function batches(jobs){let index=0,error;async function worker(){while(!error&&index<jobs.length){const size=metrics.legacy?12:8,chunk=jobs.slice(index,index+=size);try{await batch(chunk);}catch(e){error=error||e;}}}await Promise.all([worker(),worker()]);if(error)throw error;}
  async function prefetch(hashes){const hs=[...new Set(hashes.filter(Boolean))],first=[];
-  for(const hash of hs){if(typeof hash!=='string'||!/^[a-f0-9]{64}$/.test(hash))throw Error('云端对象引用无效');if(await inherited(hash))continue;const m=await getMeta(hash);if(!m||!await part(hash,0))first.push({hash,index:0});}
+  for(const hash of hs){if(typeof hash!=='string'||!/^[a-f0-9]{64}$/.test(hash))throw Error('云端对象引用无效');if(localAvailable.has(hash)||await inherited(hash))continue;const m=await getMeta(hash);if(!m||!await part(hash,0))first.push({hash,index:0});}
   if(first.length)await batches(first);
-  const missing=[];for(const hash of hs){if(await inherited(hash))continue;const m=await getMeta(hash);for(let i=1;i<(m?.total||0);i++)if(!await part(hash,i))missing.push({hash,index:i});}if(missing.length)await batches(missing);
+  const missing=[];for(const hash of hs){if(localAvailable.has(hash)||await inherited(hash))continue;const m=await getMeta(hash);for(let i=1;i<(m?.total||0);i++)if(!await part(hash,i))missing.push({hash,index:i});}if(missing.length)await batches(missing);
  }
  async function get(hash){if(texts.has(hash))return texts.get(hash);
   const previous=await inherited(hash);if(previous)return previous;
@@ -4009,52 +4201,70 @@ async function wireReader(api,profile,status){
  return {get,prefetch,metrics};
 }
 
-const verifiedUploadGraphs=new WeakMap();
+const verifiedUploadGraphs=new WeakMap(),uploadProgress=new WeakMap();
 S.SyncTransport={
  async remote(api,profile,legacy,status){
-  const head=await api('/api/sync/v2/head');if(!head.rev){const old=await legacy();return {head,snapshot:S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(old.snapshot):old.snapshot,migrating:!!old.head.rev};}
-  if(head.hash===profile.baseHash)return {head,snapshot:profile.base};
+  const head=await api('/api/sync/v2/head',P?{clientRecordsOnly:1}:undefined);if(!head.rev){const old=await legacy();return {head,snapshot:P?P.project(old.snapshot):S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(old.snapshot):old.snapshot,recordsOnly:false,migrating:!!old.head.rev};}
+  if(head.hash===profile.baseHash)return {head,snapshot:profile.base,recordsOnly:profile.recordsOnlyCloud===true};
   const reader=await wireReader(api,profile,status),root=JSON.parse(await reader.get(head.hash)),m=root.value;
   if(root.kind!=='root'||m?.protocol!==2||m.schema!==3)throw Error('云端同步目录格式不支持');
-  if(m.depotVersion!==1){reader.metrics.legacy=true;await reader.prefetch(m.objects||[]);}
+  if(m.depotVersion!==1&&!P){reader.metrics.legacy=true;await reader.prefetch(m.objects||[]);}
   else{
    await reader.prefetch([m.learning,m.aiReviews,m.conflicts,m.deletedSessions,...(m.sessions||[]).map(x=>x.ref),...(m.attempts||[]).map(x=>x.ref)]);
    const questionRefs=[];for(const row of m.sessions||[]){const value=JSON.parse(await reader.get(row.ref));if(value.kind!=='session')throw Error('会话目录类型不匹配');questionRefs.push(...value.value.questions||[]);}
    await reader.prefetch(questionRefs);
   }
-  const snapshot=await K.decode(head.hash,reader.get,S.NoteVault?.enabled()?{mapNote:note=>S.NoteVault.packNote(note)}:{});return {head,snapshot:S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(snapshot):snapshot};
+  const snapshot=await K.decode(head.hash,reader.get,P?{skipNotes:true}:S.NoteVault?.enabled()?{mapNote:note=>S.NoteVault.packNote(note)}:{});verifiedUploadGraphs.set(profile,{root:head.hash,hashes:new Set([head.hash,...m.objects||[]])});return {head,snapshot:P?P.project(snapshot):S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(snapshot):snapshot,recordsOnly:m.recordsOnly===1};
  },
  async commit(api,profile,snapshot,head,status,deviceId){
-  const work=S.SyncTransport.workMetrics={stage:'waiting',startedAt:Date.now(),objects:0,checkpoints:0,yields:0,waitingForStudy:false,finishedAt:null};
+  if(P)snapshot=P.assertNoInk(P.project(snapshot));
+  const work=S.SyncTransport.workMetrics={stage:'waiting',startedAt:Date.now(),objects:0,checkpoints:0,yields:0,waitingForStudy:false,finishedAt:null,pendingObjects:null,uploadedObjects:0,uploadedBytes:0,knownRequests:0,reusedVerifiedObjects:0};
   async function slot(){work.waitingForStudy=typeof S.syncCanTransfer==='function'&&!S.syncCanTransfer();if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();work.waitingForStudy=false;}
+  let saveCheckpoint=async()=>{};
   try{
   await slot();work.stage='encode';
-  const graph=await K.encode(snapshot,{checkpoint:async info=>{work.objects=info.objects;work.checkpoints++;await slot();if(S.SyncModel?.yieldMain)await S.SyncModel.yieldMain();else await new Promise(resolve=>setTimeout(resolve,0));work.yields++;}});
-  work.objects=graph.objects.size;work.stage='transfer';
-  if(graph.root===head.hash){verifiedUploadGraphs.set(profile,{root:head.hash,hashes:new Set([...graph.objects.keys(),...graph.external||[]])});work.stage='complete';return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size,knownRequests:0,reusedVerifiedObjects:graph.objects.size}};}
+  const persistent=!!S.NoteVault?.enabled();const graph=await K.encode(snapshot,{recordsOnly:!!P,storeObject:persistent?(hash,text)=>S.NoteVault.putSyncObject(hash,text):undefined,checkpoint:async info=>{work.objects=info.objects;work.checkpoints++;await slot();if(S.SyncModel?.yieldMain)await S.SyncModel.yieldMain();else await new Promise(resolve=>setTimeout(resolve,0));work.yields++;}});
+  work.encodedAt=Date.now();work.encodeMs=work.encodedAt-work.startedAt;work.objects=graph.objects.size;work.retainedGraphChars=persistent?0:[...graph.objects.values()].reduce((n,t)=>n+t.length,0);work.stage='transfer';
+  if(graph.root===head.hash){verifiedUploadGraphs.set(profile,{root:head.hash,hashes:new Set([...graph.objects.keys(),...graph.external||[]])});work.pendingObjects=0;work.reusedVerifiedObjects=graph.objects.size;work.stage='complete';return {...head,hash:graph.root,metrics:{uploadedChars:0,uploadedObjects:0,totalObjects:graph.objects.size,knownRequests:0,reusedVerifiedObjects:graph.objects.size}};}
   const hashes=[...new Set([...graph.objects.keys(),...graph.external||[]])],known=new Set([head.hash].filter(Boolean)),verified=verifiedUploadGraphs.get(profile);let reusedVerifiedObjects=0,knownRequests=0;
   if(verified?.root===head.hash)for(const hash of hashes)if(verified.hashes.has(hash)){known.add(hash);reusedVerifiedObjects++;}
-  const unknown=hashes.filter(h=>!known.has(h));
-  for(let i=0;i<unknown.length;i+=80){status('核验云端内容 '+Math.min(i+80,unknown.length)+'/'+unknown.length);knownRequests++;const r=await api('/api/sync/v2/known',{hashes:unknown.slice(i,i+80)});r.known.forEach(h=>known.add(h));}
-  const missing=hashes.filter(h=>!known.has(h));let sent=0,chars=0,batch=[],failure;const active=new Set(),ack=new Map();
+  // A verified current cloud manifest survives reloads in the depot/wire cache.
+  // Only the exact server head proves these objects already exist remotely.
+  if(head.hash&&head.hash===profile.baseHash&&persistent){try{let text=await S.NoteVault.peekText?.(head.hash);if(!text)text=await S.NoteVault.cachedWireText?.(head.hash);if(typeof text==='string'&&await K.hash(text)===head.hash){const root=JSON.parse(text);if(root.kind==='root'&&root.value?.protocol===2&&root.value.schema===3&&Array.isArray(root.value.objects)){const saved=new Set(root.value.objects.filter(h=>/^[a-f0-9]{64}$/.test(h)));for(const hash of hashes)if(!known.has(hash)&&saved.has(hash)){known.add(hash);reusedVerifiedObjects++;}}}}catch{/* Fall back to server existence checks. */}}
+  // Cache only server-acknowledged facts for this account object and exact head.
+  // Negative checks are reusable only for the same immutable graph; uploaded
+  // complete objects survive a paused round. Never cache partial upload parts.
+  const receiptOwner=P&&S.state?.meta?.syncOwnerId;let progress=uploadProgress.get(profile);
+  if(!progress&&receiptOwner&&persistent&&S.NoteVault.readUploadProgress){try{const saved=await S.NoteVault.readUploadProgress(receiptOwner);if(saved&&saved.head===head.hash&&Number.isFinite(saved.at)&&Date.now()-saved.at<600000&&saved.at<=Date.now()+60000&&Array.isArray(saved.known)&&Array.isArray(saved.checked)&&saved.known.length<=100000&&saved.checked.length<=100000&&[...saved.known,...saved.checked].every(h=>/^[a-f0-9]{64}$/.test(h))){progress={...saved,known:new Set(saved.known),checked:new Set(saved.checked)};uploadProgress.set(profile,progress);work.restoredCheckpoint=true;}}catch{work.checkpointReadFailed=true;}}
+  if(!progress||progress.head!==head.hash||Date.now()-progress.at>600000){progress={head:head.hash,root:graph.root,at:Date.now(),known:new Set(),checked:new Set()};uploadProgress.set(profile,progress);}
+  if(progress.root!==graph.root){progress.root=graph.root;progress.checked.clear();}
+  let receiptQueue=Promise.resolve(),savedCount=-1,receiptAt=0;
+  saveCheckpoint=async(force=false)=>{if(!receiptOwner||!S.NoteVault.writeUploadProgress)return;const count=progress.known.size+progress.checked.size;if(!force&&count-savedCount<64&&Date.now()-receiptAt<5000)return receiptQueue;savedCount=count;receiptAt=Date.now();const value={head:progress.head,root:progress.root,at:progress.at,known:[...progress.known],checked:[...progress.checked]};receiptQueue=receiptQueue.then(()=>S.NoteVault.writeUploadProgress(receiptOwner,value)).catch(()=>{work.checkpointWriteFailed=true;});return receiptQueue;};
+  work.resumedKnownObjects=0;for(const h of hashes)if(!known.has(h)&&progress.known.has(h)){known.add(h);work.resumedKnownObjects++;}
+  work.reusedVerifiedObjects=reusedVerifiedObjects;work.stage='known';
+  const unknown=hashes.filter(h=>!known.has(h)&&!progress.checked.has(h));work.resumedChecks=hashes.filter(h=>!known.has(h)&&progress.checked.has(h)).length;
+  let cursor=0,checked=0,checkFailure;
+  async function checkWorker(){while(!checkFailure&&cursor<unknown.length){const requested=unknown.slice(cursor,cursor+=(P?1000:80));try{knownRequests++;work.knownRequests=knownRequests;const r=await api('/api/sync/v2/known',{hashes:requested});if(!Array.isArray(r.known)||r.known.some(h=>!requested.includes(h)))throw Error('云端核验列表格式无效');for(const h of requested)progress.checked.add(h);for(const h of r.known){known.add(h);progress.known.add(h);}checked+=requested.length;status('核验云端内容 '+checked+'/'+unknown.length);}catch(e){checkFailure=checkFailure||e;}}}
+  await Promise.all([checkWorker(),checkWorker()]);await saveCheckpoint(true);if(checkFailure)throw checkFailure;
+  work.knownMs=Date.now()-work.encodedAt;work.uploadStartedAt=Date.now();const missing=hashes.filter(h=>!known.has(h));work.pendingObjects=missing.length;work.knownRequests=knownRequests;work.uploadedObjects=0;work.uploadedBytes=0;work.stage='upload';let sent=0,chars=0,batch=[],failure;const active=new Set(),ack=new Map();
   async function flush(){if(failure)throw failure;if(!batch.length)return;const parts=batch;batch=[];
-   const task=(async()=>{try{await api('/api/sync/v2/put',{parts});for(const p of parts){const count=(ack.get(p.hash)||0)+1;ack.set(p.hash,count);if(count===p.total)sent++;}status('正在同步新增或修改内容 '+sent+'/'+missing.length);}catch(e){failure=failure||e;}})();active.add(task);task.finally(()=>active.delete(task));if(active.size>=2)await Promise.race(active);if(failure)throw failure;
+   const task=(async()=>{try{await api('/api/sync/v2/put',{parts});for(const p of parts){const count=(ack.get(p.hash)||0)+1;ack.set(p.hash,count);if(count===p.total){sent++;progress.known.add(p.hash);}work.uploadedBytes+=new TextEncoder().encode(p.data).length;work.uploadedObjects=sent;}await saveCheckpoint();status('正在同步新增或修改内容 '+sent+'/'+missing.length);}catch(e){failure=failure||e;}})();active.add(task);task.finally(()=>active.delete(task));if(active.size>=2)await Promise.race(active);if(failure)throw failure;
   }
   try{
-  for(const hash of missing){const text=graph.objects.has(hash)?graph.objects.get(hash):await S.NoteVault.getText(hash),parts=K.splitText(text),total=parts.length;if(total>360)throw Error('单份笔记超过同步对象容量，请先备份并归档；本机未删除');
+  for(const hash of missing){const text=graph.objects.get(hash)??await S.NoteVault.getText(hash),parts=K.splitText(text),total=parts.length;if(total>360)throw Error('单份笔记超过同步对象容量，请先备份并归档；本机未删除');
    // Multi-part objects remain ordered; two parallel tails must not both miss readiness.
-   if(total>1){await flush();await Promise.all(active);if(failure)throw failure;for(let start=0;start<total;start+=6){const chunk=parts.slice(start,start+6).map((data,n)=>({hash,index:start+n,total,data}));await api('/api/sync/v2/put',{parts:chunk});chars+=chunk.reduce((n,p)=>n+p.data.length,0);}sent++;status('正在同步新增或修改内容 '+sent+'/'+missing.length);continue;}
-   for(let i=0;i<total;i++){const p={hash,index:i,total,data:parts[i]};if(batch.length>=6||new TextEncoder().encode(JSON.stringify({parts:[...batch,p]})).length>220000)await flush();batch.push(p);chars+=p.data.length;}
+   if(total>1){await flush();await Promise.all(active);if(failure)throw failure;for(let start=0;start<total;){const chunk=[];while(start<total&&chunk.length<(P?16:6)){const part={hash,index:start,total,data:parts[start]};if(chunk.length&&new TextEncoder().encode(JSON.stringify({parts:[...chunk,part]})).length>220000)break;chunk.push(part);start++;}await api('/api/sync/v2/put',{parts:chunk});chars+=chunk.reduce((n,p)=>n+p.data.length,0);work.uploadedBytes+=chunk.reduce((n,p)=>n+new TextEncoder().encode(p.data).length,0);}progress.known.add(hash);sent++;work.uploadedObjects=sent;await saveCheckpoint();status('正在同步新增或修改内容 '+sent+'/'+missing.length);continue;}
+   for(let i=0;i<total;i++){const p={hash,index:i,total,data:parts[i]};if(batch.length>=(P?16:6)||new TextEncoder().encode(JSON.stringify({parts:[...batch,p]})).length>220000)await flush();batch.push(p);chars+=p.data.length;}
   }
   await flush();await Promise.all(active);if(failure)throw failure;
   }catch(e){await Promise.all(active);throw failure||e;}
-  const result=await api('/api/sync/v2/commit',{hash:graph.root,baseRev:head.rev,deviceId});
+  work.uploadMs=Date.now()-work.uploadStartedAt;work.commitStartedAt=Date.now();work.stage='commit';const result=await api('/api/sync/v2/commit',{hash:graph.root,baseRev:head.rev,deviceId});
   // Keep only the current content graph in this account's cache. Original
   // snapshot and server's previous root remain available for recovery.
-  verifiedUploadGraphs.set(profile,{root:graph.root,hashes:new Set(hashes)});
-  delete profile.objectCache;work.stage='complete';return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size,knownRequests,reusedVerifiedObjects}};
-  }catch(e){work.waitingForStudy=false;work.stage=e?.code==='STUDY_BUSY'?'deferred':'failed';work.error=String(e?.name||'Error');throw e;}
-  finally{work.finishedAt=Date.now();}
+  verifiedUploadGraphs.set(profile,{root:graph.root,hashes:new Set(hashes)});uploadProgress.delete(profile);await saveCheckpoint(true);saveCheckpoint=async()=>{};if(receiptOwner)try{await S.NoteVault.writeUploadProgress?.(receiptOwner,null);}catch{work.checkpointWriteFailed=true;}
+  delete profile.objectCache;work.commitMs=Date.now()-work.commitStartedAt;work.stage='complete';return {...result,metrics:{uploadedChars:chars,uploadedObjects:missing.length,totalObjects:graph.objects.size,knownRequests,reusedVerifiedObjects}};
+  }catch(e){if(e?.status===409){uploadProgress.delete(profile);saveCheckpoint=async()=>{};const owner=S.state?.meta?.syncOwnerId;if(owner)try{await S.NoteVault.writeUploadProgress?.(owner,null);}catch{}}work.waitingForStudy=false;work.stage=e?.code==='STUDY_BUSY'?'deferred':'failed';work.error=String(e?.name||'Error');throw e;}
+  finally{await saveCheckpoint(true);work.finishedAt=Date.now();}
  }
 };
 })(window.Study);
@@ -4080,6 +4290,7 @@ async function open(){
  }).finally(()=>opening=null);return opening;
 }
 async function operation(mode,key,value,retry=true){
+ if(mode==='readwrite'){S.storageMaintenance?.beforeWrite?.();V.mutationVersion=(V.mutationVersion||0)+1;}
  let d;
  try{
   d=await open();return await new Promise((resolve,reject)=>{
@@ -4097,28 +4308,35 @@ async function operation(mode,key,value,retry=true){
  }
 }
 V.getText=async hash=>{V.metrics.reads++;const text=await operation('readonly',hash);if(text!==undefined)return text;if(!V.remoteGet)throw Error('该笔记尚未缓存，请联网登录原账号后重试');const result=await V.remoteGet(hash);if(await S.SyncCodec.hash(result)!==hash)throw Error('笔记下载校验失败');await V.putText(hash,result);return result;};
+V.peekText=hash=>operation('readonly',hash);
+V.readUploadProgress=owner=>operation('readonly','upload-progress:'+owner);
+V.writeUploadProgress=(owner,value)=>operation('readwrite','upload-progress:'+owner,value);
+V.putSyncObject=async(hash,text)=>{S.requireSyncSlot?.();if(!known.has(hash)){if(await V.peekText(hash)!==text){await operation('readwrite',hash,text);V.metrics.writes++;}else V.metrics.reusedWrites=(V.metrics.reusedWrites||0)+1;known.add(hash);}};
 V.putText=async(hash,text)=>{if(await S.SyncCodec.hash(text)!==hash)throw Error('笔记保存校验失败');await operation('readwrite',hash,text);V.metrics.writes++;};
-async function put(kind,value,all){const text=S.SyncCodec.stable({kind,value}),hash=await S.SyncCodec.hash(text);if(!known.has(hash)){await operation('readwrite',hash,text);known.add(hash);V.metrics.writes++;}all.add(hash);return hash;}
+const packedObjects=new WeakMap(),objectShapes=new WeakMap(),listShapes=new WeakMap(),arrayDirs=new WeakMap();
+function internList(values){const first=values.find(x=>x&&typeof x==='object');if(!first)return values;const prior=listShapes.get(first)||[],same=prior.find(x=>x.length===values.length&&x.every((v,i)=>v===values[i]));if(same)return same;prior.push(values);if(prior.length>4)prior.shift();listShapes.set(first,prior);return values;}
+function internShape(source,out){const prior=objectShapes.get(source),keys=Object.keys(out);if(prior&&keys.length===prior.keys.length&&keys.every((k,i)=>k===prior.keys[i]&&out[k]===prior.out[k]))return prior.out;objectShapes.set(source,{keys,out});return out;}
+async function put(kind,value,all){const prior=value&&typeof value==='object'&&packedObjects.get(value);if(prior?.kind===kind&&known.has(prior.hash)){all.add(prior.hash);return prior.hash;}const text=S.SyncCodec.stable({kind,value}),hash=await S.SyncCodec.hash(text);if(!known.has(hash)){if(await V.peekText(hash)!==text){await operation('readwrite',hash,text);V.metrics.writes++;}else V.metrics.reusedWrites=(V.metrics.reusedWrites||0)+1;known.add(hash);}if(value&&typeof value==='object')packedObjects.set(value,{kind,hash});all.add(hash);return hash;}
 // Bound leaves before stringify/structured cloning: 64 entries per array block,
 // long strings in 24k chunks. The original vectors and layout data are lossless.
 const subtrees=new WeakMap();
 async function tree(value,all){
  const stroke=value&&typeof value==='object'&&Array.isArray(value.points),layout=value&&typeof value==='object'&&Array.isArray(value.text)&&Number(value.width)>0;
  if(!stroke&&!layout)return treeRaw(value,all);
- const token=stroke?[value.points,value.points.length,value.layoutId,value.anchor,value.brush,value.color,value.width]:[value.text,value.text.length,value.images?.length,value.width,value.height,value.key];
- const old=subtrees.get(value);if(old&&old.token.every((x,i)=>x===token[i])){for(const h of old.objects)all.add(h);return old.value;}
+ const token=stroke?[value.id,value.points,value.points.length,value.layoutId,value.anchor,value.brush,value.color,value.width,value.draftSurfaceKey,value.draftOwnerQuestionId,value.gestureId,value.basisWidth,value.basisHeight,value.widthMode,value.inkWidth]:[value.text,value.text.length,value.images?.length,value.width,value.height,value.key];
+ const old=subtrees.get(value);if(old&&old.token.every((x,i)=>x===token[i])&&[...old.objects].every(h=>known.has(h))){for(const h of old.objects)all.add(h);return old.value;}
  const objects=new Set(),out=await treeRaw(value,objects);subtrees.set(value,{token,value:out,objects});for(const h of objects)all.add(h);return out;
 }
 async function treeRaw(value,all){
  if(typeof value==='string'&&value.length>24000){const ids=[];for(const part of S.SyncCodec.splitText(value))ids.push(await put('ink-string',part,all));return {$inkString:ids};}
  if(Array.isArray(value)){
-  if(value.length>64){const ids=[];for(let i=0;i<value.length;i+=64){ids.push(await put('ink-array',await tree(value.slice(i,i+64),all),all));if(i%512===0)await yieldMain();}return {$inkArray:ids};}
-  const out=[];for(const v of value)out.push(v&&typeof v==='object'||typeof v==='string'&&v.length>24000?await tree(v,all):v);return out;
+  if(value.length>64){const ids=[];for(let i=0;i<value.length;i+=64){ids.push(await put('ink-array',await tree(value.slice(i,i+64),all),all));if(i%512===0)await yieldMain();}const prior=arrayDirs.get(value);if(prior&&ids.length===prior.$inkArray.length&&ids.every((h,i)=>h===prior.$inkArray[i]))return prior;const out={$inkArray:ids};arrayDirs.set(value,out);return out;}
+  const out=[];for(const v of value)out.push(v&&typeof v==='object'||typeof v==='string'&&v.length>24000?await tree(v,all):v);return internList(out);
  }
- if(value&&typeof value==='object'){const out={};for(const[k,v]of Object.entries(value)){if(['__proto__','constructor','prototype'].includes(k))throw Error('笔记包含非法字段');out[k]=v&&typeof v==='object'||typeof v==='string'&&v.length>24000?await tree(v,all):v;}return out;}return value;
+ if(value&&typeof value==='object'){const out={};for(const[k,v]of Object.entries(value)){if(['__proto__','constructor','prototype'].includes(k))throw Error('笔记包含非法字段');out[k]=v&&typeof v==='object'||typeof v==='string'&&v.length>24000?await tree(v,all):v;}return internShape(value,out);}return value;
 }
 async function expand(v){if(v?.$inkArray){const out=[];for(const h of v.$inkArray){const o=JSON.parse(await V.getText(h));if(o.kind!=='ink-array')throw Error('笔记数组类型错误');out.push(...await expand(o.value));}return out;}if(v?.$inkString){let text='';for(const h of v.$inkString){const o=JSON.parse(await V.getText(h));if(o.kind!=='ink-string')throw Error('笔记文本类型错误');text+=o.value;}return text;}if(Array.isArray(v)){const out=[];for(const x of v)out.push(x&&typeof x==='object'?await expand(x):x);return out;}if(v&&typeof v==='object'){const out={};for(const[k,x]of Object.entries(v))out[k]=x&&typeof x==='object'?await expand(x):x;return out;}return v;}
-V.packNote=async n=>{if(!n||V.isRef(n))return n;const token=[n.strokes,n.strokes?.length,n.redo,n.redo?.length,n.events?.length,n.layoutId,n.layoutKey,n.lastSize?.width,n.lastSize?.height,n.clearCount,Object.keys(n.removedStrokes||{}).length],prior=refs.get(n);if(prior&&prior.token.every((x,i)=>x===token[i]))return prior.ref;const all=new Set(),value=await tree(n,all),hash=await put('ink-note',value,all);V.metrics.packed++;const ref={$ink:1,hash,objects:[...all].sort(),count:(n.strokes||[]).filter(st=>st.brush!=='erase').length,clearCount:Math.max(n.clearCount||0,(n.events||[]).filter(e=>e.type==='clear').length),at:n.events?.at(-1)?.at||n.layouts?.[n.layoutId]?.at||0};refs.set(n,{token,ref});return ref;};
+V.packNote=async n=>{if(!n||V.isRef(n))return n;const token=[n.strokes,n.strokes?.length,n.redo,n.redo?.length,n.events?.length,n.layoutId,n.layoutKey,n.inkHistory,n.lastSize?.width,n.lastSize?.height,n.clearCount,Object.keys(n.removedStrokes||{}).length],prior=refs.get(n);if(prior&&prior.token.every((x,i)=>x===token[i])&&prior.ref.objects.every(h=>known.has(h)))return prior.ref;const all=new Set(),value=await tree(n,all),hash=await put('ink-note',value,all);V.metrics.packed++;const ref={$ink:1,hash,objects:[...all].sort(),count:(n.strokes||[]).filter(st=>st.brush!=='erase').length,clearCount:Math.max(n.clearCount||0,(n.events||[]).filter(e=>e.type==='clear').length),at:n.events?.at(-1)?.at||n.layouts?.[n.layoutId]?.at||0};refs.set(n,{token,ref});return ref;};
 V.loadNote=async n=>{if(!V.isRef(n))return n;const o=JSON.parse(await V.getText(n.hash));if(o.kind!=='ink-note')throw Error('笔记对象类型错误');return expand(o.value);};
 async function notes(ns){const out={};for(const[k,n]of Object.entries(ns||{}))out[k]=await V.packNote(n);return out;}
 V.freezeEvidence=async s=>{if(s.submissionEvidence)return;const frozen=await notes(s.notes);s.submissionEvidence={version:1,capturedAt:Date.now(),origin:s.finished?'legacy-unknown':'submission',notes:frozen,events:JSON.parse(JSON.stringify(s.events||[]))};};
@@ -4129,12 +4347,12 @@ V.packSnapshot=async s=>{if(!s||!V.enabled())return s;s=S.inkRetention?.snapshot
 }out.conflicts.push(x);}}return out;};
 // Content hashes may share immutable storage, never mutable note ownership.
 // Empty notes commonly have identical hashes across questions and materials.
-V.hydrateSession=async (s,{fields=['notes','reviewNotes','submissionEvidence']}={})=>{
+V.hydrateSession=async (s,{fields=['notes','reviewNotes','submissionEvidence'],keys=null,current=()=>true}={})=>{
  S.inkRetention?.strip(s);
  const loaded=new Map(),remaining=new Map(),seen=new WeakSet();
- const maps=fields.map(k=>k==='submissionEvidence'?s.submissionEvidence?.notes:s[k]);
+ const maps=fields.map(k=>k==='submissionEvidence'?s.submissionEvidence?.notes:s[k]);const entries=ns=>Object.entries(ns||{}).filter(([k])=>!keys||keys.has(k));
  const detached=n=>typeof globalThis.structuredClone==='function'?globalThis.structuredClone(n):JSON.parse(JSON.stringify(n));
- for(const ns of maps)for(const n of Object.values(ns||{}))if(V.isRef(n))remaining.set(n.hash,(remaining.get(n.hash)||0)+1);
+ for(const ns of maps)for(const [,n] of entries(ns))if(V.isRef(n))remaining.set(n.hash,(remaining.get(n.hash)||0)+1);
  async function load(n){
   if(!V.isRef(n)){if(!n||typeof n!=='object')return n;if(seen.has(n))return detached(n);seen.add(n);return n;}
   if(!loaded.has(n.hash))loaded.set(n.hash,await V.loadNote(n));
@@ -4142,7 +4360,7 @@ V.hydrateSession=async (s,{fields=['notes','reviewNotes','submissionEvidence']}=
   if(left)return detached(value);
   loaded.delete(n.hash);return value;
  }
- for(const ns of maps)for(const[k,n]of Object.entries(ns||{}))ns[k]=await load(n);
+ for(const ns of maps)for(const[k,n]of entries(ns)){const note=await load(n);if(!current())return s;if(ns[k]===n)ns[k]=note;}
  return s;
 };
 V.packProfile=async p=>{const out={...p};for(const k of ['base','local','pending','shadow'])if(p[k])out[k]=await V.packSnapshot(p[k]);delete out.objectCache;return out;};
@@ -4150,18 +4368,21 @@ V.loadSnapshot=async s=>{const out={...s,sessions:[]};for(const row of s.session
 // Profile roots contain only content hashes. Unchanged records are never put
 // again; publication follows successful record writes. Retain legacy root for
 // rollback instead of destructively replacing the original 341MB recovery copy.
-V.writeProfile=async(id,p)=>{const packed=await V.packProfile(p),all=new Set(),hash=await put('profile-root',await tree(packed,all),all);await operation('readwrite','profile:'+id,{hash});return packed;};
+V.writeProfile=async(id,p)=>{const packed=await V.packProfile(p),all=new Set(),hash=await put('profile-root',await tree(packed,all),all);S.storageMaintenance?.beforeWrite?.();V.mutationVersion=(V.mutationVersion||0)+1;const d=await open();await new Promise((resolve,reject)=>{const tx=d.transaction('objects','readwrite'),st=tx.objectStore('objects'),r=st.get('profile:'+id);r.onsuccess=()=>{if(r.result?.hash&&r.result.hash!==hash)st.put(r.result,'recovery:'+id);st.put({hash},'profile:'+id);};tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(tx.error||Error('账号恢复目录保存失败'));});return packed;};
 V.readProfile=async id=>{const root=await operation('readonly','profile:'+id);if(!root)return null;const o=JSON.parse(await V.getText(root.hash));if(o.kind!=='profile-root')throw Error('账号目录校验失败');return expand(o.value);};
 const releases=new WeakMap();V.ready=s=>releases.get(s)||Promise.resolve();V.isReleasing=s=>releases.has(s);
-V.releaseSession=s=>{if(!s||s===S.exam?.s||s===S.review?.s)return Promise.resolve();if(releases.has(s))return releases.get(s);const task=(async()=>{const packed=await V.packSession(s);if(s===S.exam?.s||s===S.review?.s)return;s.notes=packed.notes;if(packed.reviewNotes)s.reviewNotes=packed.reviewNotes;if(packed.submissionEvidence)s.submissionEvidence=packed.submissionEvidence;})().finally(()=>releases.delete(s));releases.set(s,task);return task;};
+V.releaseSession=s=>{const active=()=>s===S.exam?.s&&!S.exam?.disposed||s===S.review?.s&&!S.review?.controller?.disposed;if(!s||active()){if(s)V.metrics.releaseBlocked=(V.metrics.releaseBlocked||0)+1;return Promise.resolve();}if(releases.has(s))return releases.get(s);V.metrics.releasingSessions=(V.metrics.releasingSessions||0)+1;const task=(async()=>{const packed=await V.packSession(s);if(active())return;s.notes=packed.notes;V.metrics.releasedSessions=(V.metrics.releasedSessions||0)+1;if(packed.reviewNotes)s.reviewNotes=packed.reviewNotes;if(packed.submissionEvidence)s.submissionEvidence=packed.submissionEvidence;})().finally(()=>{releases.delete(s);V.metrics.releasingSessions--;});releases.set(s,task);return task;};
 V.expandReferences=async v=>{if(V.isRef(v))return V.loadNote(v);if(Array.isArray(v)){const out=[];for(const x of v)out.push(await V.expandReferences(x));return out;}if(v&&typeof v==='object'){const out={};for(const[k,x]of Object.entries(v))out[k]=await V.expandReferences(x);return out;}return v;};
 V.migrationProgress=(done,total)=>{const p=S.$?.('.boot-screen p');if(p)p.textContent='首次整理本机笔记 '+done+' / '+total+'，请保持页面在前台';};
 // A wire cache is disposable; original learning records and ink objects are not.
 // Parts are kept separately so a failed download resumes without giant puts.
-V.dropWire=async hash=>{const m=await V.wireMeta(hash);if(!m)return;const d=await open();return new Promise((resolve,reject)=>{const tx=d.transaction('objects','readwrite'),store=tx.objectStore('objects');for(let i=0;i<m.total;i++)store.delete('wire:'+hash+':'+i);store.delete('wire:'+hash+':meta');tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(tx.error);});};
+V.dropWire=async hash=>{S.storageMaintenance?.beforeWrite?.();V.mutationVersion=(V.mutationVersion||0)+1;const m=await V.wireMeta(hash);if(!m)return;const d=await open();return new Promise((resolve,reject)=>{const tx=d.transaction('objects','readwrite'),store=tx.objectStore('objects');for(let i=0;i<m.total;i++)store.delete('wire:'+hash+':'+i);store.delete('wire:'+hash+':meta');tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(tx.error);});};
 V.wireMeta=hash=>operation('readonly','wire:'+hash+':meta');
 V.wirePart=(hash,index)=>operation('readonly','wire:'+hash+':'+index);
-V.cacheWireParts=async parts=>{if(!parts.length)return;const d=await open();for(const p of parts)if(!/^[a-f0-9]{64}$/.test(p.hash)||!Number.isSafeInteger(p.total)||p.total<1||p.total>360||!Number.isSafeInteger(p.index)||p.index<0||p.index>=p.total||typeof p.data!=='string'||p.data.length>60000)throw Error('下载缓存分片格式无效');return new Promise((resolve,reject)=>{const tx=d.transaction('objects','readwrite'),store=tx.objectStore('objects');for(const p of parts){store.put({data:p.data,total:p.total},'wire:'+p.hash+':'+p.index);store.put({total:p.total,ready:false},'wire:'+p.hash+':meta');}tx.oncomplete=()=>{V.metrics.wireParts=(V.metrics.wireParts||0)+parts.length;resolve();};tx.onerror=tx.onabort=()=>reject(tx.error||Error('下载断点保存失败'));});};
+V.cacheWireParts=async parts=>{if(!parts.length)return;S.storageMaintenance?.beforeWrite?.();V.mutationVersion=(V.mutationVersion||0)+1;const d=await open();for(const p of parts)if(!/^[a-f0-9]{64}$/.test(p.hash)||!Number.isSafeInteger(p.total)||p.total<1||p.total>360||!Number.isSafeInteger(p.index)||p.index<0||p.index>=p.total||typeof p.data!=='string'||p.data.length>60000)throw Error('下载缓存分片格式无效');return new Promise((resolve,reject)=>{const tx=d.transaction('objects','readwrite'),store=tx.objectStore('objects');for(const p of parts){store.put({data:p.data,total:p.total},'wire:'+p.hash+':'+p.index);store.put({total:p.total,ready:false},'wire:'+p.hash+':meta');}tx.oncomplete=()=>{V.metrics.wireParts=(V.metrics.wireParts||0)+parts.length;resolve();};tx.onerror=tx.onabort=()=>reject(tx.error||Error('下载断点保存失败'));});};
+// Maintenance reads bounded cursor pages; no getAll or full backup hydration.
+V.maintenancePage=async(after,limit=16)=>{const d=await open();return new Promise((resolve,reject)=>{const tx=d.transaction('objects','readonly'),st=tx.objectStore('objects'),rows=[];let bytes=0,done=false;const r=st.openCursor(after==null?null:IDBKeyRange.lowerBound(after,true));r.onsuccess=()=>{const c=r.result;if(!c){done=true;return;}rows.push({key:c.key,value:c.value});bytes+=typeof c.value==='string'?c.value.length*2:((c.value?.data?.length||0)*2+128);if(rows.length<limit&&bytes<1048576)c.continue();};tx.oncomplete=()=>resolve({rows,done});tx.onerror=tx.onabort=()=>reject(tx.error||Error('存储盘点读取失败'));});};
+V.maintenanceDelete=async(keys,version)=>{if(!S.storageMaintenance?.exclusive||version!==(V.mutationVersion||0))throw Error('本机记录已变化，请重新检查');const d=await open();return new Promise((resolve,reject)=>{const tx=d.transaction('objects','readwrite'),st=tx.objectStore('objects');let failure;for(const key of keys){if(/^wire:[a-f0-9]{64}:(?:meta|[0-9]+)$/.test(key)){st.delete(key);continue;}const r=st.get(key);r.onsuccess=()=>{try{if(!/^[a-f0-9]{64}$/.test(key)||typeof r.result!=='string'||!['root','question','session','attempts','learning','ai','conflicts','deleted','profile-root','ink-note','ink-array','ink-string','note'].includes(JSON.parse(r.result).kind))throw Error('清理范围包含受保护对象，已停止');st.delete(key);}catch(e){failure=e;tx.abort();}};}tx.oncomplete=()=>{for(const k of keys)known.delete(k);resolve();};tx.onerror=tx.onabort=()=>reject(failure||tx.error||Error('旧缓存清理失败'));});};
 V.cachedWireText=async hash=>{const meta=await V.wireMeta(hash);if(!meta?.total)return null;const parts=[];for(let i=0;i<meta.total;i++){const p=await V.wirePart(hash,i);if(!p||p.total!==meta.total)return null;parts.push(p.data);}const text=parts.join('');if(await S.SyncCodec.hash(text)!==hash)throw Error('已缓存下载内容校验失败，未应用云端记录');V.metrics.wireHits=(V.metrics.wireHits||0)+1;return text;};
 
 })(window.Study);
@@ -4173,8 +4394,8 @@ let profile=null,profileDB=null,profileOpening=null,cycle=null;
 C.deviceId=(()=>{try{const key='zhiyaoji-sync-device';let id=localStorage.getItem(key);if(!id){id=S.uid();localStorage.setItem(key,id);}return id;}catch{return S.uid();}})();
 const encode=new TextEncoder();
 const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',encode.encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
-async function api(path,data,{timeoutMs=25000}={}){
- if(/^\/api\/sync\/(?:v2\/)?(?:head|read|chunk|known|put|commit)(?:\?|$)/.test(path))if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
+async function api(path,data,{timeoutMs=25000,noteRead=false}={}){
+ if(!(noteRead&&path==='/api/sync/v2/read'&&data?.items?.length===1)&&/^\/api\/sync\/(?:v2\/)?(?:head|read|chunk|known|put|commit)(?:\?|$)/.test(path))if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
  const endpoint=String(path).split('?')[0],method=data===undefined?'GET':'POST',bodyText=data===undefined?undefined:JSON.stringify(data);
  const canRetry=['/api/account/health','/api/account/me','/api/sync/head','/api/sync/chunk','/api/sync/v2/head','/api/sync/v2/read','/api/sync/v2/known','/api/sync/v2/put'].includes(endpoint);
  for(let attempt=1;attempt<=(canRetry?2:1);attempt++){
@@ -4196,8 +4417,8 @@ async function api(path,data,{timeoutMs=25000}={}){
   }finally{clearTimeout(timeout);}
  }
 }
-if(S.NoteVault)S.NoteVault.remoteGet=async hash=>{const first=await api('/api/sync/v2/read',{items:[{hash,index:0}]}),parts=[first.items[0].data],total=first.items[0].total;for(let i=1;i<total;i++){const r=await api('/api/sync/v2/read',{items:[{hash,index:i}]});parts.push(r.items[0].data);}return parts.join('');};
-C.presentation=function(){const user=typeof C.user?.id==='string'&&C.user.id.trim()?C.user:null;if(!user)return {user:null,name:'登录同步',avatar:'账',label:'本机模式',detail:'尚未登录，记录保存在本机'};const name=user.username||'学习账号',label=!C.verified?'待联网验证':/未完成|失败|暂不可用|暂停|冲突|过期|额度|超时/.test(C.status)?'同步待处理':!C.profileReady?'接续记录中':/^已同步/.test(C.status)?'已同步':/待|正在|同步中|上传|下载/.test(C.status)?'待同步':'已连接';return {user,name,avatar:name.slice(0,1),label,detail:!C.verified?'账号待联网验证，记录已保存在本机':C.status};};
+if(S.NoteVault)S.NoteVault.remoteGet=async hash=>{const first=await api('/api/sync/v2/read',{items:[{hash,index:0}]},{noteRead:true}),parts=[first.items[0].data],total=first.items[0].total;for(let i=1;i<total;i++){const r=await api('/api/sync/v2/read',{items:[{hash,index:i}]},{noteRead:true});parts.push(r.items[0].data);}return parts.join('');};
+C.presentation=function(){const user=typeof C.user?.id==='string'&&C.user.id.trim()?C.user:null;if(!user)return {user:null,name:'登录同步',avatar:'账',label:'本机模式',detail:'尚未登录，记录保存在本机'};const name=user.username||'学习账号',failed=/未完成|失败|暂不可用|冲突|过期|额度|超时/.test(C.status),waiting=C.schedule?.dirty||C.schedule?.requested;let label;if(!C.verified)label=failed?'验证待重试':'待联网验证';else if(failed)label='同步待处理';else if(!C.profileReady)label='接续记录中';else if(C.phase==='sync-download')label='正在下载';else if(C.phase==='sync-upload')label='正在上传';else if(/暂缓|当前操作优先/.test(C.status))label='同步已暂缓';else if(/^已同步/.test(C.status)&&!waiting)label='已同步';else if(waiting||/待|正在|同步中|上传|下载/.test(C.status))label='待同步';else label='已连接';return {user,name,avatar:name.slice(0,1),label,detail:C.status||'账号待联网验证，记录保存在本机'};};
 function status(text){if(C.status===text)return;C.status=text;const p=C.presentation();S.$$('[data-sync-status]').forEach(n=>n.textContent=p.detail);S.$$('[data-account-status]').forEach(n=>n.textContent=p.label);}
 function busyExam(){return !!S.deletingRecords||!!S.openingPractice||!!S.preparingInk|| (!!S.exam&&!S.exam.disposed&&!S.exam.s.finished)||!!S.review;}
 const profileFaults=new Map();
@@ -4242,6 +4463,7 @@ async function getProfile(id){
  try{let value=S.NoteVault?.enabled()?await S.NoteVault.readProfile(id):null;if(!value){value=await profileOperation('readonly',id);if(value&&S.NoteVault?.enabled())value=await S.NoteVault.writeProfile(id,value);}profileFaults.delete(id);return value;}
  catch(e){profileFaults.set(id,{at:Date.now(),name:e.name});throw e;}
 }
+S.readLegacyProfileRoots=async()=>{const d=await store(),keys=await new Promise((resolve,reject)=>{const tx=d.transaction('profiles','readonly'),r=tx.objectStore('profiles').getAllKeys();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});const out=[];for(const key of keys){out.push(...S.StorageMaintenanceCore.references(await profileOperation('readonly',key)));await M.yieldMain();}return out;};
 async function putProfile(id,value){
  if(profileFaults.has(id))throw storageError('账号副本未核验，已暂停覆盖和上传',null,'guard');
  if(profileWriteFaults.has(id))throw storageError('账号副本写入失败，已暂停重复写入和同步；本机做题记录仍保留',null,'write-guard');
@@ -4251,6 +4473,7 @@ async function putProfile(id,value){
 function newProfile(){return {base:M.empty(),baseHash:null,rev:0,local:M.empty(),pending:null,shadow:null,lastSyncAt:null};}
 async function captureCurrent(){
  if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
+ await S.ensureAllQuestionSnapshots?.();
  for(let retry=0;retry<3;retry++){if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();const revision=S.learningRevision,state=S.state,packed=S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(state)):null,value=await M.captureAsync(packed?{...state,sessions:packed.sessions,meta:{...state.meta,syncConflicts:packed.conflicts}}:state);if(state===S.state&&revision===S.learningRevision)return value;await M.yieldMain();}
  throw Error('本机正在持续更新，已保留本机记录，稍后再同步');
 }
@@ -4262,13 +4485,13 @@ async function stash(snapshot){
 }
 C.performance={phases:[],initFailures:0,skippedApplies:0};
 async function phase(name,fn){const start=performance.now(),previousPhase=C.phase;C.phase=name;try{const value=await fn();C.performance.phases.push({name,ms:Math.round(performance.now()-start),ok:value!==false,...(value===false?{deferred:true}:{})});return value;}catch(e){C.performance.phases.push({name,ms:Math.round(performance.now()-start),ok:false,error:String(e.name||'Error'),storageStage:e.storageStage||null});e.syncPhase=e.syncPhase||name;C.lastFailureStage=e.syncPhase;throw e;}finally{try{const row=C.performance.phases.at(-1);C.traceDiagnostic?.(name,{...row});}catch{}if(C.performance.phases.length>40)C.performance.phases.splice(0,C.performance.phases.length-40);C.phase=previousPhase;}}
-async function validateLearning(snapshot){
+async function validateLearning(snapshot,{recordsOnly=false}={}){
  if(snapshot?.schema!==3||!Array.isArray(snapshot.sessions)||!Array.isArray(snapshot.attempts)||!Array.isArray(snapshot.aiReviews))throw Error('同步学习记录结构不完整');
  const old=new Map(S.state.sessions.map(row=>[row.id,row])),seen=new Set(),sessions=[];let changed=false,batchStarted=performance.now();
  for(const row of snapshot.sessions||[]){
   if(!row?.id||seen.has(String(row.id)))throw Error('练习记录ID重复或缺失');seen.add(String(row.id));
   const previous=old.get(row.id);
-  if(previous&&M.same(previous,row))sessions.push(previous);
+  if(previous&&M.same(recordsOnly?S.CloudRecords.session(previous):previous,row))sessions.push(previous);
   else{const shell={schema:3,bank:[],papers:[],sessions:[row],attempts:[],learning:{favorites:{},reviewState:{},canonicalStats:{}},meta:{}};
    sessions.push(S.validateState(shell,{learningOnly:true,buildIndexes:false,sanitize:!(previous&&M.same(previous.questions,row.questions))}).sessions[0]);changed=true;}
   if(performance.now()-batchStarted>=6){await M.yieldMain();batchStarted=performance.now();}
@@ -4280,13 +4503,16 @@ async function validateLearning(snapshot){
  const favorites=snapshot.learning?.favorites;if(!favorites||typeof favorites!=='object')throw Error('学习数据结构不完整');
  return {sessions,attempts,aiReviews,favorites,changed:changed||sessions.length!==old.size};
 }
-async function apply(snapshot,owner){
+async function apply(snapshot,owner,{preserveLocalInk=false}={}){
+ const recordsOnly=!!(preserveLocalInk&&S.CloudRecords);if(recordsOnly){if(owner!==S.state.meta.syncOwnerId)throw Error('账号已变化，已停止合并');snapshot=S.CloudRecords.project(snapshot);}
  if(busyExam())throw Error('请先返回首页，再切换或恢复账号记录');
- const revision=S.learningRevision,parts=await phase('validate-changes',()=>validateLearning(snapshot));
+ const revision=S.learningRevision,parts=await phase('validate-changes',()=>validateLearning(snapshot,{recordsOnly}));
  if(busyExam()||revision!==S.learningRevision)throw Error('本机正在更新，已保留当前记录，稍后再合并');
+ if(recordsOnly){const current=M.view(S.state);parts.sessions=S.CloudRecords.attach({sessions:parts.sessions},current).sessions;snapshot=S.CloudRecords.attach(snapshot,current);}
+ const samePlans=M.same(snapshot.learning?.localReviewPlans||{},S.state.learning.localReviewPlans||{});
  const sameFavorites=M.same(parts.favorites,S.state.learning.favorites),sameDeleted=M.same(snapshot.deletedSessions||{},S.state.meta.deletedSessions||{}),sameConflicts=M.same(snapshot.conflicts||[],S.state.meta.syncConflicts||[]);
- if(!parts.changed&&parts.attempts===S.state.attempts&&parts.aiReviews===S.state.aiReviews&&sameFavorites&&sameDeleted&&sameConflicts&&S.state.meta.syncOwnerId===owner){C.performance.skippedApplies++;return;}
- const candidate={...S.state,sessions:parts.sessions,attempts:parts.attempts,aiReviews:parts.aiReviews,meta:{...S.state.meta,syncOwnerId:owner,deletedSessions:M.clone(snapshot.deletedSessions||{}),syncConflicts:M.clone(snapshot.conflicts||[])},learning:{favorites:sameFavorites?S.state.learning.favorites:M.clone(parts.favorites),reviewState:{},canonicalStats:{}}};
+ if(!parts.changed&&parts.attempts===S.state.attempts&&parts.aiReviews===S.state.aiReviews&&samePlans&&sameFavorites&&sameDeleted&&sameConflicts&&S.state.meta.syncOwnerId===owner){C.performance.skippedApplies++;return;}
+ const candidate={...S.state,sessions:parts.sessions,attempts:parts.attempts,aiReviews:parts.aiReviews,meta:{...S.state.meta,syncOwnerId:owner,deletedSessions:M.clone(snapshot.deletedSessions||{}),syncConflicts:M.clone(snapshot.conflicts||[])},learning:{favorites:sameFavorites?S.state.learning.favorites:M.clone(parts.favorites),localReviewPlans:samePlans?S.state.learning.localReviewPlans:M.clone(snapshot.learning?.localReviewPlans||{}),reviewState:{},canonicalStats:{}}};
  if(!candidate.sessions.some(s=>s.id===candidate.lastSessionId))candidate.lastSessionId=candidate.sessions.filter(s=>!s.finished).at(-1)?.id||null;
  if(parts.attempts===S.state.attempts){candidate.learning.reviewState=S.state.learning.reviewState;candidate.learning.canonicalStats=S.state.learning.canonicalStats;}else S.rebuildLearningStats(candidate);
  C.applying=true;
@@ -4344,7 +4570,7 @@ async function readRemote(){
  const parts=[];
  for(let i=0;i<head.chunks;i++){status(`首次接续旧云端记录 ${i+1}/${head.chunks}`);const cached=S.NoteVault?.enabled()?await S.NoteVault.wirePart(head.hash,i):null;let p=cached?.total===head.chunks?cached:null;if(!p){p=await api('/api/sync/chunk?hash='+encodeURIComponent(head.hash)+'&index='+i);if(p.total!==head.chunks||typeof p.data!=='string')throw Error('云端同步分片不完整');if(S.NoteVault?.enabled())await S.NoteVault.cacheWireParts([{hash:head.hash,index:i,total:p.total,data:p.data}]);}parts.push(p.data);}
  const text=parts.join('');if(await sha(text)!==head.hash){if(S.NoteVault?.enabled())await S.NoteVault.dropWire(head.hash);throw Error('云端学习记录校验失败，未覆盖本机记录');}
- const snapshot=JSON.parse(text);
+ const snapshot=S.CloudRecords?S.CloudRecords.project(JSON.parse(text)):JSON.parse(text);
  // Apply the existing backup validator before any remote record becomes local state.
  S.validateState({...S.state,bank:[],papers:[],sessions:snapshot.sessions,attempts:snapshot.attempts,learning:{favorites:snapshot.learning?.favorites||{},reviewState:{},canonicalStats:{}},aiReviews:snapshot.aiReviews},{learningOnly:true});
  if(snapshot.schema!==3||!Array.isArray(snapshot.conflicts))throw Error('云端学习记录格式不支持');return {head,snapshot};
@@ -4359,19 +4585,26 @@ async function run({pullOnly=false}={}){
  const identity=await api('/api/account/me');if(identity.user?.id!==id){C.verified=false;throw Error('登录账号已改变，请重新连接后再同步');}
  for(let retry=0;retry<4;retry++){
   if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();if(C.user?.id!==id)return;
-  const {head,snapshot:remote}=await phase('sync-download',()=>S.SyncTransport.remote(api,profile,readRemote,status));if(C.user?.id!==id)return;if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
-  if(![...S.state.meta.syncConflicts||[],...profile.base?.conflicts||[]].some(c=>!c.resolved)&&!profile.pending&&remote===profile.base&&M.same((S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(S.state)):M.view(S.state)),profile.base)){C.performance.noChangeSyncs=(C.performance.noChangeSyncs||0)+1;status(pullOnly?'账号已连接，记录无变化':'已同步，记录无变化');return true;}
+  const {head,snapshot:remote,recordsOnly=false}=await phase('sync-download',()=>S.SyncTransport.remote(api,profile,readRemote,status));if(C.user?.id!==id)return;if(S.requireSyncSlot)S.requireSyncSlot();else await S.waitForSyncSlot?.();
+  if((!S.CloudRecords||recordsOnly)&&![...S.state.meta.syncConflicts||[],...profile.base?.conflicts||[]].some(c=>!c.resolved)&&!profile.pending&&remote===profile.base&&M.same(S.CloudRecords?S.CloudRecords.project(M.view(S.state)):(S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(S.state)):M.view(S.state)),S.CloudRecords?S.CloudRecords.project(profile.base):profile.base)){C.lastCloudReadAt=Date.now();C.lastCloudReadOwner=id;C.learningReadyOwner=id;C.performance.noChangeSyncs=(C.performance.noChangeSyncs||0)+1;status(pullOnly?'账号已连接，记录无变化':'已同步，记录无变化');return true;}
   const localAtStart=await phase('sync-capture',()=>captureCurrent()),local=profile?.pending?await M.mergeAsync(profile.shadow||profile.base,localAtStart,profile.pending):localAtStart;await stash(local);
-  const merged=await phase('sync-merge',()=>M.mergeAsync(profile.base,local,remote));let saved;
+  const merged=await phase('sync-merge',()=>S.CloudRecords?S.CloudRecords.merge(M,profile.base,local,remote):M.mergeAsync(profile.base,local,remote));
+  // Daily selection needs merged learning records, not a completed upload.
+  // Persist the merged local view before publishing; a deferred upload keeps it.
+  if(C.user?.id!==id||S.state.meta.syncOwnerId!==id)return;
+  await phase('prepare-daily-records',()=>apply(merged,id,{preserveLocalInk:true}));
+  if(C.user?.id!==id)return;C.lastCloudReadAt=Date.now();C.lastCloudReadOwner=id;C.learningReadyOwner=id;
+  let saved;
   try{saved=pullOnly?{...head,hash:head.hash}:await phase('sync-upload',()=>S.SyncTransport.commit(api,profile,merged,head,status,C.deviceId));}catch(e){if(e.status===409&&!e.message.includes('接续'))continue;throw e;}
   const hash=saved.hash;C.metrics=saved.metrics||C.metrics;
   if(C.user?.id!==id)return;
   // Preserve edits made during the network request and finish active pen strokes locally first.
   const unchanged=M.same((S.NoteVault?.enabled()?await S.NoteVault.packSnapshot(M.view(S.state)):M.view(S.state)),localAtStart),current=unchanged?localAtStart:await captureCurrent(),after=unchanged?merged:await M.mergeAsync(localAtStart,current,merged);
-  profile.base=pullOnly?remote:merged;profile.baseHash=hash;profile.rev=saved.rev;profile.lastSyncAt=pullOnly?profile.lastSyncAt:Date.now();
+  profile.recordsOnlyCloud=pullOnly?recordsOnly:!!S.CloudRecords;profile.base=pullOnly?remote:merged;profile.baseHash=hash;profile.rev=saved.rev;profile.lastSyncAt=pullOnly?profile.lastSyncAt:Date.now();
   if(busyExam()||S.bankImporting){profile.pending=after;profile.shadow=current;profile.local=after;}
-  else{await apply(after,id);profile.pending=null;profile.shadow=null;profile.local=after;}
+  else{await apply(after,id,{preserveLocalInk:true});profile.pending=null;profile.shadow=null;profile.local=after;}
   await phase('sync-profile-save',()=>putProfile(id,profile));
+  C.lastCloudReadAt=Date.now();C.lastCloudReadOwner=id;if(!pullOnly)C.lastCloudCommitAt=profile.lastSyncAt;
   if(pullOnly){status('云端记录已读取；本机变化将在交卷或零点同步');}else status('已同步'+(busyExam()?'；其他设备的更新将在返回后显示':''));
   if(!busyExam()&&S.route==='settings')S.renderSettings();return true;
  }
@@ -4388,8 +4621,8 @@ function scheduleState(){
 }
 function saveSchedule(j){try{localStorage.setItem(j.key,JSON.stringify(j));}catch{/* Main learning records still persist in IndexedDB. */}}
 function clearScheduleSuccess(j,generation){
- j.blockedUntil=0;j.retryAt=0;j.boundary=day(Date.now());j.requested=false;
- if(j.generation===generation)j.dirty=false;else status('本轮已同步；新增本机变化待下次同步');saveSchedule(j);
+ C.syncFailureCount=0;j.blockedUntil=0;j.retryAt=0;j.boundary=day(Date.now());j.requested=false;
+ if(j.generation===generation)j.dirty=false;else{j.dirty=true;j.requested=true;status('本轮已同步；新增本机变化将继续同步');}saveSchedule(j);
 }
 C.sync=async function(options={}){
  if(C.adopting)return C.adopting.then(ready=>ready?C.sync(options):undefined);
@@ -4400,17 +4633,17 @@ C.sync=async function(options={}){
  const j=scheduleState(),generation=j.generation;C.cycleGeneration=generation;C.cyclePullOnly=!!options.pullOnly;
  if(j.blockedUntil>Date.now()){status('今日云端写入额度已用完，本机待上传记录已保留');return;}
  cycle=run(options).then(ok=>{if(ok&&!options.pullOnly)clearScheduleSuccess(j,generation);return ok;}).catch(e=>{
-  if(e?.code==='STUDY_BUSY'){j.requested=true;j.retryAt=0;saveSchedule(j);status('做题期间暂缓大批同步，本机记录正常保存');return false;}
+  if(e?.code==='STUDY_BUSY'){j.requested=true;j.retryAt=0;saveSchedule(j);status(busyExam()?'做题期间暂缓大批同步，本机记录正常保存':S.bankImporting?'题库更新期间暂缓同步，结束后自动继续':'当前操作优先，空闲后自动继续同步，本机记录正常保存');return false;}
   if(e.status===401){C.user=null;profile=null;C.verified=false;C.profileReady=false;S.renderHeader(S.route);}
   if(!options.pullOnly)j.requested=true;
   if(/额度|daily.{0,40}(?:write|row)|行写入.*(?:限制|超)/i.test(e.message))j.blockedUntil=(Math.floor(Date.now()/86400000)+1)*86400000;
-  j.retryAt=Date.now()+5*60000;saveSchedule(j);
+  C.syncFailureCount=(C.syncFailureCount||0)+1;j.retryAt=Date.now()+Math.min(120000,15000*2**Math.min(C.syncFailureCount-1,3));saveSchedule(j);
   status((e.status===401?'登录已过期，请重新登录：':'同步未完成：')+e.message);throw e;
  }).finally(()=>{cycle=null;});return cycle;
 };
 C.onLocalSaved=function(){
- if(C.applying||!C.user?.id)return;const j=scheduleState();j.dirty=true;j.generation++;saveSchedule(j);
- if(!cycle)status(j.blockedUntil>Date.now()?'今日云端写入额度已用完，本机待上传记录已保留':'已保存本机，待交卷或零点同步');
+ if(C.applying||!C.user?.id)return;const j=scheduleState();j.dirty=true;j.requested=true;j.generation++;saveSchedule(j);
+ if(!cycle)status(j.blockedUntil>Date.now()?'今日云端写入额度已用完，本机待上传记录已保留':'已保存本机，空闲时同步');
 };
 C.requestSync=async function(reason='manual'){
  const owner=S.state.meta.syncOwnerId;
@@ -4419,16 +4652,18 @@ C.requestSync=async function(reason='manual'){
   status('账号副本写入失败；已暂停重复重试。本机记录保留，请先导出诊断');
   return false;
  }
- if(reason==='manual'){const owner=S.state.meta.syncOwnerId;if(profileFaults.has(owner)){const recovered=await getProfile(owner);profile=recovered;C.user={...(S.state.meta.syncCachedUser||{}),id:owner};C.verified=false;C.recoveredOwner=null;}C.initRetryAt=0;}
+ if(reason==='manual'){S.beginManualSync?.();const owner=S.state.meta.syncOwnerId;if(profileFaults.has(owner)){const recovered=await getProfile(owner);profile=recovered;C.user={...(S.state.meta.syncCachedUser||{}),id:owner};C.verified=false;C.recoveredOwner=null;}C.initRetryAt=0;}
  const j=scheduleState();j.requested=true;saveSchedule(j);
  if(C.verified&&!C.profileReady){const ready=await prepareIdentity(C.user);if(!ready)return;}
  if(C.verified)return C.sync();return C.init();
 };
 C.scheduleTick=async function(){
- if(!C.user?.id||document.hidden||navigator.onLine===false||S.activeInkPointer||busyExam()||cycle)return;
+ if(!C.user?.id||document.hidden||navigator.onLine===false||S.activeInkPointer||busyExam()||cycle||S.syncCanTransfer&&!S.syncCanTransfer())return;
+ await S.inkRetention?.prune();
  if(C.pendingInitialization){if(!busyExam())return C.connect();return;}
  if(!C.profileReady&&(C.verified||profileFaults.has(C.user.id)))return;
  const j=scheduleState(),now=Date.now();if(now<j.retryAt||now<j.blockedUntil)return;
+ if(!C.verified){if(now>=(C.initRetryAt||0))return C.init();return;}
  const due=j.dirty&&day(now)>j.boundary;
  if(j.requested||due){if(C.verified)return C.sync();return C.init();}
  if(!j.dirty&&day(now)>j.boundary){j.boundary=day(now);saveSchedule(j);}
@@ -4437,12 +4672,14 @@ C.syncScheduleInfo=()=>({...scheduleState()});
 C.restoreCachedIdentity=function(){const cached=S.state.meta.syncCachedUser;if(!S.state.meta.syncLoggedOut&&cached?.id&&cached.id===S.state.meta.syncOwnerId){C.user={...cached};C.verified=false;C.profileReady=false;status('账号待验证，练习记录已在本机');}};
 C.connect=function(){
  if(C.connecting)return C.connecting;
- if(!C.poll){C.poll=setInterval(()=>C.scheduleTick().catch(()=>{}),30000);C.poll?.unref?.();}
+ if(!C.poll){C.poll=setInterval(()=>C.scheduleTick().catch(()=>{}),10000);C.poll?.unref?.();}
  if(busyExam()||S.activeInkPointer){C.pendingInitialization=true;return Promise.resolve();}
  C.pendingInitialization=false;
  C.connecting=(async()=>{await C.restoreLocal();if(busyExam()||S.activeInkPointer){C.pendingInitialization=true;return;}await C.init();})().finally(()=>C.connecting=null);return C.connecting;
 };
-C.storageDiagnosticInfo=()=>({httpFailure:C.httpFailure||null,download:S.SyncTransport?.downloadMetrics||null,noteDepot:S.NoteVault?{...S.NoteVault.metrics}:null,phase:C.phase||null,verified:!!C.verified,profileReady:!!C.profileReady,adopting:!!C.adopting,profileUnavailable:profileFaults.has(S.state.meta.syncOwnerId),profileWriteUnavailable:profileWriteFaults.has(S.state.meta.syncOwnerId),active:[...(C.activeStorageOps||[])].slice(0,6).map(x=>({name:x.name,ageMs:Math.round(performance.now()-x.start)})),sessions:S.state.sessions.length,attempts:S.state.attempts.length});
+C.isSyncing=()=>!!cycle;
+C.syncModeInfo=()=>({mode:'records-only',cloudRecordsOnly:profile?.recordsOnlyCloud===true,localInkRetentionDays:S.inkRetention?.days||5});
+C.storageDiagnosticInfo=()=>({mode:C.syncModeInfo(),upload:S.SyncTransport?.workMetrics||null,httpFailure:C.httpFailure||null,download:S.SyncTransport?.downloadMetrics||null,noteDepot:S.NoteVault?{...S.NoteVault.metrics}:null,phase:C.phase||null,lastCloudReadAt:C.lastCloudReadAt||null,lastCloudCommitAt:C.lastCloudCommitAt||null,initRetryAt:C.initRetryAt||0,verified:!!C.verified,profileReady:!!C.profileReady,adopting:!!C.adopting,profileUnavailable:profileFaults.has(S.state.meta.syncOwnerId),profileWriteUnavailable:profileWriteFaults.has(S.state.meta.syncOwnerId),active:[...(C.activeStorageOps||[])].slice(0,6).map(x=>({name:x.name,ageMs:Math.round(performance.now()-x.start)})),sessions:S.state.sessions.length,attempts:S.state.attempts.length});
 C.restoreLocal=function(){
  if(C.restoring)return C.restoring;
  C.restoring=restoreLocal().finally(()=>C.restoring=null);return C.restoring;
@@ -4467,7 +4704,7 @@ C.init=async function(){
   const result=await phase('identity',()=>api('/api/account/me'));const ready=await prepareIdentity(result.user);C.initRetryAt=0;C.performance.initFailures=0;if(ready){const j=scheduleState();await C.sync({pullOnly:!(j.requested||j.dirty&&day(Date.now())>j.boundary)});}
  }catch(e){C.performance.initFailures++;C.initRetryAt=Date.now()+Math.min(15*60000,60000*2**Math.min(C.performance.initFailures-1,4));if(e.status===401){C.user=null;profile=null;C.verified=false;C.profileReady=false;status('未登录，记录保存在本机');}else{status('同步连接未完成：'+e.message);}}
  finally{if(S.ready&&!S.exam){S.renderHeader(S.route);if(S.route==='settings')S.renderSettings();}}
- if(!C.poll){C.poll=setInterval(()=>C.scheduleTick().catch(()=>{}),30000);C.poll?.unref?.();}
+ if(!C.poll){C.poll=setInterval(()=>C.scheduleTick().catch(()=>{}),10000);C.poll?.unref?.();}
  })().finally(()=>C.initializing=null);return C.initializing;
 };
 async function proof(password,salt){
@@ -4530,9 +4767,9 @@ C.noteOfflineEntry=error=>status(error?'设备验证未完成，记录保存在�
 C.request=api;
 C.lastSyncTime=()=>profile?.lastSyncAt||null;
 C.syncButtonLabel=()=>!C.profileReady?'重试同步':C.verified?'立即同步':'重新连接';
-C.lease=async function(s,takeover=false){if(!C.user||!C.verified||navigator.onLine===false)return {granted:true,offline:true};return api('/api/sync/v2/lease',{sessionId:s.id,deviceId:C.deviceId,takeover},{timeoutMs:3500});};
+C.lease=async function(s,takeover=false){if(!C.user||!C.verified||navigator.onLine===false)return {granted:true,offline:true};return api('/api/sync/v2/lease',{sessionId:s.id,deviceId:C.deviceId,takeover},{timeoutMs:15000});};
 C.releaseLease=s=>{if(C.user&&C.verified&&navigator.onLine!==false)return api('/api/sync/v2/lease',{sessionId:s.id,deviceId:C.deviceId,release:true});return Promise.resolve();};
-C.settingsHTML=()=>{const p=C.presentation();return `<section class="panel account-panel settings-section"><div class="account-summary"><span class="account-avatar">${p.user?E(p.avatar):S.icon('user')}</span><div><h2>${p.user?E(p.name):'账号与同步'} <span class="account-state" data-account-status>${E(p.label)}</span></h2><p data-sync-status role="status">${E(p.detail)}</p>${p.user&&profile?.lastSyncAt?`<small>最近同步 ${E(S.date(profile.lastSyncAt))}</small>`:''}</div></div><div class="setting-actions account-actions">${p.user?`<button class="button primary" id="account-sync-now">${C.syncButtonLabel()}</button><button class="button" id="account-logout">退出账号</button>`:'<button class="button primary" id="account-login">登录 / 注册</button>'}</div><details class="settings-detail"><summary>同步内容</summary><p>作答、练习进度、收藏、错题与手写笔记。题库与设备偏好分别管理，离线时记录仍保留在本机。</p></details></section>`;};
+C.settingsHTML=()=>{const p=C.presentation();return `<section class="panel account-panel settings-section"><div class="account-summary"><span class="account-avatar">${p.user?E(p.avatar):S.icon('user')}</span><div><h2>${p.user?E(p.name):'账号与同步'} <span class="account-state" data-account-status>${E(p.label)}</span></h2><p data-sync-status role="status">${E(p.detail)}</p>${p.user&&profile?.lastSyncAt?`<small>最近同步 ${E(S.date(profile.lastSyncAt))}</small>`:''}</div></div><div class="setting-actions account-actions">${p.user?`<button class="button primary" id="account-sync-now">${C.syncButtonLabel()}</button><button class="button" id="account-logout">退出账号</button>`:'<button class="button primary" id="account-login">登录 / 注册</button>'}</div><details class="settings-detail"><summary>同步内容</summary><p>同步作答、排除选项、确定程度、用时、练习进度、收藏、错题和文字复盘。手写笔迹仅保存在本机，沿用五天保留规则，不随账号上传或下载；本地备份仍包含笔迹。题库与设备偏好分别管理。</p></details></section>`;};
 C.bindSettings=function(){
  const bind=(id,fn)=>{const b=S.$(id);if(b)b.onclick=fn;};
  bind('#account-login',()=>C.open());bind('#account-sync-now',()=>Promise.resolve(C.requestSync('manual')).catch(e=>S.toast(e.message)));bind('#account-logout',()=>C.logout().catch(e=>S.toast(e.message)));
@@ -4551,7 +4788,7 @@ C.showUsage=async function(){
   if(revision!==S.learningRevision){target.textContent='学习记录有更新，请稍后重新查看。';return;}
   let cloud=null;try{cloud=await api('/api/sync/v2/usage');}catch{}
   if(!target?.isConnected)return;const mb=n=>(n/1000000).toFixed(2)+' MB',parts=measured.components;
-  target.innerHTML=`<p>本机学习记录索引（笔迹独立存放）：${mb(measured.jsonBytes)}</p><p>其中练习题面：${mb(parts.questions||0)}；笔记与证据：${mb((parts.notes||0)+(parts.reviewNotes||0)+(parts.submissionEvidence||0))}；历史作答：${mb(parts.attempts||0)}。</p><p>${Number.isFinite(cloud?.bytes)?'云端传输对象及保留版本：'+mb(cloud.bytes)+(cloud.storage==='r2'?'（R2 '+mb(cloud.r2Bytes||0)+'；D1旧内容 '+mb(cloud.d1Bytes||0)+'）':''):'云端占用暂未读取'}。</p><p>增量同步只上传新增或修改内容，历史记录与笔迹不会因查看统计而删除。</p>`;
+  target.innerHTML=`<p>本机学习记录索引（笔迹独立存放）：${mb(measured.jsonBytes)}</p><p>其中练习题面：${mb(parts.questions||0)}；笔记与证据：${mb((parts.notes||0)+(parts.reviewNotes||0)+(parts.submissionEvidence||0))}；历史作答：${mb(parts.attempts||0)}。</p><p>${Number.isFinite(cloud?.bytes)?'云端传输对象及保留版本：'+mb(cloud.bytes)+(cloud.storage==='r2'?'（R2 '+mb(cloud.r2Bytes||0)+'；D1旧内容 '+mb(cloud.d1Bytes||0)+'）':''):'云端占用暂未读取'}。</p><p>增量同步只上传新增或修改内容，仅上传学习记录；笔迹保留在本机，不随账号上传。旧云端占用可能仍包含以往笔迹，不在本次更新中删除。</p>`;
  }catch(e){if(target?.isConnected)target.textContent=e.name==='AbortError'?'统计已停止':e.message;}finally{C.usageJob=null;}})();return C.usageJob;
 };
 C.showConflicts=async function(){
@@ -4624,7 +4861,7 @@ S.reportSectionsHTML=function(s){
 S.reportStats=function(s){const rows=S.reportRows(s),st=M.stats(rows),ats=S.getAttemptsForSession(s);return {...st,total:s.questions.length,slow:ats.filter(a=>a.slowFlag).length,favorite:rows.filter(a=>a.marked).length};};
 S.reportCell=x=>`<button class="answer-cell ${M.status(x)}${x.marked?' marked':''}" data-report-question="${x.index}" aria-label="第${x.index+1}题，${({correct:'答对',wrong:'答错',skip:'未答',ungraded:'未判分'})[M.status(x)]}${x.marked?'，已收藏':''}">${x.index+1}${x.marked?'<span class="star-mark" aria-hidden="true">★</span>':''}</button>`;
 S.showReport=function(id){
- S.closeModal();S.closeReview?.();if(S.exam)S.exam.dispose();S.$('#app-shell').hidden=false;S.$('#workspace').hidden=true;
+ S.closeModal();S.closeReview?.();if(S.exam){S.exam.dispose();S.exam=null;}S.$('#app-shell').hidden=false;S.$('#workspace').hidden=true;
  const s=S.state.sessions.find(x=>x.id===id);if(!s)return S.go('history');const rows=S.reportRows(s),st=S.reportStats(s),paper=s.mode==='timed-paper'||s.mode==='paper',headline=M.headline(rows,paper?'paper':'practice'),d=M.difficulty(rows),elapsed=Number.isFinite(s.elapsed)?s.elapsed:st.seconds;
  S.route='report';S.renderHeader('history');
  S.$('#view').innerHTML=`<div class="report-main report-design"><div class="pagehead"><h1>练习报告</h1><button class="back" id="report-home">${S.icon('back')}返回训练</button></div>
@@ -4817,9 +5054,9 @@ S.captureInkLayout=function(layer){
  if(!document.createTreeWalker||!document.createRange||!globalThis.getComputedStyle)return Promise.resolve(false);layer.refreshBasis?.();
  const root=layer.domRoot||layer.parent,note=layer.note,r=layer.originRect||root.getBoundingClientRect(),w=layer.lastWidth,h=layer.lastHeight,epoch=layer.layoutEpoch;
  const key=w+'x'+h+'-'+S.hash(root.textContent||'');
- const bindPending=id=>{for(const st of note.strokes||[])if(!st.layoutId&&st.layoutEpoch===epoch&&st.basisWidth===w&&st.basisHeight===h){st.layoutId=id;const event=(note.events||[]).find(e=>e.strokeId===st.id);if(event)event.layoutId=id;}};
+ const bindPending=id=>{for(const st of note.strokes||[])if(!st.layoutId&&st.layoutEpoch===epoch&&st.basisWidth===w&&st.basisHeight===h&&(!layer.parent?.dataset.surfaceKey||st.draftSurfaceKey===layer.parent.dataset.surfaceKey)){st.layoutId=id;const event=(note.events||[]).find(e=>e.strokeId===st.id);if(event)event.layoutId=id;}};
  const priorLayout=Object.values(note.layouts||{}).find(x=>x.key===key);if(priorLayout){note.layoutId=priorLayout.id;note.layoutKey=key;}
- if(note.layoutKey===key&&note.layouts?.[note.layoutId]){layer.layoutReady=true;bindPending(note.layoutId);return Promise.resolve(true);}
+ if(note.layoutKey===key&&note.layouts?.[note.layoutId]){layer.layoutReady=true;layer.capturedLayoutId=note.layoutId;bindPending(note.layoutId);return Promise.resolve(true);}
  if(layer.captureJob?.key===key&&layer.captureJob.epoch===epoch)return layer.captureJob.promise;
  layer.cancelLayoutCapture?.();
  const layout={id:S.uid(),key,width:w,height:h,at:Date.now(),text:[],images:[],warnings:[]},walker=document.createTreeWalker(root,4);let node=null,index=0,style=null,range=null,done=false,exhausted=false,resolveJob;
@@ -4842,7 +5079,7 @@ S.captureInkLayout=function(layer){
    metrics.slices++;metrics.maxCharacters=Math.max(metrics.maxCharacters,count);
    if(!exhausted){layer.layoutWorkTimer=setTimeout(slice,8);return;}
    for(const img of root.querySelectorAll('img')){const b=img.getBoundingClientRect();layout.images.push({src:img.currentSrc||img.src,x:(b.left-origin.left)*(layer.pixelRatioX||1),y:(b.top-origin.top)*(layer.pixelRatioY||1),width:b.width*(layer.pixelRatioX||1),height:b.height*(layer.pixelRatioY||1),loaded:!!img.naturalWidth});if(!img.naturalWidth)layout.warnings.push('图片在记录布局时未加载');}
-   note.layouts=note.layouts||{};note.layouts[layout.id]=layout;note.layoutId=layout.id;note.layoutKey=key;layer.layoutReady=true;bindPending(layout.id);layer.onLayoutCaptured?.();end(true);
+   note.layouts=note.layouts||{};note.layouts[layout.id]=layout;note.layoutId=layout.id;note.layoutKey=key;layer.layoutReady=true;layer.capturedLayoutId=layout.id;bindPending(layout.id);layer.onLayoutCaptured?.();end(true);
   }catch(e){note.layoutWarning='布局记录失败：'+e.message;end(false);}
  }
  slice();return promise;
@@ -4958,18 +5195,21 @@ S.watchPracticeImage=function(img,exam){const jobs=exam.mediaJobs||(exam.mediaJo
  job.loaded=()=>{if(!img.naturalWidth)return;clearTimeout(job.timer);clearTimeout(job.slowTimer);img.dataset.studyImageState='ready';img.setAttribute('aria-busy','false');clearRow(exam,job);S.refreshImageLayout?.(img);};
  job.failed=()=>{clearTimeout(job.timer);clearTimeout(job.slowTimer);img.dataset.studyImageState='failed';img.setAttribute('aria-busy','false');const card=img.closest('[data-qid]');if(card)card.dataset.assetFailed='true';show(exam,job,'未能加载',true);};img.addEventListener('load',job.loaded);img.addEventListener('error',job.failed);if(img.complete&&img.naturalWidth)job.loaded();else if(img.complete)job.failed();else begin(exam,job);
 };
-S.disposePracticeImages=function(exam){for(const job of exam.mediaJobs?.values()||[])stop(exam,job);exam.mediaJobs?.clear();exam.mediaStatus?.remove();exam.mediaStatus=null;};
+S.prunePracticeImages=function(exam){for(const[img,job]of exam.mediaJobs||[])if(!img.isConnected){stop(exam,job);exam.mediaJobs.delete(img);}};
+S.disposePracticeImages=function(exam){S.clearWarmQuestionImages?.();for(const job of exam.mediaJobs?.values()||[])stop(exam,job);exam.mediaJobs?.clear();exam.mediaStatus?.remove();exam.mediaStatus=null;};
 })(window.Study);
 
 /* Reuse browser image cache; prioritize only the visible practice workspace. */
 (function(S){'use strict';
-S.imageDimensions=new Map();const warmed=new Map();
+S.imageDimensions=new Map();const warmed=new Map(),warmedSeen=new Set(),questionImageURLs=new WeakMap();
+S.clearWarmQuestionImages=()=>{for(const img of warmed.values()){img.onload=img.onerror=null;img.removeAttribute('src');}warmed.clear();warmedSeen.clear();};
 document.addEventListener('load',event=>{const img=event.target;if(img instanceof HTMLImageElement&&img.naturalWidth){S.imageDimensions.set(img.currentSrc||img.src,{width:img.naturalWidth,height:img.naturalHeight});if(S.imageDimensions.size>300)S.imageDimensions.delete(S.imageDimensions.keys().next().value);} },true);
 S.warmQuestionImages=function(exam){
  if(typeof Image!=='function'||navigator.connection?.saveData)return;
  const qs=exam.s.questions.slice(exam.s.index,exam.s.index+2);
- const urls=qs.flatMap(q=>[q.stemHtml,...q.optionsHtml||[],q.materialHtml,q.explanationHtml]).flatMap(html=>S.imageSources?.(html)||[]);
- for(const url of [...new Set(urls)].slice(0,8)){if(warmed.has(url))continue;const img=new Image();img.referrerPolicy='no-referrer';img.decoding='async';img.setAttribute('fetchpriority','low');warmed.set(url,img);img.src=url;if(warmed.size>40)warmed.delete(warmed.keys().next().value);}
+ const key=[exam.s.index,...qs];if(exam.warmKey&&key.length===exam.warmKey.length&&key.every((x,i)=>x===exam.warmKey[i]))return;exam.warmKey=key;
+ const urls=qs.flatMap(q=>{let urls=questionImageURLs.get(q);if(!urls){urls=[q.stemHtml,...q.optionsHtml||[],q.materialHtml,q.explanationHtml].flatMap(html=>S.imageSources?.(html)||[]);questionImageURLs.set(q,urls);}return urls;});
+ for(const url of [...new Set(urls)].slice(0,8)){if(warmedSeen.has(url)||warmed.has(url))continue;if(warmed.size>=4)break;const img=new Image();img.referrerPolicy='no-referrer';img.decoding='async';img.setAttribute('fetchpriority','low');img.onload=img.onerror=()=>{warmed.delete(url);img.onload=img.onerror=null;};warmedSeen.add(url);if(warmedSeen.size>80)warmedSeen.delete(warmedSeen.values().next().value);warmed.set(url,img);img.src=url;}
 };
 S.preparePracticeImages=function(exam){
  const scope=exam.split?S.$('.split-shell',exam.root):S.$('#question-scroll',exam.root);if(!scope)return;
@@ -5139,7 +5379,7 @@ S.openReview=function(id,filter='wrong',start=null){
  S.ensureEvidence(source);const needs=filter==='needs-review'?new Set(S.reportRows(source).filter(S.reportNeedsReview).map(x=>x.index)):null;
  const indices=source.questions.map((q,i)=>({q,i,a:S.sessionAnswer(source,q),at:S.getAttempt(source,q)})).filter(x=>filter==='all'||(needs?needs.has(x.i):S.reviewVerdict(x.q,x.a,x.at).type!=='correct')).map(x=>x.i);
  if(!indices.length)return S.toast('当前筛选没有需要查看的题');
- const transientNotes={};const virtual={...source,_review:true,_sourceSession:source,notes:transientNotes,positions:{},answers:Object.fromEntries(source.questions.map(q=>[q.id,{...S.sessionAnswer(source,q),excluded:[...(S.sessionAnswer(source,q).excluded||[])]}])),paused:false,index:start!=null&&indices.includes(start)?start:indices[0]};
+ const transientNotes={};const virtual={...source,_review:true,_reviewIndices:indices,_sourceSession:source,notes:transientNotes,positions:{},answers:Object.fromEntries(source.questions.map(q=>[q.id,{...S.sessionAnswer(source,q),excluded:[...(S.sessionAnswer(source,q).excluded||[])]}])),paused:false,index:start!=null&&indices.includes(start)?start:indices[0]};
  const root=document.createElement('section');root.className='exam-shell review-shell';document.body.append(root);const previousOverflow=document.body.style.overflow,shell=S.$('#app-shell'),previousShellHidden=shell?.hidden,previousShellInert=shell?.inert;if(shell){shell.hidden=true;shell.inert=true;}document.body.style.overflow='hidden';
  const controller=new ReviewExam(virtual,root);controller.indices=indices;S.review={s:source,root,controller,layers:[],previousOverflow,previousShellHidden,previousShellInert};
  const flush=()=>controller.flushReviewInk();window.addEventListener('pagehide',flush,{signal:controller.abort.signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();},{signal:controller.abort.signal});
@@ -5393,8 +5633,8 @@ S.boot=async function(){
     }
     S.accountSync?.restoreCachedIdentity?.();S.setBootProgress?.(90);
     const expired=await S.checkExpired();if(!expired)S.go('home');S.ready=true;S.bootTimings.localReadyMs=performance.now()-started;S.setBootProgress?.(100);
-    const bankTask=S.importBundledBank((label,n,total)=>{const box=S.$('#bundled-bank-progress');if(box)box.textContent=label+' '+n+'/'+total;}).then(()=>{S.bankConnectionError='';if(S.route==='home'&&!S.exam&&!S.review&&!S.openingPractice)S.renderHome();}).catch(e=>{console.error(e);S.bankConnectionError=S.isLocalStorageError?.(e)?'本地数据库暂时不可用：'+e.message+'。请保留当前页面并先导出学习备份；这不表示题库网址错误。':'题库接入未完成：'+e.message+'。请到管理题库检查地址后重试。';if(S.route==='home')S.renderHome();S.toast(S.bankConnectionError);});
-    requestAnimationFrame(()=>{bankTask.then(()=>S.accountSync?.connect?.()).then(()=>{S.bootTimings.networkReadyMs=performance.now()-started;}).catch(()=>{});});
+    const bankTask=S.checkBundledBank((label,n,total)=>{const box=S.$('#bundled-bank-progress');if(box)box.textContent=label+' '+n+'/'+total;}).then(result=>{S.bankConnectionError='';if(!result?.checked&&S.route==='home'&&!S.exam&&!S.review&&!S.openingPractice)S.renderHome();}).catch(e=>{console.error(e);S.bankConnectionError=S.bankErrorMessage(e);if(S.route==='home')S.renderHome();S.toast(S.bankConnectionError);});
+    requestAnimationFrame(()=>{setTimeout(()=>{Promise.resolve(S.accountSync?.connect?.()).then(()=>{S.bootTimings.networkReadyMs=performance.now()-started;}).catch(()=>{});},250);});
     if(S.storageMode()!=='indexeddb')S.toast('当前环境不是可靠持久存储。请使用正常HTTPS浏览器并在设置中备份。');
   }catch(e){
     console.error(e);
@@ -5410,9 +5650,9 @@ S.boot=async function(){
 (function(S){'use strict';const V=S.NoteVault;if(!V)return;
 const hasRefs=s=>[s.notes,s.reviewNotes,s.submissionEvidence?.notes].some(ns=>Object.values(ns||{}).some(V.isRef));
 let opening=0;
-function prepare(s,fn,fields){const ticket=++opening,owner=S.state.meta.syncOwnerId;if(S.inkRetentionSaving)return S.inkRetention.ready().then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return prepare(s,fn,fields);});S.inkRetention?.strip(s);if(!V.enabled()||!hasRefs(s)&&!V.isReleasing(s))return fn();S.toast('正在读取本次笔记');S.preparingInk=ticket;return V.ready(s).then(()=>V.hydrateSession(s,{fields})).then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return fn();}).catch(e=>{if(ticket===opening)S.toast('笔记未打开：'+e.message);}).finally(()=>{if(S.preparingInk===ticket)S.preparingInk=0;});}
+function prepare(s,fn,fields,index){const ticket=++opening,owner=S.state.meta.syncOwnerId;if(S.inkRetentionSaving)return S.inkRetention.ready().then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return prepare(s,fn,fields,index);});S.inkRetention?.strip(s);if(!V.enabled())return fn();if(!S.InkSurfaceCache&&!hasRefs(s)&&!V.isReleasing(s))return fn();if(hasRefs(s))S.toast('正在读取本次笔记');S.preparingInk=ticket;return V.ready(s).then(()=>S.InkSurfaceCache?S.InkSurfaceCache.prepareSession(s,fields,index,()=>ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s)):V.hydrateSession(s,{fields})).then(()=>{if(ticket===opening&&owner===S.state.meta.syncOwnerId&&S.state.sessions.includes(s))return fn();}).catch(e=>{if(ticket===opening)S.toast('笔记未打开：'+e.message);}).finally(()=>{if(S.preparingInk===ticket)S.preparingInk=0;});}
 const openExam=S.openExam;S.openExam=s=>prepare(s,()=>openExam(s),['notes']);
-const openReview=S.openReview;S.openReview=(id,...args)=>{const s=S.state.sessions.find(x=>x.id===id);if(!s)return;return prepare(s,()=>openReview(id,...args),['reviewNotes',s.submissionEvidence?'submissionEvidence':'notes']);};
+const openReview=S.openReview;S.openReview=(id,...args)=>{const s=S.state.sessions.find(x=>x.id===id);if(!s)return;return prepare(s,()=>openReview(id,...args),['reviewNotes',s.submissionEvidence?'submissionEvidence':'notes'],args[1]??s.index);};
 const build=S.buildReviewPackages;S.buildReviewPackages=async(s,options)=>{if(options?.mode!=='images'){await V.ready(s);await V.hydrateSession(s);}return build(s,options);};
 // Persist editable review notes separately from immutable submission evidence.
 const close=S.closeReview;S.closeReview=function(){++opening;const s=S.review?.s;const result=close();if(s)V.releaseSession(s).catch(e=>S.toast('笔记缓存整理未完成：'+e.message));return result;};
@@ -5420,7 +5660,7 @@ const go=S.go;S.go=function(...args){++opening;const s=S.exam?.s;const result=go
 // Streaming JSON construction avoids one detached all-history clone. This is
 // compatible with the established v3 backup importer and includes actual ink.
 async function backup(full){await S.saveHot();const state=S.state,parts=['{'],fields=full?Object.keys(state):['schema','sessions','attempts','learning','aiReviews','settings','lastSessionId','meta'];let first=true;
- for(const key of fields){if(!first)parts.push(',');first=false;parts.push(JSON.stringify(key)+':');if(key==='sessions'){parts.push('[');let sep=false;for(const row of state.sessions){if(sep)parts.push(',');sep=true;const packed=await V.packSession(row),copy={...packed,notes:{...packed.notes},reviewNotes:packed.reviewNotes?{...packed.reviewNotes}:undefined,submissionEvidence:packed.submissionEvidence?{...packed.submissionEvidence,notes:{...packed.submissionEvidence.notes}}:undefined};await V.hydrateSession(copy);for(const[k,n]of Object.entries(copy.reviewNotes||{}))copy.reviewNotes[k]=await V.loadNote(n);parts.push(JSON.stringify(copy));await new Promise(r=>setTimeout(r,0));}parts.push(']');}else if(key==='meta')parts.push(JSON.stringify({...state.meta,syncConflicts:await V.expandReferences(state.meta.syncConflicts||[])}));else parts.push(JSON.stringify(state[key]??null));}
+ for(const key of fields){if(key==='bank')await S.ensureBankQuestions?.();if(!first)parts.push(',');first=false;parts.push(JSON.stringify(key)+':');if(key==='sessions'){parts.push('[');let sep=false;for(const row of state.sessions){await S.ensureSessionQuestions(row);if(sep)parts.push(',');sep=true;const packed=await V.packSession(row),copy={...packed,notes:{...packed.notes},reviewNotes:packed.reviewNotes?{...packed.reviewNotes}:undefined,submissionEvidence:packed.submissionEvidence?{...packed.submissionEvidence,notes:{...packed.submissionEvidence.notes}}:undefined};await V.hydrateSession(copy);for(const[k,n]of Object.entries(copy.reviewNotes||{}))copy.reviewNotes[k]=await V.loadNote(n);parts.push(JSON.stringify(copy));await new Promise(r=>setTimeout(r,0));}parts.push(']');}else if(key==='meta')parts.push(JSON.stringify({...state.meta,syncConflicts:await V.expandReferences(state.meta.syncConflicts||[])}));else parts.push(JSON.stringify(state[key]??null));}
  parts.push(',"backupType":'+JSON.stringify(full?'full':'learning')+',"version":'+JSON.stringify(S.VERSION)+',"exportedAt":'+JSON.stringify(new Date().toISOString())+'}');S.download('知遥集_'+(full?'完整':'学习记录')+'备份_v3.json',new Blob(parts,{type:'application/json'}));}
 const full=S.exportFullBackup,learning=S.exportLearningBackup;S.exportFullBackup=()=>V.enabled()?backup(true):full();S.exportLearningBackup=()=>V.enabled()?backup(false):learning();S.exportBackup=S.exportFullBackup;
 })(window.Study);

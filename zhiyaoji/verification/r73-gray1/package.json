@@ -1,0 +1,27 @@
+{
+  "release": "R8.8.73-gray1",
+  "sourceArchiveSha256": "5827859a7e6b05a62032d2ed47d2c093b2f655cc79d05e2e1aced39dc29674df",
+  "sourceFiles": 83,
+  "modifiedFromR73": [
+    "index.html",
+    "sw.js"
+  ],
+  "added": [
+    "excluded-options.css",
+    "更新说明_R73_排除变灰.txt"
+  ],
+  "unchangedSourceFiles": 81,
+  "workerUnchanged": true,
+  "allR73ApplicationScriptsUnchanged": true,
+  "privateBirthdayPreserved": true,
+  "entryCount": 85,
+  "entryAssetReferences": 65,
+  "cachedAssetReferences": 72,
+  "archive": "知遥集_R73_排除变灰合并版_完整部署包.zip",
+  "archiveBytes": 2136566,
+  "archiveSha256": "55c7bddf102189e558373a6ac7a9ea9513eee3c919e88f4c3c8d7b03d3392b4e",
+  "crcAndFileBytesVerified": true,
+  "deployed": false,
+  "browserQA": false,
+  "iPadQA": false
+}

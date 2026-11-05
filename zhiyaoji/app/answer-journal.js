@@ -143,6 +143,7 @@
   return resume.call(this,id,...args);
  };
  const go=S.go;S.go=function(...args){ticket++;return go.apply(this,args);};
- for(const name of ['saveSoon','saveHot']){const original=S[name];S[name]=function(...args){const e=S.exam;if(e&&!e.disposed)capture(e.s);return original.apply(this,args);};}
+ const record=S.recordAction;S.recordAction=function(session,type,...args){const result=record?.call(this,session,type,...args);if(type==='answer'||type==='exclude')capture(session);return result;};
+ const saveHot=S.saveHot;S.saveHot=function(...args){const e=S.exam;if(e&&!e.disposed)capture(e.s);return saveHot.apply(this,args);};
  for(const name of ['pagehide','visibilitychange'])window.addEventListener(name,()=>{if(name==='pagehide'||document.hidden){const e=S.exam;if(e&&!e.disposed)capture(e.s,true);}});
 })(window.Study);

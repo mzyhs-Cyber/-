@@ -27,7 +27,8 @@ async function signIn(db,user){const token=random(32);await db.prepare('DELETE F
 const cookie=(token,age=2592000)=>`${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}`;
 function validateSnapshot(data){
  if(data?.schema!==3||!Array.isArray(data.sessions)||!Array.isArray(data.attempts)||!data.learning||!Array.isArray(data.aiReviews)||!Array.isArray(data.conflicts))fail(400,'学习快照格式无效');
- if(Object.keys(data).some(k=>!['schema','sessions','attempts','learning','aiReviews','conflicts','deletedSessions'].includes(k))||Object.keys(data.learning).some(k=>k!=='favorites'))fail(400,'同步只接受学习记录，不接受题库、设置或凭据');
+ if(Object.keys(data).some(k=>!['schema','sessions','attempts','learning','aiReviews','conflicts','deletedSessions'].includes(k))||Object.keys(data.learning).some(k=>!['favorites','localReviewPlans'].includes(k)))fail(400,'同步只接受学习记录，不接受题库、设置或凭据');
+ if(data.learning.localReviewPlans!==undefined){const plans=data.learning.localReviewPlans;if(!plans||Array.isArray(plans)||typeof plans!=='object'||Object.keys(plans).length>1000||Object.entries(plans).some(([key,p])=>key.length>240||!p||p.ready!==true||typeof p.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(p.date)||!Array.isArray(p.ids)||p.ids.length>30||p.ids.some(id=>typeof id!=='string'||id.length>240)||!Array.isArray(p.rows)||p.rows.length>30))fail(400,'每日复盘题单格式无效');}
  if(data.sessions.length>20000||data.attempts.length>500000)fail(413,'学习记录超过单账号同步上限');
  if(data.deletedSessions!==undefined){if(!data.deletedSessions||Array.isArray(data.deletedSessions)||typeof data.deletedSessions!=='object'||Object.keys(data.deletedSessions).length>20000||Object.entries(data.deletedSessions).some(([k,v])=>!k||k.length>200||!Number.isFinite(v)||v<=0))fail(400,'删除记录标记无效');}
  const ids=new Set();for(const s of data.sessions){if(typeof s.id!=='string'||ids.has(s.id)||!Array.isArray(s.questions)||!s.answers||!s.notes)fail(400,'练习记录结构无效');ids.add(s.id);}
@@ -59,10 +60,10 @@ async function apiV2(request,db,user,url,ctx,bucket){
  if(path==='/api/sync/v2/storage-check'){
   if(!bucket)return json({ok:false,storage:'d1',error:'尚未绑定STUDY_NOTES'},503);const key=uid+'/_probe/'+random(12),text='zhiyaoji-r6-private-probe';try{await bucket.put(key,text);const got=await bucket.get(key);if(!got||await got.text()!==text)fail(503,'R2读回校验失败');return json({ok:true,storage:'r2',private:true});}finally{await bucket.delete(key);}
  }
- if(path==='/api/sync/v2/head')return json(await db.prepare('SELECT rev,hash,updated_at AS updatedAt FROM study_sync2_heads WHERE user_id=?').bind(uid).first()||{rev:0,hash:null});
+ if(path==='/api/sync/v2/head'){const head=await db.prepare('SELECT rev,hash,updated_at AS updatedAt FROM study_sync2_heads WHERE user_id=?').bind(uid).first()||{rev:0,hash:null};if(head.hash&&input?.clientRecordsOnly!==1){const root=await objectV2(db,uid,head.hash,bucket);if(root.value?.recordsOnly===1)fail(409,'此账号已启用仅同步记录，请刷新到最新版后同步；本机笔迹未修改');}return json(head);}
  if(path==='/api/sync/v2/usage'){const usage=await db.prepare('SELECT COALESCE(SUM(length(CAST(data AS BLOB))),0) AS bytes,COUNT(*) AS parts FROM study_sync2_parts WHERE user_id=?').bind(uid).first();const r2=await db.prepare('SELECT COALESCE(SUM(bytes),0) AS bytes,COUNT(*) AS objects FROM study_sync2_r2_sizes WHERE user_id=?').bind(uid).first();return json({...usage,bytes:(usage.bytes||0)+(r2.bytes||0),d1Bytes:usage.bytes||0,r2Bytes:r2.bytes||0,r2Objects:r2.objects||0,storage:bucket?'r2':'d1'});}
  if(path==='/api/sync/v2/known'){
-  if(!Array.isArray(input.hashes)||!input.hashes.length||input.hashes.length>80)fail(400,'对象列表无效');input.hashes.forEach(h=>hex(h,64));const {results}=await db.prepare('SELECT hash FROM study_sync2_objects WHERE user_id=? AND ready=1 AND hash IN ('+input.hashes.map(()=>'?').join(',')+')').bind(uid,...input.hashes).all();return json({known:results.map(x=>x.hash)});
+  if(!Array.isArray(input.hashes)||!input.hashes.length||input.hashes.length>1000)fail(400,'对象列表无效');input.hashes.forEach(h=>hex(h,64));const {results}=await db.prepare('SELECT hash FROM study_sync2_objects WHERE user_id=? AND ready=1 AND hash IN (SELECT value FROM json_each(?))').bind(uid,JSON.stringify(input.hashes)).all();return json({known:results.map(x=>x.hash)});
  }
  if(path==='/api/sync/v2/read'){
   if(!Array.isArray(input.items)||input.items.length>12)fail(400,'读取列表无效');const items=[];for(const p of input.items){hex(p.hash,64);if(!Number.isSafeInteger(p.index)||p.index<0)fail(400,'分片无效');let row=await db.prepare('SELECT p.data,o.total FROM study_sync2_parts p JOIN study_sync2_objects o ON p.user_id=o.user_id AND p.hash=o.hash WHERE p.user_id=? AND p.hash=? AND p.idx=? AND o.ready=1').bind(uid,p.hash,p.index).first();if(!row&&bucket){const o=await db.prepare('SELECT total,ready FROM study_sync2_objects WHERE user_id=? AND hash=?').bind(uid,p.hash).first();if(o?.ready&&p.index<o.total){const part=await bucket.get(uid+'/'+p.hash+'/'+p.index);if(part)row={total:o.total,data:await part.text()};}}if(!row)fail(404,'同步分片不存在');items.push({...p,...row});}return json({items});
@@ -112,6 +113,8 @@ async function apiV2(request,db,user,url,ctx,bucket){
   if(o.kind!=='root'||m?.protocol!==2||m.schema!==3||!Array.isArray(m.objects)||m.objects.length>100000||!Array.isArray(m.sessions)||m.sessions.length>20000)fail(400,'同步目录无效');
   for(let i=0;i<m.objects.length;i+=2000){const hs=m.objects.slice(i,i+2000);hs.forEach(h=>hex(h,64));const row=await db.prepare('SELECT COUNT(*) AS n FROM study_sync2_objects WHERE user_id=? AND ready=1 AND hash IN (SELECT value FROM json_each(?))').bind(uid,JSON.stringify(hs)).first();if(row.n!==new Set(hs).size)fail(409,'同步目录引用未完整上传的内容');}
   const current=await db.prepare('SELECT rev,hash FROM study_sync2_heads WHERE user_id=?').bind(uid).first();if((current?.rev||0)!==rev)fail(409,'其他设备已更新，请重试合并');let previous=null;if(current)previous=(await objectV2(db,uid,current.hash,bucket)).value;
+  if(previous?.recordsOnly===1&&m.recordsOnly!==1)fail(409,'此账号已启用仅同步记录，请更新其他设备后重试；本机笔迹保留');
+  if(m.recordsOnly!==undefined&&m.recordsOnly!==1)fail(400,'同步模式无效');
   if(previous?.depotVersion===1&&m.depotVersion!==1)fail(409,'请更新旧设备页面后再同步笔记，云端原记录已保留');
   const deleted=(await objectV2(db,uid,m.deletedSessions,bucket)).value;if(previous){const old=(await objectV2(db,uid,previous.deletedSessions,bucket)).value;if(Object.keys(old).some(id=>!deleted[id]))fail(409,'不可移除已同步的删除标记');}
   const oldRefs=new Map((previous?.sessions||[]).map(s=>[s.id,s.ref]));const {results:leases}=await db.prepare('SELECT session_id,device_id,expires_at FROM study_sync2_leases WHERE user_id=? AND expires_at>?').bind(uid,Date.now()).all(),leaseMap=new Map(leases.map(l=>[l.session_id,l]));for(const s of m.sessions){if(deleted[s.id])fail(400,'已删除练习不能重新上传');if(oldRefs.get(s.id)!==s.ref){const lease=leaseMap.get(s.id);if(lease&&lease.device_id!==input.deviceId)fail(409,'这份练习已由另一台设备接续，本机版本已保留');}}
@@ -193,8 +196,9 @@ function reviewKeys(value,allowed,label){if(!value||typeof value!=='object'||Arr
 function reviewFeedback(input,answers){
  reviewKeys(input,Object.keys(answers||{}),'复盘');const out={};
  for(const [id,row]of Object.entries(input)){
-  reviewKeys(row,['userCause','excludeFromLearning','exclusionReason','inclusionOverride','updatedAt','causeOrigin'],'复盘反馈');
+  reviewKeys(row,['userCause','excludeFromLearning','exclusionReason','inclusionOverride','updatedAt','causeOrigin','confidence'],'复盘反馈');
   if(typeof row.userCause!=='string'||row.userCause.length>5000||typeof row.exclusionReason!=='string'||row.exclusionReason.length>1000||typeof row.excludeFromLearning!=='boolean'||typeof row.inclusionOverride!=='boolean'||row.updatedAt!==undefined&&(!Number.isFinite(row.updatedAt)||row.updatedAt<0)||row.causeOrigin!==undefined&&row.causeOrigin!=='user')fail(400,'复盘反馈格式无效');
+  if(row.confidence!==undefined&&!['certain','uncertain','guess'].includes(row.confidence))fail(400,'作答信心格式无效');
   out[id]={...row};
  }return out;
 }

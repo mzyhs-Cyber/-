@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r8-54';
+  const VERSION = 'D2-r8-73';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;
@@ -19,6 +19,7 @@
   const criticalTypes=new Set(['page_start','pagehide','script_error','unhandled_rejection','navigation_error','visibility','timer_delay','shell_redirect_normalized']);
   let accountDetails=[],accountFailures=[];const DETAIL_LIMIT=64;
   let previousRun = null;
+  let lastResourceSample=null;
   let dirty = false;
   let seq = 0;
   let lastFlush = 0;
@@ -46,13 +47,14 @@
   if(stored){accountFailures=Array.isArray(stored.accountFailures)?stored.accountFailures.slice(-12):[];accountDetails=Array.isArray(stored.accountDetails)?stored.accountDetails.slice(-DETAIL_LIMIT):[];events=stored.events;previousRun=stored.run||null;truncate();}
   function write(force=false){
     if(flushing||disposed||(!dirty&&!force)||(!force&&S.activeInkPointer))return;
+    if(!force&&(S.exam&&!S.exam.disposed||S.review))return;
     const now=Date.now();
     if(!force&&now-lastFlush<FLUSH_INTERVAL_MS)return;
     flushing=true;
     try{
       truncate();
-      localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events,criticalEvents,accountDetails,accountFailures,
-        run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:actualRoute(),visible:document.visibilityState,ended:false}}));
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events:events.filter(e=>criticalTypes.has(e.type)||['navigation','account_sync_done'].includes(e.type)).slice(-24),criticalEvents:criticalEvents.slice(-12),accountDetails:accountDetails.slice(-8),accountFailures:accountFailures.slice(-4),
+        run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:actualRoute(),visible:document.visibilityState,ended:false,lastResourceSample}}));
       dirty=false;lastFlush=now;
     }catch{
       // Storage may be unavailable in private browsing, over quota or while WebKit is terminating.
@@ -71,7 +73,7 @@
   }
   const navigation=performance.getEntriesByType?.('navigation')?.[0];
   add('page_start',{
-    build:S.BUILD||'unknown',diagnosticVersion:VERSION,nav:navigation?.type||'unknown',
+    build:document.documentElement?.dataset?.build||S.BUILD||'unknown',diagnosticVersion:VERSION,nav:navigation?.type||'unknown',
     wasDiscarded:!!document.wasDiscarded,
     width:window.innerWidth,height:window.innerHeight,dpr:number(window.devicePixelRatio),
     touch:('ontouchstart' in window)||navigator.maxTouchPoints>0,
@@ -80,6 +82,7 @@
       ageSeconds:number((Date.now()-previousRun.lastAt)/1000),
       lastRoute:previousRun.route,
       ended:!!previousRun.ended,
+      lastResourceSample:previousRun.lastResourceSample||null,
       // A missing pagehide suggests an abrupt termination but does not prove a memory crash.
       unclean:!previousRun.ended && Date.now()-previousRun.lastAt<3600000
     }:null
@@ -144,14 +147,20 @@
   }catch{}
 
   function actualRoute(){return S.exam&&!S.exam.disposed?'practice':S.review?'review':DIAG.currentRoute;}
-  function resources(){const controller=S.exam||S.review?.controller;let buffers=0,bytes=0,facades=0;for(const view of controller?.layers?.values?.()||[]){facades+=view.facades?.size||0;for(const key of ['canvas','base','live','original']){const c=view[key];if(c?.width>1&&c?.height>1){buffers++;bytes+=c.width*c.height*4;}}}return {views:controller?.layers?.size||0,buffers,estimatedCanvasMB:number(bytes/1048576),layoutFacades:facades};}
+  function resources(){const controller=S.exam&&!S.exam.disposed?S.exam:S.review?.controller;let buffers=0,bytes=0,facades=0;for(const view of controller?.layers?.values?.()||[]){facades+=view.facades?.size||0;for(const key of ['canvas','base','live','original']){const c=view[key];if(c?.width>1&&c?.height>1){buffers++;bytes+=c.width*c.height*4;}}}return {views:controller?.layers?.size||0,buffers,estimatedCanvasMB:number(bytes/1048576),layoutFacades:facades};}
   function activity(){
     const practice=!!(S.exam&&!S.exam.disposed&&!S.exam.s?.finished),review=!!(S.review&&!S.review.disposed);
     return {studyMode:practice?'practice':review?'review':'page',writing:!!S.activeInkPointer,resources:resources(),inkRetention:S.inkRetention?{days:S.inkRetention.days,...S.inkRetention.metrics}:null,
       syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,
       syncWork:S.SyncTransport?.workMetrics?{...S.SyncTransport.workMetrics}:null,
-      persistence:S.persistenceMetrics?{hotRequests:Number(S.persistenceMetrics.hotRequests)||0,hotWrites:Number(S.persistenceMetrics.hotWrites)||0,hotFailures:Number(S.persistenceMetrics.hotFailures)||0,lastHotMs:Number(S.persistenceMetrics.lastHotMs)||0}:null,
+      inkSurfaceCache:S.InkSurfaceCache?{...S.InkSurfaceCache.metrics}:null,
+      persistence:S.persistenceMetrics?{hotRequests:Number(S.persistenceMetrics.hotRequests)||0,hotWrites:Number(S.persistenceMetrics.hotWrites)||0,hotFailures:Number(S.persistenceMetrics.hotFailures)||0,lastHotMs:Number(S.persistenceMetrics.lastHotMs)||0,phases:S.persistenceMetrics.lastHotPhases||null,lastError:S.persistenceMetrics.lastHotError||null,localRecords:S.LocalRecords?.metrics||null}:null,
       answerJournal:S.answerJournal?.metrics?{...S.answerJournal.metrics}:null,
+      homeWork:S.homeWorkMetrics?{...S.homeWorkMetrics}:null,
+      importWork:S.importWorkMetrics?{...S.importWorkMetrics}:null,
+      recommendationWork:S.localSelectionMetrics?{...S.localSelectionMetrics}:null,
+      reviewRender:S.reviewRenderMetrics?{...S.reviewRenderMetrics}:null,
+      bankUpdating:!!S.bankImporting,
       readingControls:S.readingControlMetrics?{...S.readingControlMetrics}:null};
   }
   // Periodic snapshot; no full-bank iteration or app-state serialization.
@@ -165,6 +174,7 @@
     // DOM node sampling at low frequency; does not capture any content.
     if(kind==='sample'&&!S.activeInkPointer&&document.visibilityState==='visible')point.domNodes=document.getElementsByTagName('*').length;
     point.storage=S.accountSync?.storageDiagnosticInfo?.()||null;
+    lastResourceSample={at:Date.now(),route:point.route,resources:point.resources,domNodes:point.domNodes,syncWork:point.syncWork,persistence:point.persistence,answerJournal:point.answerJournal,noteDepot:point.storage?.noteDepot};
     add(kind,point);
   }
   let lastHeartbeat=performance.now();

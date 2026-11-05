@@ -84,7 +84,7 @@
    try{sessionKeys=await read(MAIN,'hot',null,'练习编号目录',true)||[];}catch(e){error(e);}
    try{mainHeader=await read(MAIN,'hot','main','练习索引');}catch(e){error(e);}
   }
-  const all=mainHeader?.sessionStorage==='records-v1'?[...(mainHeader.sessionIds||[])].reverse():mainHeader?.sessions?.length?[...mainHeader.sessions].reverse():sessionKeys.map(k=>k.slice(8));
+  const all=['records-v1','records-v2'].includes(mainHeader?.sessionStorage)?[...(mainHeader.sessionIds||[])].reverse():mainHeader?.sessions?.length?[...mainHeader.sessions].filter(Boolean).reverse():sessionKeys.map(k=>k.slice(8));
   if(mainHeader?.lastSessionId){const i=all.indexOf(mainHeader.lastSessionId);if(i>0)all.unshift(...all.splice(i,1));}
   for(const item of all.slice(position,position+8)){const s=typeof item==='string'?{id:item,title:item===mainHeader?.lastSessionId?'最近打开的练习':'练习 · '+item.slice(-8)}:item;if(!s?.id||model.entries.some(e=>e.id===s.id))continue;model.entries.push({id:s.id,title:s.title||'未命名练习',finished:s.finished,startedAt:s.startedAt});}position+=8;
   model.stage='目录只读练习编号；选中后才读取该场练习，避免加载多场大型副本。';render();
@@ -98,7 +98,7 @@
  async function choose(id){
   begin(id);
   try{const meta=await read(MAIN,'meta','main','本机账号信息');if(meta)model.owner=meta.syncOwnerId||'guest';}catch(e){error(e);}
-  let s;try{s=(mainHeader?.sessions||[]).find(x=>x.id===id)||await read(MAIN,'hot','session:'+id,'选中的练习');if(s){await visit(s,'当前主记录',model.owner!==null);const row=model.entries.find(x=>x.id===id);if(row)row.title=s.title||row.title;}}catch(e){error(e);}
+  let s;try{s=(mainHeader?.sessions||[]).find(x=>x?.id===id)||await read(MAIN,'hot','session:'+id,'选中的练习');if(s?._localFormat===2){s={...s,questions:await read(MAIN,'hot','snapshot:'+s.questionSnapshot,'原题快照'),answers:{},events:[]};const prefix='detail:'+encodeURIComponent(id)+':',keys=await read(MAIN,'hot',null,'作答分段目录',IDBKeyRange.bound(prefix,prefix+'\uffff')),events=[];for(const key of keys||[]){const row=await read(MAIN,'hot',key,'作答分段');if(row.field==='answers')s.answers[row.key]=row.value;if(row.field==='events')events.push(row);}s.events=events.sort((a,b)=>a.key-b.key).flatMap(e=>e.value);}if(s){await visit(s,'当前主记录',model.owner!==null);const row=model.entries.find(x=>x?.id===id);if(row)row.title=s.title||row.title;}}catch(e){error(e);}
   return s;
  }
  async function scan(id,{legacy=false}={}){

@@ -6,7 +6,7 @@ const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
 const aborted=()=>Object.assign(Error('匹配已暂停'),{name:'AbortError'});
 S.selectLocalReviewAsync=async function(state,options={}){
  if(typeof Worker!=='function')throw Error('后台选题组件不可用，请刷新后重试');
- const snapshot=state,bank=state.bank,owner=state.meta?.syncOwnerId,serial=++sequence,materials=new Map();
+ const snapshot=state,bank=state.bank,owner=state.meta?.syncOwnerId,serial=++sequence,materials=new Map(),sessionsById=new Map((state.sessions||[]).map(s=>[s.id,s])),timingCache=new Map();
  const invalid=()=>S.state!==snapshot||state.bank!==bank||state.meta?.syncOwnerId!==owner||options.cancelled?.()||S.bankImporting||S.openingPractice||S.preparingInk||S.preparingReview||S.activeInkPointer||S.exam&&!S.exam.disposed||S.review||document.hidden;
  const guard=()=>{if(invalid())throw aborted();};
  const started=performance.now();let slice=started;
@@ -19,9 +19,16 @@ S.selectLocalReviewAsync=async function(state,options={}){
    archived:q.archived,demo:q.demo,answerConflict:q.answerConflict,disputed:q.disputed,gradingStatus:q.gradingStatus,
    contentStatus:q.contentStatus,sourceQuestionType:q.sourceQuestionType,materialKey:q.materialKey,
    materialStatus:q.materialStatus,materialComplete:q.materialComplete,materialExpectedCount:q.materialExpectedCount,
-   localTopicPaths:options.paths?.(q)||q.localTopicPaths||[],_allowed:!options.allow||!!options.allow(q),
+   localTopicPaths:options.paths?.(q)||q.localTopicPaths||[],_allowed:!options.allow||!!options.allow(q),_catalogEligible:valid,
+   _favorite:!!state.learning?.favorites?.[(options.canonical?.(q)||q.canonicalId||q.id)],
    _groupKey:options.groupKey?.(q)||(q.materialKey?'m:'+q.paperId+':'+q.materialKey:'q:'+q.id),_expected:options.expectedCount?.(q)||0,
    stemHtml:valid?'题':'',optionsHtml:['A','B','C','D'],materialHtml:materialId};
+ };
+ const assessment=a=>{
+  const s=sessionsById.get(a.sessionId);let result=E.timing(a.timeAssessment);if(!result.valid)result=E.timing(s?.timeAssessment?.questions?.[a.questionId]);
+  if(result.valid||!s||!S.computeTiming)return result;
+  if(!timingCache.has(s.id))try{timingCache.set(s.id,S.computeTiming(s));}catch{timingCache.set(s.id,null);}
+  return E.timing(timingCache.get(s.id)?.questions?.[a.questionId]);
  };
  metrics.runs++;metrics.inFlight++;
  let worker,timer;
@@ -30,14 +37,15 @@ S.selectLocalReviewAsync=async function(state,options={}){
   for(const q of bank){projected.push(project(q));await checkpoint();}
   const byId=new Set(bank.map(q=>q.id)),attempts=[];
   for(const a of state.attempts||[]){
-   const row={};for(const key of ['sessionId','questionId','canonicalId','finishedAt','gradingStatus','answer','answerConflict','selected','result','confidence','certainty','excluded'])if(key in a)row[key]=a[key];
+   const row={};for(const key of ['sessionId','questionId','canonicalId','finishedAt','gradingStatus','answer','answerConflict','selected','result','confidence','certainty','seconds','favoriteAtAttempt'])if(key in a)row[key]=a[key];
+   row.timeAssessment=assessment(a);
    if(!byId.has(a.questionId)&&a.questionSnapshot)row.questionSnapshot=project(a.questionSnapshot);
    else if(!byId.has(a.questionId)){row.subject=a.subject;row.rate=a.rate;row.localTopicPaths=options.paths?.(a)||a.localTopicPaths||[];}
    attempts.push(row);await checkpoint();
   }
   const sessions=[];
   for(const s of state.sessions||[]){
-   const answers={};for(const [key,a]of Object.entries(s.answers||{}))if(a&&typeof a==='object')answers[key]={selected:a.selected,confidence:a.confidence};
+   const answers={};for(const [key,a]of Object.entries(s.answers||{}))if(a&&typeof a==='object')answers[key]={selected:a.selected,confidence:a.confidence,seconds:a.seconds};
    const feedback={};for(const [key,f]of Object.entries(s.reviewFeedback||{}))if(f&&typeof f==='object')feedback[key]={confidence:f.confidence,excludeFromLearning:f.excludeFromLearning,inclusionOverride:f.inclusionOverride,updatedAt:f.updatedAt};
    sessions.push({id:s.id,mode:s.mode,startedAt:s.startedAt,dailyPackHash:s.dailyPackHash,blueprint:s.blueprint?.localReview?{localReview:true}:undefined,reviewFeedback:feedback,answers});
    await checkpoint();
@@ -46,11 +54,12 @@ S.selectLocalReviewAsync=async function(state,options={}){
   const parameters={};for(const key of ['now','learningAsOf','numericOffset','seed','strategy','quotas'])if(options[key]!==undefined)parameters[key]=options[key];
   const begin=performance.now();
   const plan=await new Promise((resolve,reject)=>{
-   worker=new Worker(new URL('local-review-worker.js?v=r73',document.baseURI));
+   worker=new Worker(new URL('local-review-worker.js?v=r74',document.baseURI));
    timer=setInterval(()=>{if(invalid())reject(aborted());},100);
    worker.onmessage=event=>{const reply=event.data;if(reply?.protocol!==1||reply.id!==serial)return;reply.error?reject(Error(reply.error)):resolve(reply.plan);};
    worker.onerror=()=>reject(Error('后台选题组件未加载，请刷新后重试'));
-   worker.postMessage({protocol:1,id:serial,state:{bank:projected,attempts,sessions},aliases:{...state.meta?.canonicalAliases},options:parameters});
+   const reviewState={};for(const [key,value]of Object.entries(state.learning?.reviewState||{}))if(value?.nextReviewAt>0)reviewState[key]={nextReviewAt:value.nextReviewAt,lastAttemptAt:value.lastAttemptAt};
+   worker.postMessage({protocol:1,id:serial,state:{bank:projected,attempts,sessions,reviewState},aliases:{...state.meta?.canonicalAliases},options:parameters});
   });
   guard();metrics.workerMs=Math.round(performance.now()-begin);
   if(!Array.isArray(plan?.ids)||new Set(plan.ids).size!==plan.ids.length)throw Error('选题结果格式无效');

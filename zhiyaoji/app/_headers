@@ -68,3 +68,6 @@
 
 /draft-owner-review.js
   Cache-Control: no-cache
+
+/practice-images.js
+  Cache-Control: no-cache

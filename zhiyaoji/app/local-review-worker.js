@@ -1,5 +1,5 @@
 'use strict';
-importScripts('./local-review-engine.js?v=r73');
+importScripts('./local-review-engine.js?v=r74');
 self.onmessage=function(event){
  const data=event.data;if(!data||data.protocol!==1)return;
  try{

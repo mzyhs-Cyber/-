@@ -8,7 +8,7 @@
  const ownSession=()=>S.state.sessions.filter(s=>s.mode==='local-review'&&s.blueprint?.localReview?.date===today()).sort((a,b)=>a.startedAt-b.startedAt)[0];
  const cutoff=()=>Date.parse(today()+'T00:00:00+08:00')-1;
  const signature=()=>JSON.stringify([S.classificationVersion,S.state.meta?.bankContentRevision||0,S.state.bank.length,S.state.settings.localReviewSources||['real']]);
- function validPlan(p){return p?.version===E.VERSION&&p.date===today()&&(!p.ownerId||p.ownerId===owner())&&Array.isArray(p.ids)&&Array.isArray(p.rows)&&Array.isArray(p.modules);}
+ function validPlan(p){return (p?.version===E.VERSION||p?.ready&&p?.version>=6&&p?.version<E.VERSION)&&p.date===today()&&(!p.ownerId||p.ownerId===owner())&&Array.isArray(p.ids)&&Array.isArray(p.rows)&&Array.isArray(p.modules);}
  function stored(){
   const k=key(),saved=S.state.learning?.localReviewPlans?.[k];if(validPlan(saved)&&saved.ready)return saved;
   let p=cache.get(k);if(!p)try{p=JSON.parse(localStorage.getItem(storageKey(k))||'null');if(validPlan(p))cache.set(k,p);else p=null;}catch{}
@@ -90,7 +90,7 @@
  function why(){
   const p=ownSession()?.blueprint?.localReview||stored();if(!p)return;
   const counts=p.candidateCounts||{},classification={source_mapped:'来源标签',rule_mapped:'规则映射',rule_supported_source_evidence:'规则映射·有原文依据',focused_classification_checked:'细分类已核对',focused_text_reviewed:'文本已核对',returned_evidence_checked:'回传依据已核对',needs_fine_classification:'待补细分类',source_fallback:'原始标签'};
-  S.modal({title:'本次选题依据',subtitle:p.date+' · 次日复盘 · 数推5＋2',body:`<p>补弱依据截至前一天，今天的作答只用于避开已做题。题单生成成功后当天固定；题型优先，难度用于排序，放宽匹配会单独标明。</p><p>不确定、蒙对不算掌握。资料分析按小题匹配，每题保留完整材料。</p>${Object.keys(counts).length?'<details><summary>查看候选筛选统计</summary>'+Object.entries(counts).map(([m,c])=>'<p>'+esc(m)+'：识别'+c.recognized+' → 内容有效'+c.complete+' → 符合题源'+c.sourceAllowed+' → 未做且去重'+c.unseen+' → 材料完整可选'+c.eligible+'</p>').join('')+'</details>':''}<ol class="local-review-reasons">${p.rows.map((r,i)=>`<li><strong>${i+1}. ${esc(r.module)} · ${esc(r.micro)}</strong><span>${esc(r.kind)}${r.difficultyRelaxed?' · 已放宽难度范围':''} · ${r.unseen?'未做过':'已做过'}${r.rateGap!=null?' · 正确率差'+r.rateGap+'个百分点':' · 难度待核'}</span><span>${esc(references(r))}</span><span>分类依据：${esc(classification[r.classificationStatus]||'原始标签')}</span></li>`).join('')}</ol>`,footer:'<button class="button" data-local-close>关闭</button>',onOpen:h=>h.querySelector('[data-local-close]').onclick=S.closeModal});
+  S.modal({title:'本次选题依据',subtitle:p.date+' · 次日复盘 · 数推5＋2',body:`${p.version<E.VERSION?'<p>今天已生成的题单保留，新的权重用于下一份新题单。</p>':''}<p>补弱依据截至前一天，今天的作答只用于避开已做题。题单生成成功后当天固定；题型优先，难度用于排序，放宽匹配会单独标明。</p><p>不确定、蒙对不算掌握。纳入错题优先；不纳入的非蒙错题仍低优先级参考，超时与收藏单独考虑。资料分析每题保留完整材料。</p>${Object.keys(counts).length?'<details><summary>查看候选筛选统计</summary>'+Object.entries(counts).map(([m,c])=>'<p>'+esc(m)+'：识别'+c.recognized+' → 内容有效'+c.complete+' → 符合题源'+c.sourceAllowed+' → 未做且去重'+c.unseen+' → 材料完整可选'+c.eligible+'</p>').join('')+'</details>':''}<ol class="local-review-reasons">${p.rows.map((r,i)=>`<li><strong>${i+1}. ${esc(r.module)} · ${esc(r.micro)}</strong><span>${esc(r.kind)}${r.difficultyRelaxed?' · 已放宽难度范围':''} · ${r.dueRetest?'到期原题复测':r.unseen?'未做过':'已做过'}${r.rateGap!=null?' · 正确率差'+r.rateGap+'个百分点':' · 难度待核'}</span>${r.weightReason?'<span>补弱依据：'+esc(r.weightReason)+(r.baseWeight!=null?' · 基础优先级 '+esc(r.baseWeight):'')+'</span>':''}<span>${esc(references(r))}</span><span>分类依据：${esc(classification[r.classificationStatus]||'原始标签')}</span></li>`).join('')}</ol>`,footer:'<button class="button" data-local-close>关闭</button>',onOpen:h=>h.querySelector('[data-local-close]').onclick=S.closeModal});
  }
  async function supplementNumeric(){
   const source=ownSession();if(!source||busy())return;
@@ -109,8 +109,10 @@
   if(starting)return;starting=true;try{
    const active=ownSession();if(active)return active.finished?S.showReport(active.id):S.resumeSession(active.id);
    const p=stored()||await generate();if(!p?.ids.length)return;
-   const seen=seenNow(),all=p.ids.map(id=>S.lookup(id)).filter(Boolean),blockedGroups=new Set(all.filter(q=>q.subject!=='资料分析'&&seen.has(S.canonicalKey(q))).map(q=>S.materialIdentity(q)).filter(Boolean));
-   const questions=all.filter(q=>E.valid(q)&&!seen.has(S.canonicalKey(q))&&!blockedGroups.has(S.materialIdentity(q)));
+   const repeatIds=new Set(p.rows.filter(r=>r.dueRetest).map(r=>r.id)),blockedRetests=new Set();
+   if(repeatIds.size){for(const a of S.state.attempts)if(Number(a.finishedAt)>Number(p.asOf))blockedRetests.add(S.canonicalKey(S.lookup(a.questionId)||{canonicalId:a.canonicalId,id:a.questionId}));for(const session of S.state.sessions)if(!session.finished)for(const [id,a]of Object.entries(session.answers||{}))if(a?.selected!=null){const q=S.lookup(id)||session.questions?.find(q=>q.id===id);if(q)blockedRetests.add(S.canonicalKey(q));}}
+   const seen=seenNow(),isRetest=q=>repeatIds.has(q.id)&&!blockedRetests.has(S.canonicalKey(q)),all=p.ids.map(id=>S.lookup(id)).filter(Boolean),blockedGroups=new Set(all.filter(q=>q.subject!=='资料分析'&&seen.has(S.canonicalKey(q))&&!isRetest(q)).map(q=>S.materialIdentity(q)).filter(Boolean));
+   const questions=all.filter(q=>E.valid(q)&&(!seen.has(S.canonicalKey(q))||isRetest(q))&&!blockedGroups.has(S.materialIdentity(q)));
    if(!questions.length)return S.toast('今日题单中的题已做过或暂不可用，保留原题单，明日生成新题。');
    const nonData=questions.filter(q=>q.subject!=='资料分析'),integral=S.ensureGroupIntegrity(nonData);if(integral.length!==nonData.length||integral.some(q=>!nonData.some(x=>x.id===q.id)))return S.toast('逻辑材料完整性待核验，请先检查题库。');
    if(questions.length!==p.ids.length)S.toast('已跳过其他练习中做过或暂不可用的题，今日题单不重新抽题。');
@@ -132,16 +134,16 @@
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.route==='home'){paint();queueAuto();}});
  // Confidence is explicit user evidence. A favorite or option elimination is not a guess marker.
  const feedbackMarkup=S.reviewFeedbackMarkup;
- S.reviewFeedbackMarkup=function(s,qid){const html=feedbackMarkup.call(this,s,qid);if(!s.blueprint?.localReview)return html;const selected=s.reviewFeedback?.[qid]?.confidence;const confidence=`<div class="local-review-confidence" role="group" aria-label="本题作答信心"><span>作答信心</span>${[['certain','确定'],['uncertain','不确定'],['guess','蒙']].map(([v,label])=>`<button type="button" data-local-confidence="${v}" data-local-session="${esc(s.id)}" data-local-qid="${esc(qid)}" aria-pressed="${selected===v}">${label}</button>`).join('')}</div>`;return html.replace('<label>',confidence+'<label>');};
+ S.reviewFeedbackMarkup=function(s,qid){const html=feedbackMarkup.call(this,s,qid);if(!s.finished)return html;const selected=s.reviewFeedback?.[qid]?.confidence;const confidence=`<div class="local-review-confidence" role="group" aria-label="本题作答信心"><span>作答信心</span>${[['certain','确定'],['uncertain','不确定'],['guess','蒙']].map(([v,label])=>`<button type="button" data-local-confidence="${v}" data-local-session="${esc(s.id)}" data-local-qid="${esc(qid)}" aria-pressed="${selected===v}">${label}</button>`).join('')}</div>`;return html.replace('<label>',confidence+'<label>');};
  document.addEventListener('click',event=>{
   const b=event.target.closest?.('[data-local-confidence]');if(!b)return;
   const s=S.state.sessions.find(s=>s.id===b.dataset.localSession);
-  if(!s?.finished||!s.blueprint?.localReview||!s.questions.some(q=>q.id===b.dataset.localQid)||S.reviewUploading?.has(s.id))return;
+  if(!s?.finished||!s.questions.some(q=>q.id===b.dataset.localQid)||S.reviewUploading?.has(s.id))return;
   const qid=b.dataset.localQid,f=S.reviewFeedbackFor(s,qid),confidence=f.confidence===b.dataset.localConfidence?null:b.dataset.localConfidence;
   s.reviewFeedback={...s.reviewFeedback,[qid]:{...f,confidence,updatedAt:Date.now()}};s.reviewRevision=(s.reviewRevision||0)+1;
   if(s.reviewCompletion)s.reviewCompletion={...s.reviewCompletion,status:'draft'};
   S.touchSession(s);S.saveSoon();for(const button of document.querySelectorAll('[data-local-confidence]'))if(button.dataset.localQid===qid)button.setAttribute('aria-pressed',String(button.dataset.localConfidence===confidence));
  });
  S.localReview={generate,start,supplementNumeric,why,paint,stored,signature,markup,readiness,cutoff,queueAuto,metrics:()=>stored()?.metrics};
- S.BUILD='2.9.18-r8-8-69';
+ S.BUILD='2.9.18-r8-8-74';
 })(window.Study,window.LocalReviewEngine);

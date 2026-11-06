@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r8-73';
+  const VERSION = 'D2-r8-74';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;

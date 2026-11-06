@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-27",
+  "timezone": "Asia/Shanghai",
+  "rulesVersion": "RULES-20261027-v1",
+  "documentationCommit": "a688d6f74f6d76cde4fffd979d97731f9118b8d2",
+  "researchEntryCommit": "82c45a5803f1ba24b35eea547a758df76b986237",
+  "verifiedDocumentBlobs": {
+    "zhiyaoji/README.md": "5770d2ba6d9aa7cb649eff946c3e3c2857ba2d2a",
+    "zhiyaoji/AGENTS.md": "a8763779d6611cb5e0ac3467a298efb683b49246",
+    "zhiyaoji/HANDOFF.md": "f8ed5133a3734afadf71a6a95a7fc32317095744",
+    "zhiyaoji/PROJECT_STATE.md": "6200185ba56c157dc3001497ef27520183ae8caf",
+    "zhiyaoji/ACTIVE_TASK.md": "ced6b113063e1dd331a6dd230ca371d8e196336f",
+    "zhiyaoji/CHANGELOG.md": "a114d0287e9f6fb30ae1f16a360ade7c8c8f302e",
+    "zhiyaoji/TEST_MATRIX.md": "31cfb744d2c5ef603a80cd1291d55bf00d47fd15",
+    "zhiyaoji/DECISIONS.md": "c83a735460e7d45bb3c7aa151ed216a533c71465",
+    "zhiyaoji/docs/OPERATING_RULES.md": "0df130c4c9f4ed5eea5024abd86282d63459481f",
+    "zhiyaoji/docs/CONTINUITY.md": "47d54313abb6e98d86853ac1eaf0f9b5791b0dc6",
+    "zhiyaoji/docs/FEEDBACK_LOG.md": "30d4ac2e254b97f9f35393b174ff7e3530f54863"
+  },
+  "researchPointersReadBack": 2,
+  "issue5ReadBack": true,
+  "automationChecks": [
+    {
+      "title": "知遥集｜江苏模型与个人纠错训练",
+      "promptExactReadBack": true,
+      "originalSchedulePreserved": true,
+      "enabledStatePreserved": true,
+      "newRunTriggered": false
+    },
+    {
+      "title": "知遥集｜晨间发布回执复查",
+      "promptExactReadBack": true,
+      "originalSchedulePreserved": true,
+      "enabledStatePreserved": true,
+      "newRunTriggered": false
+    }
+  ],
+  "appTreeUnchanged": true,
+  "appVersion": "R8.8.27",
+  "deployed": false,
+  "scope": "rules, continuity, sanitized feedback and existing automation prompts; future runs must continue recording execution evidence",
+  "pending": "specific missing ink requires device evidence; compatibility fix is not full recovery"
+}

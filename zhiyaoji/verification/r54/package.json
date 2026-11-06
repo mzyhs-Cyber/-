@@ -1,0 +1,26 @@
+{
+  "version": "R8.8.54",
+  "baselineCommit": "140ef15e906652d27be411a221fd936f7ce8858f",
+  "baselineZipSha256": "a1cf335266146d8dacc5459e4deb8f5aa493825456cb9971d4162d77c77a803a",
+  "changedAssets": [
+    "bundle.js",
+    "immersive-mode.js",
+    "index.html",
+    "performance-diagnostics.js",
+    "sw.js",
+    "sync-cooperate.js"
+  ],
+  "addedAssets": [
+    "ink-retention.js"
+  ],
+  "syntaxChecks": 34,
+  "entryCount": 63,
+  "archive": "zhiyaoji-R8.8.54-stability-full.zip",
+  "sha256": "3bc27ee078c91d580a9da755ec1bb034bc7cd7d1b5cf4662611b79827eb0ac81",
+  "size": 1711816,
+  "privateBirthdayPreserved": true,
+  "workerUnchanged": true,
+  "deployed": false,
+  "browserQA": "unavailable: sites-previewd mailbox missing",
+  "deviceQA": false
+}

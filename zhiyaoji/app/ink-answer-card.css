@@ -1,0 +1,13 @@
+.exam-shell .reading-answer-dock{--reading-dock-button-opacity:.7}
+.exam-shell .reading-answer-dock>button[data-exam="card"]{opacity:var(--reading-dock-button-opacity)}
+/* One grid in practice/review and reading/ink modes. Fit ten real columns;
+   fixed heights previously stretched the full-width cells into ellipses. */
+.exam-shell .answer-drawer{width:min(560px,calc(100% - 88px))}
+.exam-shell .answer-drawer .answer-body{width:100%;min-width:0;overflow-x:hidden;padding:14px 12px}
+.exam-shell .answer-drawer .answer-cells{grid-template-columns:repeat(10,minmax(0,1fr));gap:clamp(3px,.8vw,8px);min-width:0;max-width:none}
+.exam-shell .answer-drawer .answer-cell{width:100%;max-width:44px;min-width:0;height:auto;min-height:0;aspect-ratio:1/1;border-radius:50%;padding:0;justify-self:center;align-self:start;box-sizing:border-box;line-height:1}
+@media(max-width:600px){
+ .exam-shell .answer-drawer{left:12px;right:12px;width:calc(100% - 24px);max-width:calc(100% - 24px)}
+ .exam-shell .answer-drawer .answer-body{padding-inline:8px}
+ .exam-shell .answer-drawer .answer-cell{font-size:12px}
+}

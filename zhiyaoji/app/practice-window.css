@@ -1,0 +1,3 @@
+.practice-gap{height:0;pointer-events:none;overflow-anchor:none}
+.practice-live,.practice-item{display:flow-root;overflow-anchor:none}
+.exam-scroll:has(.practice-live){overflow-anchor:none}

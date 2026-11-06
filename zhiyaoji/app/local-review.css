@@ -1,0 +1,64 @@
+/* Reuse the original AI card styles for the local review card. */
+/* home.css */
+#local-review-card{min-width:0;padding:0;overflow:hidden;border:1px solid #e3e7e5;border-radius:18px;background:#fff;box-shadow:0 3px 16px #26352e03}
+#local-review-card .daily-card-head{padding:19px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #f0f2f0}
+#local-review-card h2{font-size:15px;font-weight:600;margin:0}
+#local-review-card .daily-link{border:0;background:none;padding:6px 0;color:#89948e;font-size:11px;display:inline-flex;align-items:center;gap:4px;min-height:32px}
+#local-review-card .daily-link svg{width:13px;height:13px}
+#local-review-card .daily-card-body{padding:22px 22px 19px}
+#local-review-card .daily-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px;color:#98a19b;font-variant-numeric:tabular-nums}
+#local-review-card .daily-state{padding:4px 8px;border-radius:5px;background:#f3f5f3;color:#76877b;font-size:10px}
+#local-review-card h3{font-size:18px;line-height:1.55;font-weight:550;color:#35473c;margin:17px 0 7px;overflow-wrap:anywhere}
+#local-review-card .daily-caption{font-size:12px;color:#95a097;margin:0 0 21px;line-height:1.7}
+#local-review-card .daily-start{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:43px;padding:11px 15px;border:0;border-radius:10px;background:#edf2ee;color:#4e6857;font-size:12px;box-shadow:none}
+#local-review-card .daily-start svg{width:15px;height:15px}
+#local-review-card .daily-card-foot{display:flex;align-items:center;justify-content:space-between;padding:0 22px 13px}
+#local-review-card .daily-status{font-size:11px;line-height:1.6;margin:0;padding:0 22px 16px;color:#8c978e;overflow-wrap:anywhere}
+#local-review-card .daily-status:empty{display:none}
+@media(max-width:480px){#local-review-card .daily-card-head{padding:17px 18px}
+#local-review-card .daily-card-body{padding:19px 18px 17px}
+#local-review-card .daily-card-foot{padding-inline:18px}}
+/* ux-polish.css */
+.home-daily-primary #local-review-card{width:100%;height:100%;display:flex;flex-direction:column}
+#local-review-card .daily-link{gap:6px}
+#local-review-card .daily-link svg{width:15px;height:15px}
+/* refinement.css */
+#app-shell #local-review-card{box-shadow:inset 0 2px 0 var(--ref-edge),var(--ref-shadow)}
+/* appearance-a.css */
+#app-shell #local-review-card{
+ background:#fff;border:1px solid var(--ref-line,#dde4df);box-shadow:none;
+}
+#app-shell #local-review-card .daily-card-head{border-bottom-color:#edf0ed}
+#app-shell #local-review-card .daily-start{border:1px solid #dce3df;background:#fff;color:#55695b}
+/* daily-pairs.css */
+#local-review-card .daily-pairs{display:grid;gap:14px;margin-top:14px;min-width:0}
+#local-review-card .daily-pair{border:1px solid var(--line,#e5e9e2);border-radius:16px;padding:16px;min-width:0;background:var(--surface,#fff)}
+#local-review-card .daily-card-head{padding:14px 16px}
+#local-review-card .daily-card-body{padding:12px 16px 8px}
+#local-review-card .daily-pairs{max-height:270px;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;gap:10px;margin-top:0;padding-right:3px}
+#local-review-card .daily-pair{padding:12px 0;border:0;border-radius:0;background:transparent}
+#local-review-card .daily-pair+.daily-pair{border-top:1px solid var(--line,#e5e9e2)}
+#local-review-card .daily-pair>summary{list-style:none;cursor:pointer}
+#local-review-card .daily-pair>summary::-webkit-details-marker{display:none}
+#local-review-card .daily-pair-chevron{width:8px;height:8px;flex:none;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:0 4px 4px 8px;color:var(--muted,#778277)}
+#local-review-card .daily-pair[open] .daily-pair-chevron{transform:rotate(225deg);margin-bottom:0}
+#local-review-card .daily-pair-heading h3{font-size:16px;margin:0;line-height:1.4}
+#local-review-card .daily-pair-label{font-size:12px;margin:7px 0 0}
+#local-review-card .daily-pair .daily-caption{font-size:12px;margin:8px 0 12px;line-height:1.5}
+#local-review-card .daily-start{min-height:40px;padding:9px 12px}
+#local-review-card .daily-card-foot{padding:0 16px 10px}
+.home-daily-primary #local-review-card{width:100%;display:flex;flex-direction:column;margin:0}
+.home-daily-primary #local-review-card .daily-card-body{flex:1;min-height:0}
+.home-daily-primary #local-review-card .daily-card-foot{margin-top:auto}
+
+/* Both home cards share one row without a large spacer above the shortcuts. */
+#app-shell .home-primary-grid{align-items:stretch}
+#local-review-card .daily-card-body{display:flex;flex-direction:column;gap:0}
+#local-review-card h3{margin:8px 0 4px;font-size:18px}
+#local-review-card .daily-caption{margin:0 0 8px}
+#local-review-card .daily-status{padding:0;margin:0 0 8px;font-size:11px;line-height:1.5}
+#local-review-card .daily-start{margin-top:auto}
+#local-review-card .daily-card-foot{padding-top:5px}
+.local-review-reasons li span{display:block;overflow-wrap:anywhere;line-height:1.6}
+.local-review-reasons{padding:0;list-style:none}.local-review-reasons li{padding:10px 0;border-bottom:1px solid #e4e9e1}.local-review-reasons strong,.local-review-reasons span{display:block;font-size:13px;line-height:1.7}.local-review-reasons span{color:#566151}
+.local-review-confidence{display:inline-flex;gap:3px;align-items:center;flex-wrap:wrap}.local-review-confidence button{border:1px solid #d5dfd1;background:#fafcf8;color:#4d5d46;padding:5px 8px;border-radius:7px;font-size:12px;box-shadow:none}.local-review-confidence button[aria-pressed="true"]{background:#dce9d7;border-color:#91aa88;color:#223d20}

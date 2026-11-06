@@ -1,0 +1,8 @@
+/* Modal scroll never chains to the training or report underneath. */
+#dialog-host{overflow:hidden;overscroll-behavior:none}
+#dialog-host .dialog{min-height:0;overscroll-behavior:contain}
+#dialog-host .dialog-body{flex:1 1 auto;min-height:0;max-height:100%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#dialog-host .choice-list,#dialog-host .choice-inline-panel{overscroll-behavior:contain}
+
+#dialog-host input,#dialog-host textarea,#dialog-host [contenteditable]:not([contenteditable="false"]){user-select:text;-webkit-user-select:text}
+#dialog-host textarea:focus-visible{outline:2px solid #718e7c;outline-offset:3px}

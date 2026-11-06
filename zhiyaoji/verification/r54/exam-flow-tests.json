@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "checks": 90,
+  "cases": [
+    "135-question paper: choose, cancel, change, exclude/recover, favorite, journal and main saves",
+    "unfinished paper: three runtime restarts restore selections, excluded options and IDs",
+    "crash before the main debounce: independent answer journal recovers the newest choice",
+    "either journal storage path can fail while the other still restores the latest answer",
+    "missing required image blocks answering; retry or skip leaves other questions usable",
+    "ordinary practice: active time, manual pause/resume and background pause",
+    "auto advance honors the 156ms wait and stops at a material-group boundary",
+    "material expansion/collapse, next material, answer card and original question numbers",
+    "manual submission creates one frozen result per question, correct grading and report statistics",
+    "countdown expiry submits once; finished sessions reject further answer changes",
+    "report/review: needs-review filter, original numbering, editable cause persists, original answers freeze",
+    "pen input through the production canvas router saves, submits and reopens editable review ink",
+    "learning backup round trip retains answers, attempts, favorites, review feedback and ink"
+  ],
+  "scope": "All production scripts loaded in index order, actual controller events, main persistence, answer journal, grading, review and backup paths; synthetic DOM/IDB adapters. No real browser layout, iPad or live cloud acceptance."
+}

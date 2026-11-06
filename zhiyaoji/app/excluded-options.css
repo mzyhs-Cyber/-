@@ -1,0 +1,19 @@
+/* R73 gray3: dim excluded text and retain the original strikethrough. */
+.exam-shell {
+  --excluded-text: #8c929b;
+}
+
+.exam-shell[data-reading="night"] {
+  --excluded-text: #8993a1;
+}
+
+/* Preserve graded result colours and restore the original colour on undo. */
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-letter,
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body,
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body * {
+  color: var(--excluded-text) !important;
+}
+
+.exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body {
+  text-decoration: line-through;
+}

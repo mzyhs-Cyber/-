@@ -1,0 +1,227 @@
+/* R8.8.8: reading chrome only; writing surfaces and question text metrics stay intact. */
+:root{--ref-ink:#28343d;--ref-muted:#5f6b76;--ref-line:#e1e7eb;--ref-soft:#eef3f7;--ref-accent:#486b86;--ref-edge:#bfd0df;--ref-shadow:0 5px 24px #24334205;--ref-radius:18px}
+:root[data-study-theme="b"]{--ref-ink:#30353c;--ref-muted:#626b73;--ref-line:#e2e5e8;--ref-soft:#f0f2f3;--ref-accent:#505d69;--ref-edge:#c9ced3}
+:root[data-study-theme="c"]{--ref-ink:#2d3d33;--ref-muted:#626e65;--ref-line:#e0e7df;--ref-soft:#eff4ef;--ref-accent:#4a6a58;--ref-edge:#c6d5c7}
+
+/* 01. Clear active navigation; no added wordmark during boot or in the app. */
+#app-shell .app-header{column-gap:24px}
+#app-shell .nav-account{color:var(--ref-ink)}
+#app-shell .nav-account-copy small{color:var(--ref-muted)}
+#app-shell .nav-avatar{background:var(--ref-soft);color:var(--ref-accent);box-shadow:inset 0 0 0 1px var(--ref-line)}
+
+/* 02. Card hierarchy; preserve hero artwork, dimensions and quote typography. */
+#app-shell .panel{border-color:var(--ref-line);border-radius:var(--ref-radius);box-shadow:var(--ref-shadow)}
+#app-shell .page-title h1{color:var(--ref-ink);letter-spacing:.4px}
+#app-shell .today-head h1{font-size:18px!important;color:var(--ref-ink);letter-spacing:.2px}
+#app-shell .panel-title h2,#app-shell .daily-card-head h2{font-size:16px;color:var(--ref-ink);font-weight:600}
+#app-shell .home-primary-grid .home-today{display:flex;flex-direction:column}
+#app-shell .home-primary-grid .learning-shortcuts-v29{margin-top:auto;padding-top:14px;gap:10px}
+#app-shell .home-primary-grid .learning-shortcuts-v29 button{border-color:var(--ref-line);border-radius:11px;background:#fff;box-shadow:none}
+#app-shell .home-primary-grid .learning-shortcuts-v29 strong{font-variant-numeric:tabular-nums}
+#app-shell #daily-training{box-shadow:inset 0 2px 0 var(--ref-edge),var(--ref-shadow)}
+#app-shell .daily-card-head{border-bottom-color:var(--ref-line)}
+#app-shell .daily-meta,#app-shell .daily-state{color:var(--ref-muted);font-variant-numeric:tabular-nums}
+#app-shell .daily-card-body h3{font-weight:600;color:var(--ref-ink);line-height:1.6}
+#app-shell .daily-caption{color:var(--ref-muted)}
+#app-shell .home-entry{border-color:var(--ref-line);border-radius:16px;box-shadow:var(--ref-shadow)}
+#app-shell .home-entry-icon{border-radius:12px;background:var(--ref-soft);color:var(--ref-accent)}
+#app-shell .home-entry>b{opacity:.8}
+#app-shell .home-hero .hero-caption{color:#5f6f66}
+#app-shell .hero-circle{box-shadow:0 2px 7px #35483b04}
+#app-shell .topic-count-v297,#app-shell .learning-split,#app-shell .week-bars small{color:var(--ref-muted);font-variant-numeric:tabular-nums}
+#app-shell .subject-expand-v28{color:var(--ref-ink)}
+#app-shell .subject-expand-v28[aria-expanded="true"]{color:var(--ref-accent)}
+
+/* 03. One primary-action treatment; subdued secondary and destructive actions. */
+#app-shell .button,#dialog-host .button{border-radius:10px;transition:background-color .14s,border-color .14s,box-shadow .14s}
+#app-shell .button.primary,#app-shell .daily-start,#dialog-host .button.primary{color:#fff;background:var(--ref-accent);border-color:var(--ref-accent);box-shadow:0 2px 5px #23374a0a}
+#app-shell .button.soft,#app-shell .release-tabs [aria-selected="true"],#app-shell .release-tabs [aria-pressed="true"]{color:var(--ref-accent);background:var(--ref-soft);border-color:var(--ref-edge)}
+#app-shell .button:disabled,#app-shell .choice-button:disabled{opacity:.48;box-shadow:none}
+#app-shell .text-button,#app-shell .backlink{color:var(--ref-accent)}
+#app-shell .record-trash{color:#7d8891;background:transparent}
+#app-shell .record-row{border-bottom-color:var(--ref-line)}
+#app-shell .record-row strong{color:var(--ref-ink);font-weight:600}
+#app-shell .record-row p{color:var(--ref-muted);font-size:13px;line-height:1.7}
+#app-shell .record-score{border-radius:9px;background:var(--ref-soft);color:var(--ref-accent);font-variant-numeric:tabular-nums}
+
+/* 04. Search and selections remain visible while scanning long lists. */
+#app-shell .bank-search-label{color:var(--ref-ink);font-size:14px}
+#app-shell .bank-search-label input{background:#fafcfd;border-color:var(--ref-line);border-radius:11px;box-shadow:inset 0 1px 2px #253a4c03}
+#app-shell .bank-search-label input:focus{background:#fff;border-color:var(--ref-accent)}
+#app-shell .bank-filters label{color:var(--ref-muted)}
+#app-shell .choice-button{border-radius:9px;border-color:var(--ref-line);color:var(--ref-ink);background:#fff}
+#bank-filter-region+.choice-button[data-value]:not([data-value=""]),
+#bank-filter-year+.choice-button[data-value]:not([data-value=""]),
+#bank-filter-kind+.choice-button[data-value]:not([data-value=""]),
+#bank-filter-source+.choice-button[data-value]:not([data-value=""]),
+#bank-filter-sort+.choice-button[data-value="recent"]{border-color:var(--ref-edge);background:var(--ref-soft);color:var(--ref-accent);box-shadow:inset 0 0 0 1px var(--ref-edge)}
+#app-shell .bank-result-meta{color:var(--ref-muted);font-variant-numeric:tabular-nums}
+#app-shell #bank-result-count{font-weight:500}
+#app-shell #bank-paper-results .paper-row{margin:7px 0;border-bottom-color:var(--ref-line);border-radius:11px}
+#app-shell #bank-paper-results h3{color:var(--ref-ink);font-size:16px;line-height:1.6;font-weight:600}
+#app-shell #bank-paper-results .paper-row-main p{color:var(--ref-muted)}
+#app-shell #bank-paper-results .chip{font-size:11px;font-weight:500;border-radius:6px;background:var(--ref-soft);color:var(--ref-accent);border-color:var(--ref-line);white-space:nowrap;vertical-align:middle}
+#app-shell .bank-incomplete-note{color:#7c5c28!important}
+#app-shell .practice-history-badge{color:var(--ref-muted);background:#f1f4f5}
+#app-shell .practice-history-badge.is-done{color:#7c5c28;background:#fff3d7}
+#app-shell .bank-summary h2{color:var(--ref-ink);font-size:19px;line-height:1.6;font-variant-numeric:tabular-nums}
+#app-shell .bank-summary p{color:var(--ref-muted)}
+
+/* 05. Tool hierarchy, without moving or resizing the writing/reading surfaces. */
+.exam-shell .exam-head{border-bottom-color:var(--reading-line);box-shadow:0 2px 10px #263a4b03}
+.exam-shell .exam-head .icon-button:not([data-exam="submit"]){border-radius:10px}
+.exam-shell .exam-clock{font-variant-numeric:tabular-nums;color:var(--reading-text)}
+.exam-shell .exam-heading strong{color:var(--reading-text);font-weight:500}
+.exam-shell .exam-head [data-exam="reading-settings"]{color:var(--reading-text)}
+.exam-shell .reading-material-nav{border-bottom-color:var(--reading-line)}
+.exam-shell:not([data-reading="night"]) .reading-material-nav [data-exam="material-close"]{background:#f3f6f8;border-color:#d9e1e7;color:#405565}
+.exam-shell .answer-drawer{box-shadow:0 -7px 24px #24374b0b;border-top-color:var(--reading-line)}
+.exam-shell .answer-legend{color:var(--reading-muted)}
+.exam-shell .answer-cell{border-radius:9px;font-variant-numeric:tabular-nums}
+.exam-shell .answer-cell.current{outline-color:#486b86}
+.exam-shell .reading-answer-dock button{box-shadow:0 3px 12px #24374b0d;border-color:var(--reading-line);border-radius:11px}
+
+/* 06. Dialogs have one clear title, selected settings and a visible resume action. */
+#dialog-host .dialog{border:1px solid var(--ref-line);border-radius:20px;box-shadow:0 22px 80px #20324726}
+#dialog-host .dialog-head{border-bottom-color:var(--ref-line)}
+#dialog-host .dialog-head h2{font-weight:600;color:var(--ref-ink);letter-spacing:.2px}
+#dialog-host .dialog-copy,#dialog-host .dialog-body>p{color:var(--ref-muted);line-height:1.8}
+#dialog-host .reading-setting-row{border-bottom-color:var(--ref-line);color:var(--ref-ink)}
+#dialog-host .reading-setting-row [data-reading-size]{background:#f7f9fa;border-color:var(--ref-line);color:var(--ref-muted)}
+#dialog-host .reading-setting-row [data-reading-size].soft{color:var(--ref-accent);background:var(--ref-soft);border-color:var(--ref-edge);box-shadow:inset 0 0 0 1px var(--ref-edge)}
+#dialog-host #reading-auto{width:19px;height:19px;accent-color:var(--ref-accent)}
+#dialog-host .choice-list [role="option"]{color:var(--ref-ink);border-radius:8px}
+#dialog-host .choice-list [aria-selected="true"]{color:var(--ref-accent);background:var(--ref-soft);box-shadow:inset 2px 0 0 var(--ref-accent)}
+#dialog-host .choice-search{border-radius:9px;border-color:var(--ref-line);background:#fafcfd}
+.exam-shell .pause-card{max-width:420px;padding:30px 34px;border:1px solid var(--reading-line);border-radius:22px;background:var(--reading-paper);box-shadow:0 18px 55px #25384b12}
+.exam-shell .pause-card h2{font-size:21px;line-height:1.6;color:var(--reading-text);font-weight:600}
+.exam-shell .pause-card p{color:var(--reading-muted);font-size:13px;line-height:1.8}
+.exam-shell .pause-resume{min-height:46px;min-width:144px;margin-top:8px;border-radius:11px;border:1px solid var(--ref-accent);color:#fff;background:var(--ref-accent);font-size:14px;font-weight:500;cursor:pointer}
+#toast{border:1px solid #ffffff1c;border-radius:12px;background:#2e3d48;color:#fff;box-shadow:0 8px 26px #24374b22;font-size:13px;line-height:1.7}
+
+/* 07. Clear focus, restrained hover, and stable coarse-pointer hit areas. */
+#app-shell button:focus-visible,#app-shell input:focus-visible,#dialog-host button:focus-visible,#dialog-host input:focus-visible,.exam-shell button:focus-visible{outline:2px solid var(--ref-accent);outline-offset:3px}
+@media(hover:hover) and (pointer:fine){
+ #app-shell .nav-button:not(.active):hover{background:#f3f6f8;color:var(--ref-ink)}
+ #app-shell .home-entry:hover,#app-shell #bank-paper-results .paper-row:hover{background:#fafcfd;border-color:var(--ref-edge)}
+ #app-shell .learning-shortcuts-v29 button:hover{background:var(--ref-soft);border-color:var(--ref-edge)}
+ #app-shell .record-trash:hover,#app-shell .record-trash:focus-visible{color:#ad4848;background:#fff1f0}
+ .exam-shell .exam-head .icon-button:not([data-exam="submit"]):hover{background:#edf2f5}
+ .exam-shell[data-reading="night"] .exam-head .icon-button:not([data-exam="submit"]):hover{background:#344453}
+}
+@supports selector(:has(*)){
+ body:has(.exam-shell[data-reading="day"]) #dialog-host .reading-setting-row [data-reading-night="false"],
+ body:has(.exam-shell[data-reading="night"]) #dialog-host .reading-setting-row [data-reading-night="true"]{color:var(--ref-accent);background:var(--ref-soft);border-color:var(--ref-edge);box-shadow:inset 0 0 0 1px var(--ref-edge)}
+ #bank-paper-results .paper-row:has(.bank-incomplete-note) .chip{color:#7c5c28;background:#fff6e6;border-color:#eadbbb}
+}
+@media(min-width:1000px){
+ #app-shell .bank-discovery{position:sticky;top:12px;z-index:3;background:#fff;box-shadow:0 14px 18px -18px #20324548}
+}
+@media(max-width:899px){
+ #app-shell .app-header{column-gap:12px}
+}
+@media(max-width:540px){
+ #app-shell .panel{border-radius:15px}
+ #app-shell .page-title{flex-wrap:wrap;row-gap:12px}
+ #app-shell .bank-header-actions{flex-wrap:wrap;gap:7px}
+ #app-shell #bank-paper-results h3{font-size:15px}
+ .exam-shell .exam-heading{display:none}
+ .exam-shell .pause-card{max-width:calc(100% - 32px);padding:25px 22px}
+ #dialog-host .dialog{border-radius:17px}
+}
+@media(pointer:coarse){
+ #dialog-host .choice-list [role="option"],.exam-shell .pause-resume{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+ #app-shell .nav-button,#app-shell .button,#dialog-host .button{transition:none}
+}
+
+/* R8.8.8 approved compact reading header: 56px, with 44px touch targets. */
+.exam-shell .exam-head{height:56px;min-height:56px;border-bottom:0;box-shadow:none}
+.exam-shell .split-shell{top:56px}
+.exam-shell .reading-note-toolbar{height:56px}
+.exam-shell .exam-clock{font-weight:600}
+.exam-shell .exam-head [data-exam="exit"]{width:44px;min-width:44px;height:44px;min-height:44px}
+.exam-shell .exam-head-right{gap:8px}
+.exam-shell .exam-head-right .icon-button{width:44px;min-width:44px;height:44px;min-height:44px;gap:0;padding:11px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;background:transparent;color:#69737d;box-shadow:none}
+.exam-shell .exam-head-right .icon-button svg{width:22px;height:22px;stroke-width:1.6}
+.exam-shell .exam-head [data-exam="exit"] svg{width:22px;height:22px}
+.exam-shell[data-reading="night"] .exam-head-right .icon-button{color:#bec8d4}
+.exam-shell:not([data-reading="night"]):not(.reading-ink){background:#fff}
+.exam-shell:not([data-reading="night"]):not(.reading-ink) .qpaper{border-color:#eceef0}
+@supports selector(:has(*)){
+ html:has(.exam-shell:not([hidden]):not([data-reading="night"])),
+ html:has(.exam-shell:not([hidden]):not([data-reading="night"])) body{background:#fff}
+}
+/* R8.8.9: approved light palette; no drawing-engine or timer changes. */
+:root{--choice-blue:#edf5fc;--choice-text:#527fa6;--choice-line:#c8dcf0;--favorite-gold:#ffb820}
+#app-shell .button,#dialog-host .button,#app-shell .daily-start{box-shadow:none}
+#app-shell .button.primary,#app-shell .daily-start,#dialog-host .button.primary,
+#app-shell .button.primary:not(:disabled):hover,#app-shell .daily-start:not(:disabled):hover,
+#app-shell .button.primary:not(:disabled):active,#app-shell .daily-start:not(:disabled):active{background:var(--choice-blue);border-color:var(--choice-line);color:#385f82;box-shadow:none}
+#app-shell .button.soft,#app-shell .choice-button.active{background:var(--choice-blue);border-color:var(--choice-line);color:var(--choice-text);box-shadow:none}
+.exam-shell .option-row.selected:not(.correct):not(.incorrect){box-shadow:none}
+.exam-shell .option-row.selected:not(.correct):not(.incorrect) .option-button{background:transparent;border-color:transparent;color:var(--reading-text)}
+.exam-shell .option-row.selected:not(.correct):not(.incorrect) .option-letter{background:var(--choice-blue);border-color:var(--choice-line);color:var(--choice-text)}
+.exam-shell .answer-drawer{box-shadow:none;max-height:min(60vh,480px);width:min(560px,calc(100% - 88px));border-color:#e2e7ec}
+.exam-shell .answer-cells{grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:16px 12px}
+.exam-shell .answer-cell{width:44px;height:44px;min-height:44px;border-radius:50%;background:#f2f4f5;color:#747e86;box-shadow:none;justify-self:center;font-weight:600}
+.exam-shell .answer-cell.answered{background:var(--choice-blue);color:var(--choice-text);border:1px solid var(--choice-line)}
+.exam-shell .answer-cell.correct{background:#e5f3ed;color:#298466;border-color:#d5e9df}
+.exam-shell .answer-cell.incorrect{background:#fbecec;color:#bd5c5b;border-color:#f1dada}
+.exam-shell .answer-cell.current{outline:1.5px solid #8db3d5;outline-offset:3px}
+.exam-shell .answer-cell.current:not(.answered):not(.correct):not(.incorrect){background:var(--reading-paper);color:var(--choice-text)}
+.exam-shell .answer-done-mark{display:none}
+.exam-shell .answer-group{margin-bottom:18px}
+.exam-shell .answer-group:last-of-type{margin-bottom:6px}
+.exam-shell .answer-cell.marked:after,.report-design .answer-cell .star-mark,.report-design .legend .star{color:var(--favorite-gold)}
+.report-design .answer-cell.marked{outline-color:var(--favorite-gold)}
+.exam-shell [data-exam="mark"][aria-pressed="true"],.exam-shell [data-exam="mark"].marked{color:var(--favorite-gold)}
+.exam-shell [data-exam="mark"][aria-pressed="true"] svg,.exam-shell [data-exam="mark"].marked svg{fill:var(--favorite-gold);stroke:var(--favorite-gold)}
+.exam-shell:not([data-reading="night"]):not(.reading-ink) .qpaper.review-correct{background:linear-gradient(to bottom,#e1f8ed 0,rgba(225,248,237,.45) 32px,#fff 90px)}
+.exam-shell:not([data-reading="night"]):not(.reading-ink) .qpaper.review-incorrect{background:linear-gradient(to bottom,#fff0ec 0,rgba(255,240,236,.45) 32px,#fff 90px)}
+.exam-shell:not(.reading-ink) .qpaper.review-correct .qhead,.exam-shell:not(.reading-ink) .qpaper.review-incorrect .qhead{background:transparent}
+.exam-shell .material-head [data-exam="material"],.exam-shell .reading-material-nav [data-exam="material-close"]{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:9px 13px;border:1px solid var(--reading-line,#e2e7ec);border-radius:10px;background:var(--reading-paper,#fff);color:var(--reading-text,#505a65);box-shadow:none;font-size:13px;font-weight:600;white-space:nowrap}
+.exam-shell:not([data-reading="night"]) .reading-material-nav [data-exam="material-close"]{background:var(--reading-paper,#fff);border-color:#e2e7ec;color:#505a65}
+.exam-shell .material-head [data-exam="material"] svg,.exam-shell .reading-material-nav [data-exam="material-close"] svg{width:20px;height:20px;stroke-width:1.6;flex:none}
+/* R8.8.10: image-only dimming works inside isolated/transparent stacking contexts. White maps to paper #e8e8e8; black remains black. */
+.exam-shell.reading-ink:not([data-reading="night"]) .rich img{mix-blend-mode:normal;filter:brightness(0.9098039215686274)}
+.exam-shell.reading-ink:not([data-reading="night"]) .material-content,
+.exam-shell.reading-ink:not([data-reading="night"]) .split-material-content{background:var(--reading-paper)}
+.exam-shell[data-reading="night"] .option-row.selected:not(.correct):not(.incorrect) .option-letter{background:#293e52;border-color:#6e94b6;color:#c9e2f5}
+.exam-shell[data-reading="night"] .answer-cell.answered{background:#293e52;color:#c9e2f5;border-color:#6e94b6}
+body:has(.exam-shell.reading-ink:not([data-reading="night"])){background:#dedfe0}
+
+/* Flat answer-card trigger in both open and closed states. */
+.exam-shell .reading-answer-dock button{box-shadow:none}
+
+/* R8.8.11: translucent answer states, including review letters and report cards. */
+:root{
+ --choice-blue:rgba(98,163,225,.20);--choice-text:#3f719d;--choice-line:rgba(98,150,200,.40);
+ --choice-green:rgba(56,159,118,.21);--choice-green-text:#287653;--choice-green-line:rgba(56,159,118,.34);
+ --choice-red:rgba(216,100,100,.20);--choice-red-text:#aa4f4d;--choice-red-line:rgba(216,100,100,.34);
+}
+.exam-shell .option-row.correct .option-letter,
+.exam-shell .answer-cell.correct,.report-design .answer-cell.correct{
+ background:var(--choice-green);color:var(--choice-green-text);border-color:var(--choice-green-line);
+}
+.exam-shell .option-row.incorrect .option-letter,
+.exam-shell .answer-cell.incorrect,.report-design .answer-cell.wrong{
+ background:var(--choice-red);color:var(--choice-red-text);border-color:var(--choice-red-line);
+}
+.exam-shell[data-reading="night"] .option-row.selected:not(.correct):not(.incorrect) .option-letter,
+.exam-shell[data-reading="night"] .answer-cell.answered{
+ background:rgba(98,163,225,.22);border-color:rgba(151,192,229,.5);color:#c9e2f5;
+}
+.exam-shell[data-reading="night"] .option-row.correct .option-letter,
+.exam-shell[data-reading="night"] .answer-cell.correct{background:rgba(71,173,133,.24);border-color:rgba(112,198,163,.45);color:#b7e5ce}
+.exam-shell[data-reading="night"] .option-row.incorrect .option-letter,
+.exam-shell[data-reading="night"] .answer-cell.incorrect{background:rgba(221,120,115,.24);border-color:rgba(230,153,149,.45);color:#f2c4c0}
+
+/* No raised or inset shadows on interactive buttons in any state. Focus uses outlines. */
+#app-shell button,#dialog-host button,.exam-shell button,
+#app-shell [role="button"],#dialog-host [role="button"],.exam-shell [role="button"]{
+ box-shadow:none!important;text-shadow:none!important;filter:none!important;
+}
+.report-design .answer-cell.current{outline:1.5px solid #8db3d5;outline-offset:3px}
+.report-design .answer-cell.current.marked{outline-color:var(--favorite-gold)}

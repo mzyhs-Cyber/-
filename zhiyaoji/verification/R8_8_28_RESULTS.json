@@ -1,0 +1,21 @@
+{
+ "version":"R8.8.28",
+ "rules":"RULES-20261027-v3",
+ "policy":"PAIR-20261027-v1",
+ "baseline_head":"284d10d80906e3b05e5adab067e7c7df43b2e42f",
+ "regression":"R17-R28 all passed",
+ "syntax":"passed",
+ "resource_references":"passed",
+ "zip_crc":"passed",
+ "zip_files":47,
+ "zip_bytes":1670718,
+ "zip_sha256":"af1204e2048c4d4f867f7d6ab99c55930d1637af284971c84ebba2d942c634d9",
+ "private_asset":"preserved only in private deliverable",
+ "worker_changed":false,
+ "database_schema_changed":false,
+ "ink_engine_changed":false,
+ "deployed":false,
+ "ipad_acceptance":"pending",
+ "new_eligible_candidates":0,
+ "limitations":["initial source metadata does not replace full-media/model/live-dedup checks","latest non-Jiangsu radical pool incomplete","client upgrade required for independent cards","actual prior missing ink still needs local evidence"]
+}

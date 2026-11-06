@@ -1,0 +1,263 @@
+{
+  "executed_at": "2026-11-05T05:54:37.901277+00:00",
+  "scope": "archive and static only",
+  "passed": false,
+  "checks": [
+    {
+      "name": "A01_snapshot_sha256",
+      "passed": false,
+      "detail": {
+        "files": 22,
+        "mismatches": [
+          "_headers",
+          "_worker.js",
+          "bundle.js",
+          "home.css",
+          "index.html",
+          "manifest.webmanifest",
+          "performance-diagnostics.js",
+          "reading.css",
+          "report.css",
+          "sw.js"
+        ]
+      }
+    },
+    {
+      "name": "A02_javascript_syntax",
+      "passed": true,
+      "detail": [
+        {
+          "file": "timing-repair.js",
+          "passed": true
+        },
+        {
+          "file": "immersive-mode.js",
+          "passed": true
+        },
+        {
+          "file": "export-scopes.js",
+          "passed": true
+        },
+        {
+          "file": "answer-journal.js",
+          "passed": true
+        },
+        {
+          "file": "performance-diagnostics.js",
+          "passed": true
+        },
+        {
+          "file": "ink-controls-repair.js",
+          "passed": true
+        },
+        {
+          "file": "review-render-work.js",
+          "passed": true
+        },
+        {
+          "file": "storage-maintenance.js",
+          "passed": true
+        },
+        {
+          "file": "draft-boundaries.js",
+          "passed": true
+        },
+        {
+          "file": "local-review.js",
+          "passed": true
+        },
+        {
+          "file": "modal-scroll.js",
+          "passed": true
+        },
+        {
+          "file": "_worker.js",
+          "passed": true
+        },
+        {
+          "file": "storage-check.js",
+          "passed": true
+        },
+        {
+          "file": "complete-review-export.js",
+          "passed": true
+        },
+        {
+          "file": "classification-data.js",
+          "passed": true
+        },
+        {
+          "file": "ink-surface-cache.js",
+          "passed": true
+        },
+        {
+          "file": "training-order-ink.js",
+          "passed": true
+        },
+        {
+          "file": "training-review.js",
+          "passed": true
+        },
+        {
+          "file": "practice-window.js",
+          "passed": true
+        },
+        {
+          "file": "source-filters.js",
+          "passed": true
+        },
+        {
+          "file": "countdown-policy.js",
+          "passed": true
+        },
+        {
+          "file": "paper-counts.js",
+          "passed": true
+        },
+        {
+          "file": "local-review-engine.js",
+          "passed": true
+        },
+        {
+          "file": "local-records.js",
+          "passed": true
+        },
+        {
+          "file": "ink-retention.js",
+          "passed": true
+        },
+        {
+          "file": "daily-pairs.js",
+          "passed": true
+        },
+        {
+          "file": "review-layout.js",
+          "passed": true
+        },
+        {
+          "file": "review-only-upload.js",
+          "passed": true
+        },
+        {
+          "file": "bundle.js",
+          "passed": true
+        },
+        {
+          "file": "local-review-worker.js",
+          "passed": true
+        },
+        {
+          "file": "local-review-background.js",
+          "passed": true
+        },
+        {
+          "file": "bank-network.js",
+          "passed": true
+        },
+        {
+          "file": "record-boundaries.js",
+          "passed": true
+        },
+        {
+          "file": "reading-continuity.js",
+          "passed": true
+        },
+        {
+          "file": "sync-cooperate.js",
+          "passed": true
+        },
+        {
+          "file": "wrongbook.js",
+          "passed": true
+        },
+        {
+          "file": "draft-owner-review.js",
+          "passed": true
+        },
+        {
+          "file": "cloud-records.js",
+          "passed": true
+        },
+        {
+          "file": "training-memory.js",
+          "passed": true
+        },
+        {
+          "file": "sw.js",
+          "passed": true
+        },
+        {
+          "file": "classification-adapter.js",
+          "passed": true
+        },
+        {
+          "file": "continuity.js",
+          "passed": true
+        },
+        {
+          "file": "bank-config.js",
+          "passed": true
+        },
+        {
+          "file": "r2-check.html:inline-0",
+          "passed": true
+        },
+        {
+          "file": "index.html:inline-0",
+          "passed": true
+        },
+        {
+          "file": "index.html:inline-1",
+          "passed": true
+        },
+        {
+          "file": "index.html:inline-2",
+          "passed": true
+        },
+        {
+          "file": "typography-comparison.html:inline-0",
+          "passed": true
+        },
+        {
+          "file": "answer-rescue.html:inline-0",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "A02_html_asset_references",
+      "passed": true,
+      "detail": {
+        "missing": []
+      }
+    },
+    {
+      "name": "A03_json_metadata",
+      "passed": true,
+      "detail": {
+        "checked": 20,
+        "invalid": []
+      }
+    },
+    {
+      "name": "A03_private_files_and_common_credentials",
+      "passed": true,
+      "detail": {
+        "unexpected_paths": [],
+        "credential_pattern_paths": [],
+        "scope": "heuristic, not security audit"
+      }
+    },
+    {
+      "name": "A04_entry_docs_links_version",
+      "passed": false,
+      "detail": {
+        "missing_docs": [],
+        "broken_links": [],
+        "snapshot_markers_match": false
+      }
+    }
+  ],
+  "business_tests": "not executed",
+  "remote_verification": "see verification/REMOTE.json"
+}

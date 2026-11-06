@@ -1,0 +1,5 @@
+/* Visible glyph square is the hit target; writing beside it remains on canvas. */
+.exam-shell [data-exam="pen"],.exam-shell [data-exam="note-close"],.exam-shell [data-exam="exclude"]{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;max-width:20px;max-height:20px;padding:0!important;box-sizing:border-box;flex:none;}
+.exam-shell [data-exam="pen"] svg,.exam-shell [data-exam="note-close"] svg,.exam-shell [data-exam="exclude"] svg{width:20px;height:20px;pointer-events:none;}
+.exam-shell [data-exam="pen"]::before,.exam-shell [data-exam="pen"]::after,.exam-shell [data-exam="note-close"]::before,.exam-shell [data-exam="note-close"]::after,.exam-shell [data-exam="exclude"]::before,.exam-shell [data-exam="exclude"]::after{content:none!important;pointer-events:none;}
+.ai-scope-summary{font-size:13px;line-height:1.7;white-space:pre-line;color:var(--text-secondary,#63758a);margin:12px 0;}

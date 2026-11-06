@@ -7,7 +7,7 @@
 (function (S) {
   'use strict';
   if (!S || window.__ZhiyaojiPerfDiagnostics) return;
-  const VERSION = 'D2-r7';
+  const VERSION = 'D2-r8-74';
   const STORAGE_KEY = 'zhiyaoji-perf-diagnostics-d1'; // Shared key: retain D1 logs after upgrading to D2.
   const MAX_EVENTS = 300;
   const MAX_AGE_MS = 2 * 24 * 3600000;
@@ -15,8 +15,11 @@
   const DIAG = {version:VERSION, sessionStart:Date.now(), currentRoute:'boot', memorySupported:false, longTaskSupported:false};
   window.__ZhiyaojiPerfDiagnostics = DIAG;
   let events = [];
+  let criticalEvents=[];
+  const criticalTypes=new Set(['page_start','pagehide','script_error','unhandled_rejection','navigation_error','visibility','timer_delay','shell_redirect_normalized']);
   let accountDetails=[],accountFailures=[];const DETAIL_LIMIT=64;
   let previousRun = null;
+  let lastResourceSample=null;
   let dirty = false;
   let seq = 0;
   let lastFlush = 0;
@@ -37,18 +40,21 @@
   function truncate(){
     const cutoff=Date.now()-MAX_AGE_MS;
     events=events.filter(x=>x && x.at>=cutoff).slice(-MAX_EVENTS);
+    criticalEvents=criticalEvents.filter(x=>x&&x.at>=cutoff).slice(-48);
   }
   const stored=read();
+  if(stored)criticalEvents=Array.isArray(stored.criticalEvents)?stored.criticalEvents:stored.events.filter(e=>criticalTypes.has(e.type));
   if(stored){accountFailures=Array.isArray(stored.accountFailures)?stored.accountFailures.slice(-12):[];accountDetails=Array.isArray(stored.accountDetails)?stored.accountDetails.slice(-DETAIL_LIMIT):[];events=stored.events;previousRun=stored.run||null;truncate();}
   function write(force=false){
     if(flushing||disposed||(!dirty&&!force)||(!force&&S.activeInkPointer))return;
+    if(!force&&(S.exam&&!S.exam.disposed||S.review))return;
     const now=Date.now();
     if(!force&&now-lastFlush<FLUSH_INTERVAL_MS)return;
     flushing=true;
     try{
       truncate();
-      localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events,accountDetails,accountFailures,
-        run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:DIAG.currentRoute,visible:document.visibilityState,ended:false}}));
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({schema:1,version:VERSION,events:events.filter(e=>criticalTypes.has(e.type)||['navigation','account_sync_done'].includes(e.type)).slice(-24),criticalEvents:criticalEvents.slice(-12),accountDetails:accountDetails.slice(-8),accountFailures:accountFailures.slice(-4),
+        run:{id:ownSession,startedAt:DIAG.sessionStart,lastAt:now,route:actualRoute(),visible:document.visibilityState,ended:false,lastResourceSample}}));
       dirty=false;lastFlush=now;
     }catch{
       // Storage may be unavailable in private browsing, over quota or while WebKit is terminating.
@@ -59,6 +65,7 @@
     if(disposed)return;
     const e={at:Date.now(),t:number(performance.now()-startAt),run:ownSession,n:++seq,type,...data};
     events.push(e);
+    if(criticalTypes.has(type)){criticalEvents.push(e);if(criticalEvents.length>48)criticalEvents.shift();}
     if(events.length>MAX_EVENTS+40)events.splice(0,events.length-MAX_EVENTS);
     dirty=true;
     // Coalesce diagnostic persistence; failures must not cause a synchronous storage burst.
@@ -66,7 +73,7 @@
   }
   const navigation=performance.getEntriesByType?.('navigation')?.[0];
   add('page_start',{
-    build:S.BUILD||'unknown',diagnosticVersion:VERSION,nav:navigation?.type||'unknown',
+    build:document.documentElement?.dataset?.build||S.BUILD||'unknown',diagnosticVersion:VERSION,nav:navigation?.type||'unknown',
     wasDiscarded:!!document.wasDiscarded,
     width:window.innerWidth,height:window.innerHeight,dpr:number(window.devicePixelRatio),
     touch:('ontouchstart' in window)||navigator.maxTouchPoints>0,
@@ -75,16 +82,17 @@
       ageSeconds:number((Date.now()-previousRun.lastAt)/1000),
       lastRoute:previousRun.route,
       ended:!!previousRun.ended,
+      lastResourceSample:previousRun.lastResourceSample||null,
       // A missing pagehide suggests an abrupt termination but does not prove a memory crash.
       unclean:!previousRun.ended && Date.now()-previousRun.lastAt<3600000
     }:null
   },true);
   DIAG.report=()=>({schema:1,diagnosticVersion:VERSION,createdAt:new Date().toISOString(),
     description:'本地诊断信息。手写延迟为JS事件至画布绘制指令完成的估计，非真实屏幕呈现延迟；异常刷新和CPU/内存原因不可直接推定。',
-    applicationBase:'V2.9.18 修正版7（存储错误与重定向诊断）',
+    applicationBase:S.BUILD||S.VERSION||'unknown',
     metrics:{eventCount:events.length,longTaskSupported:DIAG.longTaskSupported,memorySupported:DIAG.memorySupported,
-      currentRoute:DIAG.currentRoute,viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
-    accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,events:events.slice()});
+      currentRoute:actualRoute(),viewWidth:innerWidth,viewHeight:innerHeight,devicePixelRatio:number(devicePixelRatio)},
+    activity:activity(),accountPhases:S.accountSync?.performance||null,accountDetails:accountDetails.slice(),accountFailures:accountFailures.slice(),storageState:S.accountSync?.storageDiagnosticInfo?.()||null,syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,criticalEvents:criticalEvents.slice(),events:events.slice()});
   S.accountSync.traceDiagnostic=(name,data)=>{accountDetails.push({at:Date.now(),run:ownSession,build:S.BUILD||'unknown',name,...data});if(accountDetails.length>DETAIL_LIMIT)accountDetails.splice(0,accountDetails.length-DETAIL_LIMIT);if(data.ok===false){accountFailures.push(accountDetails.at(-1));if(accountFailures.length>12)accountFailures.shift();}dirty=true;};
   navigator.serviceWorker?.addEventListener?.('message',e=>{if(e.data?.type==='shell-redirect-normalized')add('shell_redirect_normalized');});
   DIAG.export=function(){
@@ -130,7 +138,7 @@
       const observer=new PerformanceObserver(list=>{
         for(const item of list.getEntries()){
           // Reduce write amplification: log >=80ms; the observer callback is otherwise cheap.
-          if(item.duration>=80)add('long_task',{durationMs:number(item.duration),route:DIAG.currentRoute});
+          if(item.duration>=80)add('long_task',{durationMs:number(item.duration),route:actualRoute()});
         }
       });
       observer.observe({entryTypes:['longtask']});
@@ -138,9 +146,26 @@
     }
   }catch{}
 
+  function actualRoute(){return S.exam&&!S.exam.disposed?'practice':S.review?'review':DIAG.currentRoute;}
+  function resources(){const controller=S.exam&&!S.exam.disposed?S.exam:S.review?.controller;let buffers=0,bytes=0,facades=0;for(const view of controller?.layers?.values?.()||[]){facades+=view.facades?.size||0;for(const key of ['canvas','base','live','original']){const c=view[key];if(c?.width>1&&c?.height>1){buffers++;bytes+=c.width*c.height*4;}}}return {views:controller?.layers?.size||0,buffers,estimatedCanvasMB:number(bytes/1048576),layoutFacades:facades};}
+  function activity(){
+    const practice=!!(S.exam&&!S.exam.disposed&&!S.exam.s?.finished),review=!!(S.review&&!S.review.disposed);
+    return {studyMode:practice?'practice':review?'review':'page',writing:!!S.activeInkPointer,resources:resources(),inkRetention:S.inkRetention?{days:S.inkRetention.days,...S.inkRetention.metrics}:null,
+      syncTransfer:S.syncTransferMetrics?{...S.syncTransferMetrics}:null,
+      syncWork:S.SyncTransport?.workMetrics?{...S.SyncTransport.workMetrics}:null,
+      inkSurfaceCache:S.InkSurfaceCache?{...S.InkSurfaceCache.metrics}:null,
+      persistence:S.persistenceMetrics?{hotRequests:Number(S.persistenceMetrics.hotRequests)||0,hotWrites:Number(S.persistenceMetrics.hotWrites)||0,hotFailures:Number(S.persistenceMetrics.hotFailures)||0,lastHotMs:Number(S.persistenceMetrics.lastHotMs)||0,phases:S.persistenceMetrics.lastHotPhases||null,lastError:S.persistenceMetrics.lastHotError||null,localRecords:S.LocalRecords?.metrics||null}:null,
+      answerJournal:S.answerJournal?.metrics?{...S.answerJournal.metrics}:null,
+      homeWork:S.homeWorkMetrics?{...S.homeWorkMetrics}:null,
+      importWork:S.importWorkMetrics?{...S.importWorkMetrics}:null,
+      recommendationWork:S.localSelectionMetrics?{...S.localSelectionMetrics}:null,
+      reviewRender:S.reviewRenderMetrics?{...S.reviewRenderMetrics}:null,
+      bankUpdating:!!S.bankImporting,
+      readingControls:S.readingControlMetrics?{...S.readingControlMetrics}:null};
+  }
   // Periodic snapshot; no full-bank iteration or app-state serialization.
   function snapshot(kind){
-    const point={route:DIAG.currentRoute,visibility:document.visibilityState};
+    const point={route:actualRoute(),visibility:document.visibilityState,...activity()};
     if(performance.memory?.usedJSHeapSize){
       point.jsHeapMB=number(performance.memory.usedJSHeapSize/1048576);
       point.jsHeapLimitMB=number(performance.memory.jsHeapSizeLimit/1048576);
@@ -149,6 +174,7 @@
     // DOM node sampling at low frequency; does not capture any content.
     if(kind==='sample'&&!S.activeInkPointer&&document.visibilityState==='visible')point.domNodes=document.getElementsByTagName('*').length;
     point.storage=S.accountSync?.storageDiagnosticInfo?.()||null;
+    lastResourceSample={at:Date.now(),route:point.route,resources:point.resources,domNodes:point.domNodes,syncWork:point.syncWork,persistence:point.persistence,answerJournal:point.answerJournal,noteDepot:point.storage?.noteDepot};
     add(kind,point);
   }
   let lastHeartbeat=performance.now();
@@ -156,7 +182,7 @@
     const now=performance.now();
     const delay=Math.max(0,now-lastHeartbeat-30000);
     lastHeartbeat=now;
-    if(delay>=250)add('timer_delay',{delayMs:number(delay),route:DIAG.currentRoute});
+    if(delay>=250)add('timer_delay',{delayMs:number(delay),route:actualRoute()});
     if(!S.activeInkPointer)snapshot('sample');write();
   },30000);
   setInterval(()=>write(),15000);
@@ -229,10 +255,10 @@
   });
   window.addEventListener('error',event=>{
     // No exception messages or filenames: could contain private content / URL.
-    add('script_error',{errorType:String(event.error?.name||'Error').slice(0,45),route:DIAG.currentRoute});
+    add('script_error',{errorType:String(event.error?.name||'Error').slice(0,45),route:actualRoute()});
   });
   window.addEventListener('unhandledrejection',event=>{
-    add('unhandled_rejection',{errorType:String(event.reason?.name||'PromiseRejection').slice(0,45),route:DIAG.currentRoute});
+    add('unhandled_rejection',{errorType:String(event.reason?.name||'PromiseRejection').slice(0,45),route:actualRoute()});
   });
 
   // ---- D2: bounded, read-only handwriting timing instrumentation. ----
@@ -348,7 +374,7 @@
     if(!visible || lastVisibleState!=='visible' || now-lastVisible<2500){lastVisibleState=document.visibilityState;return;}
     lastVisibleState=document.visibilityState;
     if(lag>=140){
-      add('event_loop_stall',{delayMs:number(lag),writing:activeInk.size>0,route:DIAG.currentRoute,storage:S.accountSync?.storageDiagnosticInfo?.()||null},lag>=800);
+      add('event_loop_stall',{delayMs:number(lag),route:actualRoute(),...activity(),writing:activeInk.size>0,storage:S.accountSync?.storageDiagnosticInfo?.()||null},lag>=800);
     }
     writeInkSummary(false);
   },2000);
@@ -361,11 +387,11 @@
       const host=document.querySelector('#view');
       if(host&&!host.querySelector('#diag-panel')){
         const panel=document.createElement('section');panel.id='diag-panel';panel.className='panel settings-section';
-        panel.innerHTML='<h2>性能诊断（D2-r7 · 含手写延迟）</h2>'+
+        panel.innerHTML='<h2>性能诊断（D2-r8-2 · 含手写延迟）</h2>'+
           '<p>记录页面卡顿、手写事件处理和画布绘制耗时；不记录笔迹位置、形状或内容。异常重载后仍可导出。手写延迟是估计值，不等于实际屏幕显示延迟；iPad可能不提供内存和长任务指标。</p>'+
           '<div class="setting-actions">'+
           '<button class="button primary" type="button" id="diag-export">导出性能诊断</button>'+
-          '<a class="button" href="storage-check.html">存储专项检测</a><button class="button" type="button" id="diag-clear">清空诊断记录</button></div>'+
+          '<a class="button" href="storage-check.html">存储专项检测</a><a class="button" href="answer-rescue.html?v=rescue3">只读抢救答题卡</a><button class="button" type="button" id="diag-clear">清空诊断记录</button></div>'+
           '<p id="diag-summary" style="font-size:.82rem;opacity:.75"></p>';
         host.appendChild(panel);
         const summary=panel.querySelector('#diag-summary');

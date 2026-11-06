@@ -1,0 +1,159 @@
+/* R8.8.12 — user selection: 01A, 02A, 03A, 04A, 05A, 06A, 07A, 08A.
+   Presentation only. Existing controls, DOM order, events and writing geometry stay intact. */
+
+/* 01A — white defaults, fine borders, pale pressed and selected states. */
+#app-shell .button,#dialog-host .button,
+#app-shell .button.primary,#dialog-host .button.primary,
+#app-shell .daily-start,#app-shell .choice-button{
+ background:#fff;border-color:#dce3df;color:#55695b;box-shadow:none;
+}
+@media(hover:hover) and (pointer:fine){
+ #app-shell .button:not(:disabled):hover,#dialog-host .button:not(:disabled):hover,
+ #app-shell .button.primary:not(:disabled):hover,#dialog-host .button.primary:not(:disabled):hover,
+ #app-shell .daily-start:not(:disabled):hover,#app-shell .choice-button:not(:disabled):hover{
+  background:#f6f8f7;border-color:#c9d4cd;color:#55695b;
+ }
+}
+#app-shell .button:not(:disabled):active,#dialog-host .button:not(:disabled):active,
+#app-shell .button.primary:not(:disabled):active,#dialog-host .button.primary:not(:disabled):active,
+#app-shell .daily-start:not(:disabled):active,#app-shell .choice-button:not(:disabled):active{
+ background:#e9edf0;border-color:#c9d4dd;color:#5c7385;
+}
+#app-shell .button.soft,#dialog-host .button.soft,
+#app-shell .button[aria-pressed="true"],#dialog-host .button[aria-pressed="true"],
+#app-shell .choice-button.active,#dialog-host .choice-button.active,
+#dialog-host .reading-setting-row [data-reading-size].soft{
+ background:var(--choice-blue);border-color:var(--choice-line);color:var(--choice-text);
+}
+@media(hover:hover) and (pointer:fine){
+ #app-shell .button.soft:not(:disabled):hover,#dialog-host .button.soft:not(:disabled):hover,
+ #app-shell .button[aria-pressed="true"]:not(:disabled):hover,#dialog-host .button[aria-pressed="true"]:not(:disabled):hover,
+ #app-shell .choice-button.active:not(:disabled):hover{
+  background:var(--choice-blue);border-color:var(--choice-line);color:var(--choice-text);
+ }
+}
+#app-shell .button.danger,#dialog-host .button.danger,
+#app-shell .button.danger:not(:disabled):hover,#dialog-host .button.danger:not(:disabled):hover{
+ color:#bf4955;
+}
+@supports selector(:has(*)){
+ body:has(.exam-shell[data-reading="day"]) #dialog-host .reading-setting-row [data-reading-night="false"],
+ body:has(.exam-shell[data-reading="night"]) #dialog-host .reading-setting-row [data-reading-night="true"]{
+  background:var(--choice-blue);border-color:var(--choice-line);color:var(--choice-text);box-shadow:none;
+ }
+}
+
+/* 02A — a white AI-training card with a fine external frame. */
+#app-shell #daily-training{
+ background:#fff;border:1px solid var(--ref-line,#dde4df);box-shadow:none;
+}
+#app-shell #daily-training .daily-card-head{border-bottom-color:#edf0ed}
+#app-shell #daily-training .daily-start{border:1px solid #dce3df;background:#fff;color:#55695b}
+
+/* 03A — white, finely outlined material controls; existing hit areas stay unchanged. */
+.exam-shell:not([data-reading="night"]) .material-head [data-exam="material"],
+.exam-shell:not([data-reading="night"]) .reading-material-nav [data-exam="material-close"]{
+ background:#fff;border-color:#dce3df;color:#55695b;box-shadow:none;
+}
+.exam-shell[data-reading="night"] .material-head [data-exam="material"],
+.exam-shell[data-reading="night"] .reading-material-nav [data-exam="material-close"]{
+ background:var(--reading-paper);border-color:var(--reading-line);color:var(--reading-text);
+}
+
+/* 04A — pale blue marks the active note tool, without changing canvas or toolbar sizes. */
+.exam-shell .reading-note-toolbar .icon-button.active,
+.exam-shell .qactions .pen-active{
+ background:var(--choice-blue);color:var(--choice-text);box-shadow:none;
+}
+.exam-shell[data-reading="night"] .reading-note-toolbar .icon-button.active,
+.exam-shell[data-reading="night"] .qactions .pen-active{
+ background:rgba(98,163,225,.22);color:#c9e2f5;
+}
+
+/* 05A — white search and filter areas separated by fine lines. */
+#app-shell .bank-discovery{background:#fff;border-bottom-color:#e9eee9;box-shadow:none}
+#app-shell .bank-search-label input{background:#fff;border-color:#dce3df;box-shadow:none}
+#app-shell .bank-search-label input:focus{border-color:#8caecb}
+#app-shell .bank-filters{background:#fff}
+#app-shell .bank-result-meta{border-top:1px solid #e9eee9;padding-top:12px}
+
+/* 06A — translucent blue for inclusion and review confirmation; existing states remain native. */
+.exam-shell .qactions .review-learning-chip[aria-pressed="true"],
+#app-shell .button.review-finish,#dialog-host .button.primary[data-feedback-done],
+#app-shell .button.review-finish:not(:disabled):hover,#app-shell .button.review-finish:not(:disabled):active,
+#dialog-host .button.primary[data-feedback-done]:not(:disabled):hover,#dialog-host .button.primary[data-feedback-done]:not(:disabled):active,
+.exam-shell .review-finish{
+ background:var(--choice-blue);border-color:var(--choice-line);color:var(--choice-text);box-shadow:none;
+}
+.exam-shell[data-reading="night"] .qactions .review-learning-chip[aria-pressed="true"],
+.exam-shell[data-reading="night"] .review-finish{
+ background:rgba(98,163,225,.22);border-color:rgba(151,192,229,.5);color:#c9e2f5;
+}
+
+/* 07A — style the original checkboxes as switches; labels, checked values and events stay intact. */
+#app-shell #auto-advance,#dialog-host #reading-auto{
+ -webkit-appearance:none;appearance:none;position:relative;
+ width:39px;min-width:39px;height:23px;margin:0;border:0;border-radius:20px;flex:none;
+ background-color:#dfe6e1;
+ background-image:radial-gradient(circle at center,#fff 0 8px,transparent 8.5px);
+ background-size:17px 17px;background-repeat:no-repeat;background-position:3px center;
+ cursor:pointer;transition:background-color .15s,background-position .15s;
+}
+#app-shell #auto-advance:checked,#dialog-host #reading-auto:checked{
+ background-color:#8da998;background-position:19px center;
+}
+#app-shell #auto-advance:disabled,#dialog-host #reading-auto:disabled{opacity:.48;cursor:default}
+#app-shell .backup-block .button,#app-shell #history-backup{
+ background:#fff;border-color:#dce3df;color:#55695b;
+}
+@media(forced-colors:active){
+ #app-shell #auto-advance,#dialog-host #reading-auto,
+ #app-shell #auto-advance:checked,#dialog-host #reading-auto:checked{
+  -webkit-appearance:auto;appearance:auto;width:20px;min-width:20px;height:20px;
+  background:none;border:revert;
+ }
+}
+
+/* 08A — each existing practice record gets its own fine frame. */
+#app-shell .record-row,#app-shell .record-row:last-child{
+ margin:0 0 12px;background:#fff;border:1px solid var(--ref-line,#dde4df);border-radius:12px;
+}
+#app-shell .record-row:last-child{margin-bottom:0}
+@supports selector(:has(*)){
+ #app-shell #view>section.panel:has(>.record-row){
+  background:transparent;border:0;padding:0;box-shadow:none;
+ }
+}
+
+@media(prefers-reduced-motion:reduce){
+ #app-shell #auto-advance,#dialog-host #reading-auto{transition:none}
+}
+
+/* Source-paper selectors use the same history badge as the bank. */
+#app-shell .choice-button .choice-paper-option,
+#dialog-host .choice-list .choice-paper-option{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ flex:1;min-width:0;overflow:visible;white-space:normal;text-overflow:clip;
+}
+#app-shell .choice-button .choice-paper-title,
+#dialog-host .choice-list .choice-paper-title{
+ display:block;flex:1;min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.55;text-align:left;
+}
+#app-shell .choice-paper-title>small,#dialog-host .choice-paper-title>small{
+ display:block;color:var(--ref-muted);font-size:11px;font-weight:400;margin-top:3px;
+}
+#app-shell .choice-button .choice-paper-status,
+#dialog-host .choice-list .choice-paper-status{
+ display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none;overflow:visible;white-space:nowrap;
+}
+#app-shell .choice-paper-status>small,#dialog-host .choice-paper-status>small{
+ font-size:10px;font-weight:400;color:var(--ref-muted);
+}
+#app-shell .choice-paper-status .practice-history-badge,
+#dialog-host .choice-paper-status .practice-history-badge{
+ background:#f1f4f5;color:var(--ref-muted);white-space:nowrap;
+}
+#app-shell .choice-paper-status .practice-history-badge.is-done,
+#dialog-host .choice-paper-status .practice-history-badge.is-done{
+ background:#fff3d7;color:#7c5c28;
+}

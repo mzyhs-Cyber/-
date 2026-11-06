@@ -1,0 +1,18 @@
+{
+  "build": "2.9.18-r8-8-73",
+  "status": "program_checks_passed_physical_device_acceptance_pending",
+  "liveDeployed": false,
+  "physicalDeviceTested": false,
+  "localDatabaseVersion": {
+    "before": 2,
+    "after": 3,
+    "exportBackupFormat": 3
+  },
+  "limits": [
+    "Older supplied backups only; current tablet database not accessed.",
+    "No real-device one-hour writing or crash verification.",
+    "No measured live-network synchronization duration.",
+    "Storage reclaimed only after reference audit; no claim that all 7 GB will be released."
+  ],
+  "provenance": "Original R73 report supplied with user archive; historical results, not rerun for gray1."
+}

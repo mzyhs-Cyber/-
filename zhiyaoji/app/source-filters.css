@@ -1,0 +1,9 @@
+/* Compact source choices inherit the selected A appearance. */
+.source-kind-field{min-width:0;margin:0 0 18px;padding:0;border:0;color:inherit}
+.source-kind-field legend{padding:0;margin:0 0 9px;font-size:13px;font-weight:600;color:inherit}
+.source-kind-options{display:flex;flex-wrap:wrap;gap:10px 18px}
+.source-kind-choice{display:inline-flex;align-items:center;gap:8px;min-height:40px;cursor:pointer;font-size:14px}
+.source-kind-choice input{width:18px;height:18px;flex:0 0 18px;margin:0;accent-color:#718e7c;cursor:pointer}
+.source-kind-choice input:focus-visible{outline:2px solid #718e7c;outline-offset:3px}
+.setup-card-v29>.source-kind-field{padding-bottom:16px;border-bottom:1px solid rgba(80,99,88,.10)}
+@media(max-width:520px){.source-kind-options{gap:8px 14px}.source-kind-choice{font-size:13px;min-height:42px}}

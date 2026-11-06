@@ -1,4 +1,4 @@
-/* R73 gray2: excluded choices change text colour only. */
+/* R73 gray3: dim excluded text and retain the original strikethrough. */
 .exam-shell {
   --excluded-text: #8c929b;
 }
@@ -15,5 +15,5 @@
 }
 
 .exam-shell .option-row.excluded:not(.correct):not(.incorrect) .option-body {
-  text-decoration: none;
+  text-decoration: line-through;
 }
